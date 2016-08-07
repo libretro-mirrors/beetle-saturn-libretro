@@ -51,7 +51,6 @@
 
 #include <mednafen/cdrom/CDUtility.h>
 #include <mednafen/cdrom/cdromif.h>
-using namespace CDUtility;
 
 namespace MDFN_IEN_SS
 {
@@ -241,7 +240,7 @@ static uint32 CalcedActualSize;
 //
 static bool TrayOpen;
 static CDIF* Cur_CDIF;
-static CDUtility::TOC toc;
+static TOC toc;
 static sscpu_timestamp_t lastts;
 static int32 CommandPhase;
 //static bool CommandYield;
