@@ -140,8 +140,8 @@ static void DoSimpleCommand(int cmd)
 
 static const FileExtensionSpecStruct KnownExtensions[] =
 {
- { ".ssf", gettext_noop("SSF Rip") },
- { ".minissf", gettext_noop("MiniSSF Rip") },
+ { ".ssf", "SSF Rip" },
+ { ".minissf", "MiniSSF Rip" },
 
  { NULL, NULL }
 };
@@ -149,8 +149,8 @@ static const FileExtensionSpecStruct KnownExtensions[] =
 
 static MDFNSetting SSFPlaySettings[] =
 {
- { "ssfplay.resamp_quality", MDFNSF_NOFLAGS, gettext_noop("SCSP output resampler quality."),
-	gettext_noop("0 is lowest quality and CPU usage, 10 is highest quality and CPU usage.  The resampler that this setting refers to is used for converting from 44.1KHz to the sampling rate of the host audio device Mednafen is using.  Changing Mednafen's output rate, via the \"sound.rate\" setting, to \"44100\" may bypass the resampler, which can decrease CPU usage by Mednafen, and can increase or decrease audio quality, depending on various operating system and hardware factors."), MDFNST_UINT, "4", "0", "10" },
+ { "ssfplay.resamp_quality", MDFNSF_NOFLAGS, "SCSP output resampler quality.",
+	"0 is lowest quality and CPU usage, 10 is highest quality and CPU usage.  The resampler that this setting refers to is used for converting from 44.1KHz to the sampling rate of the host audio device Mednafen is using.  Changing Mednafen's output rate, via the \"sound.rate\" setting, to \"44100\" may bypass the resampler, which can decrease CPU usage by Mednafen, and can increase or decrease audio quality, depending on various operating system and hardware factors.", MDFNST_UINT, "4", "0", "10" },
 
  { NULL },
 };
