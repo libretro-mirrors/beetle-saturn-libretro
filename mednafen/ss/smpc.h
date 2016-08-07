@@ -51,7 +51,7 @@ enum
  SMPC_RTC_LANG_FRENCH = 2,
  SMPC_RTC_LANG_SPANISH = 3,
  SMPC_RTC_LANG_ITALIAN = 4,
- SMPC_RTC_LANG_JAPANESE = 5,
+ SMPC_RTC_LANG_JAPANESE = 5
 };
 
 void SMPC_Init(const uint8 area_code, const int32 master_clock) MDFN_COLD;

@@ -142,7 +142,7 @@ class SH7095 final
   EXCEPTION_NMI,	// NMI
   EXCEPTION_BREAK,	// User break
   EXCEPTION_TRAP,	// Trap instruction
-  EXCEPTION_INT,	// Interrupt
+  EXCEPTION_INT	// Interrupt
  };
 
  enum
@@ -157,7 +157,7 @@ class SH7095 final
   VECNUM_BREAK     = 12,	// User break
 
   VECNUM_TRAP_BASE = 32,	// Trap instruction
-  VECNUM_INT_BASE  = 64,	// Interrupt
+  VECNUM_INT_BASE  = 64	// Interrupt
  };
 
  enum
@@ -502,7 +502,7 @@ class SH7095 final
   GSREG_FTCSRM,
   GSREG_TCR,
   GSREG_TOCR,
-  GSREG_RWT,
+  GSREG_RWT
  };
 
  uint32 GetRegister(const unsigned id, char* const special, const uint32 special_len);
