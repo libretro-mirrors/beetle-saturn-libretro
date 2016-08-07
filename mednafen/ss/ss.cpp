@@ -34,8 +34,6 @@
 
 #include <bitset>
 
-#include <trio/trio.h>
-
 #include <zlib.h>
 
 extern MDFNGI EmulatedSS;
@@ -1565,35 +1563,35 @@ static void DoSimpleCommand(int cmd)
 
 static const FileExtensionSpecStruct KnownExtensions[] =
 {
- { ".elf", gettext_noop("SS Homebrew ELF Executable") },
+ { ".elf", "SS Homebrew ELF Executable" },
 
  { NULL, NULL }
 };
 
 static const MDFNSetting_EnumList Region_List[] =
 {
- { "jp", SMPC_AREA_JP, gettext_noop("Japan") },
- { "na", SMPC_AREA_NA, gettext_noop("North America") },
- { "eu", SMPC_AREA_EU_PAL, gettext_noop("Europe") },
- { "kr", SMPC_AREA_KR, gettext_noop("South Korea") },
+ { "jp", SMPC_AREA_JP, "Japan" },
+ { "na", SMPC_AREA_NA, "North America" },
+ { "eu", SMPC_AREA_EU_PAL, "Europe" },
+ { "kr", SMPC_AREA_KR, "South Korea" },
 
- { "tw", SMPC_AREA_ASIA_NTSC, gettext_noop("Taiwan") },	// Taiwan, Philippines
- { "as", SMPC_AREA_ASIA_PAL, gettext_noop("China") },	// China, Middle East
+ { "tw", SMPC_AREA_ASIA_NTSC, "Taiwan" },	// Taiwan, Philippines
+ { "as", SMPC_AREA_ASIA_PAL, "China" },	// China, Middle East
 
- { "br", SMPC_AREA_CSA_NTSC, gettext_noop("Brazil") },
- { "la", SMPC_AREA_CSA_PAL, gettext_noop("Latin America") },
+ { "br", SMPC_AREA_CSA_NTSC, "Brazil" },
+ { "la", SMPC_AREA_CSA_PAL, "Latin America" },
 
  { NULL, 0 },
 };
 
 static const MDFNSetting_EnumList RTCLang_List[] =
 {
- { "english", SMPC_RTC_LANG_ENGLISH, gettext_noop("English") },
- { "german", SMPC_RTC_LANG_GERMAN, gettext_noop("Deutsch") },
- { "french", SMPC_RTC_LANG_FRENCH, gettext_noop("Français") },
- { "spanish", SMPC_RTC_LANG_SPANISH, gettext_noop("Español") },
- { "italian", SMPC_RTC_LANG_ITALIAN, gettext_noop("Italiano") },
- { "japanese", SMPC_RTC_LANG_JAPANESE, gettext_noop("日本語") },
+ { "english", SMPC_RTC_LANG_ENGLISH, "English" },
+ { "german", SMPC_RTC_LANG_GERMAN, "Deutsch" },
+ { "french", SMPC_RTC_LANG_FRENCH, "Français" },
+ { "spanish", SMPC_RTC_LANG_SPANISH, "Español" },
+ { "italian", SMPC_RTC_LANG_ITALIAN, "Italiano" },
+ { "japanese", SMPC_RTC_LANG_JAPANESE, "日本語" },
 
  { "deutsch", SMPC_RTC_LANG_GERMAN, NULL },
  { "français", SMPC_RTC_LANG_FRENCH, NULL },
@@ -1606,49 +1604,49 @@ static const MDFNSetting_EnumList RTCLang_List[] =
 
 static const MDFNSetting_EnumList Cart_List[] =
 {
- { "auto", CART__RESERVED, gettext_noop("Automatic") },
- { "none", CART_NONE, gettext_noop("None") },
- { "backup", CART_BACKUP_MEM, gettext_noop("Backup Memory(512KiB)") },
- { "extram1", CART_EXTRAM_1M, gettext_noop("1MiB Extended RAM") },
- { "extram4", CART_EXTRAM_4M, gettext_noop("4MiB Extended RAM") },
+ { "auto", CART__RESERVED, "Automatic" },
+ { "none", CART_NONE, "None" },
+ { "backup", CART_BACKUP_MEM, "Backup Memory(512KiB)" },
+ { "extram1", CART_EXTRAM_1M, "1MiB Extended RAM" },
+ { "extram4", CART_EXTRAM_4M, "4MiB Extended RAM" },
 
  { NULL, 0 },
 };
 
 static MDFNSetting SSSettings[] =
 {
- { "ss.bios_jp", MDFNSF_EMU_STATE, gettext_noop("Path to the Japan ROM BIOS"), gettext_noop(""), MDFNST_STRING, "sega_101.bin" },
- { "ss.bios_na_eu", MDFNSF_EMU_STATE, gettext_noop("Path to the North America and Europe ROM BIOS"), gettext_noop(""), MDFNST_STRING, "mpr-17933.bin" },
+ { "ss.bios_jp", MDFNSF_EMU_STATE, "Path to the Japan ROM BIOS", "", MDFNST_STRING, "sega_101.bin" },
+ { "ss.bios_na_eu", MDFNSF_EMU_STATE, "Path to the North America and Europe ROM BIOS", "", MDFNST_STRING, "mpr-17933.bin" },
 
- { "ss.scsp.resamp_quality", MDFNSF_NOFLAGS, gettext_noop("SCSP output resampler quality."),
-	gettext_noop("0 is lowest quality and CPU usage, 10 is highest quality and CPU usage.  The resampler that this setting refers to is used for converting from 44.1KHz to the sampling rate of the host audio device Mednafen is using.  Changing Mednafen's output rate, via the \"sound.rate\" setting, to \"44100\" may bypass the resampler, which can decrease CPU usage by Mednafen, and can increase or decrease audio quality, depending on various operating system and hardware factors."), MDFNST_UINT, "4", "0", "10" },
+ { "ss.scsp.resamp_quality", MDFNSF_NOFLAGS, "SCSP output resampler quality.",
+	"0 is lowest quality and CPU usage, 10 is highest quality and CPU usage.  The resampler that this setting refers to is used for converting from 44.1KHz to the sampling rate of the host audio device Mednafen is using.  Changing Mednafen's output rate, via the \"sound.rate\" setting, to \"44100\" may bypass the resampler, which can decrease CPU usage by Mednafen, and can increase or decrease audio quality, depending on various operating system and hardware factors.", MDFNST_UINT, "4", "0", "10" },
 
- { "ss.region_autodetect", MDFNSF_EMU_STATE | MDFNSF_UNTRUSTED_SAFE, gettext_noop("Attempt to auto-detect region of game."), NULL, MDFNST_BOOL, "1" },
- { "ss.region_default", MDFNSF_EMU_STATE | MDFNSF_UNTRUSTED_SAFE, gettext_noop("Default region to use."), gettext_noop("Used if region autodetection fails or is disabled."), MDFNST_ENUM, "jp", NULL, NULL, NULL, NULL, Region_List },
+ { "ss.region_autodetect", MDFNSF_EMU_STATE | MDFNSF_UNTRUSTED_SAFE, "Attempt to auto-detect region of game.", NULL, MDFNST_BOOL, "1" },
+ { "ss.region_default", MDFNSF_EMU_STATE | MDFNSF_UNTRUSTED_SAFE, "Default region to use.", "Used if region autodetection fails or is disabled.", MDFNST_ENUM, "jp", NULL, NULL, NULL, NULL, Region_List },
 
- { "ss.input.mouse_sensitivity", MDFNSF_NOFLAGS, gettext_noop("Emulated mouse sensitivity."), NULL, MDFNST_FLOAT, "0.50", NULL, NULL },
+ { "ss.input.mouse_sensitivity", MDFNSF_NOFLAGS, "Emulated mouse sensitivity.", NULL, MDFNST_FLOAT, "0.50", NULL, NULL },
 
- { "ss.smpc.autortc", MDFNSF_NOFLAGS, gettext_noop("Automatically set RTC on game load."), gettext_noop("Automatically set the SMPC's emulated Real-Time Clock to the host system's current time and date upon game load."), MDFNST_BOOL, "1" },
- { "ss.smpc.autortc.lang", MDFNSF_NOFLAGS, gettext_noop("BIOS language."), NULL, MDFNST_ENUM, "english", NULL, NULL, NULL, NULL, RTCLang_List },
+ { "ss.smpc.autortc", MDFNSF_NOFLAGS, "Automatically set RTC on game load.", "Automatically set the SMPC's emulated Real-Time Clock to the host system's current time and date upon game load.", MDFNST_BOOL, "1" },
+ { "ss.smpc.autortc.lang", MDFNSF_NOFLAGS, "BIOS language.", NULL, MDFNST_ENUM, "english", NULL, NULL, NULL, NULL, RTCLang_List },
 
- { "ss.cart", MDFNSF_EMU_STATE | MDFNSF_UNTRUSTED_SAFE, gettext_noop("Expansion cart."), NULL, MDFNST_ENUM, "auto", NULL, NULL, NULL, NULL, Cart_List },
- { "ss.cart.kof95_path", MDFNSF_EMU_STATE, gettext_noop("Path to KoF 95 ROM image."), NULL, MDFNST_STRING, "mpr-18811-mx.ic1" },
- { "ss.cart.ultraman_path", MDFNSF_EMU_STATE, gettext_noop("Path to Ultraman ROM image."), NULL, MDFNST_STRING, "mpr-19367-mx.ic1" },
+ { "ss.cart", MDFNSF_EMU_STATE | MDFNSF_UNTRUSTED_SAFE, "Expansion cart.", NULL, MDFNST_ENUM, "auto", NULL, NULL, NULL, NULL, Cart_List },
+ { "ss.cart.kof95_path", MDFNSF_EMU_STATE, "Path to KoF 95 ROM image.", NULL, MDFNST_STRING, "mpr-18811-mx.ic1" },
+ { "ss.cart.ultraman_path", MDFNSF_EMU_STATE, "Path to Ultraman ROM image.", NULL, MDFNST_STRING, "mpr-19367-mx.ic1" },
  
- { "ss.bios_sanity", MDFNSF_NOFLAGS, gettext_noop("Enable BIOS ROM image sanity checks."), NULL, MDFNST_BOOL, "1" },
+ { "ss.bios_sanity", MDFNSF_NOFLAGS, "Enable BIOS ROM image sanity checks.", NULL, MDFNST_BOOL, "1" },
 
- { "ss.cd_sanity", MDFNSF_NOFLAGS, gettext_noop("Enable CD (image) sanity checks."), NULL, MDFNST_BOOL, "1" },
+ { "ss.cd_sanity", MDFNSF_NOFLAGS, "Enable CD (image) sanity checks.", NULL, MDFNST_BOOL, "1" },
 
- { "ss.slstart", MDFNSF_NOFLAGS, gettext_noop("First displayed scanline in NTSC mode."), NULL, MDFNST_INT, "0", "0", "239" },
- { "ss.slend", MDFNSF_NOFLAGS, gettext_noop("Last displayed scanline in NTSC mode."), NULL, MDFNST_INT, "239", "0", "239" },
+ { "ss.slstart", MDFNSF_NOFLAGS, "First displayed scanline in NTSC mode.", NULL, MDFNST_INT, "0", "0", "239" },
+ { "ss.slend", MDFNSF_NOFLAGS, "Last displayed scanline in NTSC mode.", NULL, MDFNST_INT, "239", "0", "239" },
 
- { "ss.slstartp", MDFNSF_NOFLAGS, gettext_noop("First displayed scanline in PAL mode."), NULL, MDFNST_INT, "0", "0", "255" },
- { "ss.slendp", MDFNSF_NOFLAGS, gettext_noop("Last displayed scanline in PAL mode."), NULL, MDFNST_INT, "255", "0", "255" },
+ { "ss.slstartp", MDFNSF_NOFLAGS, "First displayed scanline in PAL mode.", NULL, MDFNST_INT, "0", "0", "255" },
+ { "ss.slendp", MDFNSF_NOFLAGS, "Last displayed scanline in PAL mode.", NULL, MDFNST_INT, "255", "0", "255" },
 
- { "ss.midsync", MDFNSF_NOFLAGS, gettext_noop("Enable mid-frame synchronization."), gettext_noop("Mid-frame synchronization can reduce input latency, but it will increase CPU requirements."), MDFNST_BOOL, "0" },
+ { "ss.midsync", MDFNSF_NOFLAGS, "Enable mid-frame synchronization.", "Mid-frame synchronization can reduce input latency, but it will increase CPU requirements.", MDFNST_BOOL, "0" },
 
- { "ss.dbg_mask", MDFNSF_NOFLAGS, gettext_noop("Debug printf mask."), NULL, MDFNST_UINT, "0x00001", "0x00000", "0xFFFFF" },
- { "ss.dbg_exe_cdpath", MDFNSF_SUPPRESS_DOC, gettext_noop("CD image to use with homebrew executable loading."), NULL, MDFNST_STRING, "" },
+ { "ss.dbg_mask", MDFNSF_NOFLAGS, "Debug printf mask.", NULL, MDFNST_UINT, "0x00001", "0x00000", "0xFFFFF" },
+ { "ss.dbg_exe_cdpath", MDFNSF_SUPPRESS_DOC, "CD image to use with homebrew executable loading.", NULL, MDFNST_STRING, "" },
 
  { NULL },
 };
