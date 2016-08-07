@@ -60,12 +60,18 @@ namespace MDFN_IEN_SS
  extern uint32 ss_dbg_mask;
 
  static INLINE void SS_DBG_Dummy(const char* format, ...) { }
- #define SS_DBG(which, format, ...) ((MDFN_UNLIKELY(ss_dbg_mask & (which))) ? (void)trio_printf(format, ## __VA_ARGS__) : SS_DBG_Dummy(format, ## __VA_ARGS__))
+
+#ifdef HAVE_DEBUG
+#define SS_DBG(which, format, ...) ((MDFN_UNLIKELY(ss_dbg_mask & (which))) ? (void)trio_printf(format, ## __VA_ARGS__) : SS_DBG_Dummy(format, ## __VA_ARGS__))
+#else
+#define SS_DBG(which, format, ...) SS_DBG_Dummy(format, ## __VA_ARGS__)
+#endif
  #define SS_DBGTI(which, format, ...) SS_DBG(which, format " @Line=0x%03x, HPos=0x%03x\n", ## __VA_ARGS__, VDP2::PeekLine(), VDP2::PeekHPos())
 
  template<unsigned which>
  static void SS_DBG_Wrap(const char* format, ...) noexcept
  {
+#ifdef HAVE_DEBUG
   if(ss_dbg_mask & which)
   {
    va_list ap;
@@ -76,6 +82,7 @@ namespace MDFN_IEN_SS
 
    va_end(ap);
   }
+#endif
  }
 
  typedef int32 sscpu_timestamp_t;
