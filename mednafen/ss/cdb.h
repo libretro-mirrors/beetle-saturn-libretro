@@ -32,8 +32,8 @@ void CDB_Kill(void) MDFN_COLD;
 
 void CDB_SetDisc(bool tray_open, CDIF *cdif) MDFN_COLD;
 
-void CDB_Write_DBM(uint32 offset, uint16 DB, uint16 mask) MDFN_HOT;
-uint16 CDB_Read(uint32 offset) MDFN_HOT;
+void CDB_Write_DBM(uint32 offset, uint16 DB, uint16 mask);
+uint16 CDB_Read(uint32 offset);
 
 void CDB_Reset(bool powering_up) MDFN_COLD;
 
