@@ -67,7 +67,7 @@ void IODevice_Mouse::StateAction(StateMem* sm, const unsigned load, const bool d
   SFEND
  };
  char section_name[64];
- trio_snprintf(section_name, sizeof(section_name), "%s_Mouse", sname_prefix);
+ snprintf(section_name, sizeof(section_name), "%s_Mouse", sname_prefix);
 
  if(!MDFNSS_StateAction(sm, load, data_only, StateRegs, section_name, true) && load)
   Power();
