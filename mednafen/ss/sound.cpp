@@ -25,7 +25,6 @@
 // (May not be worth emulating if it could possibly trigger problems in games)
 
 #include <mednafen/mednafen.h>
-#include <mednafen/resampler/resampler.h>
 #include <mednafen/hw_cpu/m68k/m68k.h>
 
 #ifndef MDFN_SSFPLAY_COMPILE
@@ -54,7 +53,6 @@ static sscpu_timestamp_t lastts;
 
 static int16 IBuffer[1024][2];
 static uint32 IBufferCount;
-static SpeexResamplerState* resampler = NULL;
 static int last_rate;
 static uint32 last_quality;
 
@@ -154,11 +152,6 @@ void SOUND_Reset68K(void)
 
 void SOUND_Kill(void)
 {
- if(resampler)
- {
-  speex_resampler_destroy(resampler);  
-  resampler = NULL;
- }
 }
 
 void SOUND_Set68KActive(bool active)
@@ -238,19 +231,6 @@ void SOUND_StartFrame(double rate, uint32 quality)
 {
  if((int)rate != last_rate || quality != last_quality)
  {
-  int err = 0;
-
-  if(resampler)
-  {
-   speex_resampler_destroy(resampler);
-   resampler = NULL;
-  }
-
-  if((int)rate && (int)rate != 44100)
-  {
-   resampler = speex_resampler_init(2, 44100, (int)rate, quality, &err);
-  }
-
   last_rate = (int)rate;
   last_quality = quality;
  }
@@ -276,39 +256,12 @@ int32 SOUND_FlushOutput(int16* SoundBuf, const int32 SoundBufMaxSize, const bool
   }
  }
  
- if(last_rate == 44100)
- {
   int32 ret = IBufferCount;
 
   memcpy(SoundBuf, IBuffer, IBufferCount * 2 * sizeof(int16));
   IBufferCount = 0;
 
   return(ret);
- }
- else if(resampler)
- {
-  spx_uint32_t in_len; // "Number of input samples in the input buffer. Returns the number of samples processed. This is all per-channel."
-  spx_uint32_t out_len; // "Size of the output buffer. Returns the number of samples written. This is all per-channel."
-
-  in_len = IBufferCount;
-  out_len = SoundBufMaxSize;
-
-  speex_resampler_process_interleaved_int(resampler, (const spx_int16_t *)IBuffer, &in_len, (spx_int16_t *)SoundBuf, &out_len);
-
-  assert(in_len <= IBufferCount);
-
-  if((IBufferCount - in_len) > 0)
-   memmove(IBuffer, IBuffer + in_len, (IBufferCount - in_len) * sizeof(int16) * 2);
-
-  IBufferCount -= in_len;
-
-  return(out_len);
- }
- else
- {
-  IBufferCount = 0;
-  return 0;
- }
 }
 
 void SOUND_StateAction(StateMem *sm, const unsigned load, const bool data_only)
