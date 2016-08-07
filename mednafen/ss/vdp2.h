@@ -27,9 +27,9 @@ namespace MDFN_IEN_SS
 namespace VDP2
 {
 
-void Write8_DB(uint32 A, uint16 DB) MDFN_HOT;
-void Write16_DB(uint32 A, uint16 DB) MDFN_HOT;
-uint16 Read16_DB(uint32 A) MDFN_HOT;
+void Write8_DB(uint32 A, uint16 DB);
+void Write16_DB(uint32 A, uint16 DB);
+uint16 Read16_DB(uint32 A);
 
 void Init(const bool IsPAL, const int sls, const int sle) MDFN_COLD;
 void FillVideoParams(MDFNGI* gi) MDFN_COLD;
