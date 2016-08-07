@@ -62,8 +62,8 @@ void SMPC_SaveNV(Stream* s) MDFN_COLD;
 
 void SMPC_SetRTC(const struct tm* ht, const uint8 lang) MDFN_COLD;
 
-void SMPC_Write(const sscpu_timestamp_t timestamp, uint8 A, uint8 V) MDFN_HOT;
-uint8 SMPC_Read(const sscpu_timestamp_t timestamp, uint8 A) MDFN_HOT;
+void SMPC_Write(const sscpu_timestamp_t timestamp, uint8 A, uint8 V);
+uint8 SMPC_Read(const sscpu_timestamp_t timestamp, uint8 A);
 
 sscpu_timestamp_t SMPC_Update(sscpu_timestamp_t timestamp);
 void SMPC_ResetTS(void);
