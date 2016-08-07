@@ -22,9 +22,10 @@
 #include "ss.h"
 #include <mednafen/mednafen.h>
 #include <mednafen/FileStream.h>
-#include <mednafen/endian.h>
 #include <mednafen/settings.h>
 #include <mednafen/general.h>
+
+#include "../mednafen-endian.h"
 
 #include "cart.h"
 
@@ -66,14 +67,14 @@ static void Debug_RW_DB(uint32 A, uint16* DB)
 }
 
 
-static MDFN_HOT void CartID_Read_DB(uint32 A, uint16* DB)
+static void CartID_Read_DB(uint32 A, uint16* DB)
 {
  if((A & ~1) == 0x04FFFFFE)
   *DB = Cart_ID;
 }
 
 template<typename T, bool IsWrite>
-static MDFN_HOT void ExtRAM_RW_DB(uint32 A, uint16* DB)
+static void ExtRAM_RW_DB(uint32 A, uint16* DB)
 {
  const uint32 mask = (sizeof(T) == 2) ? 0xFFFF : (0xFF << (((A & 1) ^ 1) << 3));
  uint16* const ptr = (uint16*)((uint8*)ExtRAM + (A & ExtRAM_Mask));
@@ -88,7 +89,7 @@ static MDFN_HOT void ExtRAM_RW_DB(uint32 A, uint16* DB)
 
 // TODO: Check mirroring.
 template<typename T, bool IsWrite>
-static MDFN_HOT void ExtBackupRAM_RW_DB(uint32 A, uint16* DB)
+static void ExtBackupRAM_RW_DB(uint32 A, uint16* DB)
 {
  uint8* const ptr = ExtBackupRAM + ((A >> 1) & 0x7FFFF);
 
@@ -109,7 +110,7 @@ static MDFN_HOT void ExtBackupRAM_RW_DB(uint32 A, uint16* DB)
  }
 }
 
-static MDFN_HOT void ROM_Read(uint32 A, uint16* DB)
+static void ROM_Read(uint32 A, uint16* DB)
 {
  // TODO: Check mirroring.
  //printf("ROM: %08x\n", A);
@@ -117,13 +118,13 @@ static MDFN_HOT void ROM_Read(uint32 A, uint16* DB)
 }
 
 template<typename T>
-static MDFN_HOT void DummyRead(uint32 A, uint16* DB)
+static void DummyRead(uint32 A, uint16* DB)
 {
  SS_DBG(SS_DBG_WARNING, "[CART] Unknown %zu-byte read from 0x%08x\n", sizeof(T), A);
 }
 
 template<typename T>
-static MDFN_HOT void DummyWrite(uint32 A, uint16* DB)
+static void DummyWrite(uint32 A, uint16* DB)
 {
  SS_DBG(SS_DBG_WARNING, "[CART] Unknown %zu-byte write to 0x%08x(DB=0x%04x)\n", sizeof(T), A, *DB);
 }

@@ -31,6 +31,108 @@
 	Mem4Mb
 */
 
+#define MDFN_ASSUME_ALIGNED(p, align) (p)
+
+template<typename T>
+static INLINE uint8* ne64_ptr_be(uint64* const base, const size_t byte_offset)
+{
+#ifdef MSB_FIRST
+  return (uint8*)base + (byte_offset &~ (sizeof(T) - 1));
+#else
+  return (uint8*)base + (((byte_offset &~ (sizeof(T) - 1)) ^ (8 - sizeof(T))));
+#endif
+}
+
+template<typename T>
+static INLINE void ne64_wbo_be(uint64* const base, const size_t byte_offset, const T value)
+{
+  uint8* const ptr = ne64_ptr_be<T>(base, byte_offset);
+
+  static_assert(sizeof(T) == 1 || sizeof(T) == 2 || sizeof(T) == 4 || sizeof(T) == 8, "Unsupported type size");
+
+  memcpy(MDFN_ASSUME_ALIGNED(ptr, sizeof(T)), &value, sizeof(T));
+}
+
+template<typename T, typename BT>
+static INLINE uint8* ne16_ptr_be(BT* const base, const size_t byte_offset)
+{
+#ifdef MSB_FIRST
+  return (uint8*)base + (byte_offset &~ (sizeof(T) - 1));
+#else
+  return (uint8*)base + (((byte_offset &~ (sizeof(T) - 1)) ^ (2 - std::min<size_t>(2, sizeof(T)))));
+#endif
+}
+
+template<typename T>
+static INLINE T ne16_rbo_be(const uint16* const base, const size_t byte_offset)
+{
+  uint8* const ptr = ne16_ptr_be<T>(base, byte_offset);
+
+  static_assert(sizeof(T) == 1 || sizeof(T) == 2 || sizeof(T) == 4, "Unsupported type size");
+
+  if(sizeof(T) == 4)
+  {
+   uint16* const ptr16 = (uint16*)ptr;
+   T tmp;
+
+   tmp  = ptr16[0] << 16;
+   tmp |= ptr16[1];
+
+   return tmp;
+  }
+  else
+   return *(T*)ptr;
+}
+
+template<typename T>
+static INLINE void ne16_wbo_be(uint16* const base, const size_t byte_offset, const T value)
+{
+  uint8* const ptr = ne16_ptr_be<T>(base, byte_offset);
+
+  static_assert(sizeof(T) == 1 || sizeof(T) == 2 || sizeof(T) == 4, "Unsupported type size");
+
+  if(sizeof(T) == 4)
+  {
+   uint16* const ptr16 = (uint16*)ptr;
+
+   ptr16[0] = value >> 16;
+   ptr16[1] = value;
+  }
+  else
+   *(T*)ptr = value;
+}
+
+template<typename T>
+static INLINE T ne64_rbo_be(uint64* const base, const size_t byte_offset)
+{
+  uint8* const ptr = ne64_ptr_be<T>(base, byte_offset);
+  T ret;
+
+  static_assert(sizeof(T) == 1 || sizeof(T) == 2 || sizeof(T) == 4, "Unsupported type size");
+
+  memcpy(&ret, MDFN_ASSUME_ALIGNED(ptr, sizeof(T)), sizeof(T));
+
+  return ret;
+}
+
+template<typename T, bool IsWrite>
+static INLINE void ne64_rwbo_be(uint64* const base, const size_t byte_offset, T* value)
+{
+  if(IsWrite)
+   ne64_wbo_be<T>(base, byte_offset, *value);
+  else
+   *value = ne64_rbo_be<T>(base, byte_offset);
+}
+
+template<typename T, bool IsWrite>
+static INLINE void ne16_rwbo_be(uint16* const base, const size_t byte_offset, T* value)
+{
+  if(IsWrite)
+   ne16_wbo_be<T>(base, byte_offset, *value);
+  else
+   *value = ne16_rbo_be<T>(base, byte_offset);
+}
+
 SS_SCSP::SS_SCSP()
 {
  memset(&RAM[0x40000], 0x00, 0x80000);	// Zero out dummy part.
