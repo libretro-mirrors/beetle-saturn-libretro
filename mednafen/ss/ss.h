@@ -22,12 +22,10 @@
 #ifndef __MDFN_SS_SS_H
 #define __MDFN_SS_SS_H
 
-#include <mednafen/types.h>
-#include <mednafen/math_ops.h>
+#include "../mednafen-types.h"
+#include "../math_ops.h"
 #include <stdint.h>
 #include <stdarg.h>
-
-#include <trio/trio.h>
 
 namespace MDFN_IEN_SS
 {
@@ -57,7 +55,7 @@ namespace MDFN_IEN_SS
   SS_DBG_VDP2_REGW = 0x08000,
 
   SS_DBG_SCSP 	   = 0x10000,
-  SS_DBG_SCSP_REGW = 0x20000,
+  SS_DBG_SCSP_REGW = 0x20000
  };
  extern uint32 ss_dbg_mask;
 
