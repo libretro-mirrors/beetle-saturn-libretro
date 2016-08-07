@@ -221,8 +221,9 @@ void CART_Init(const int cart_type)
  }
  else if(cart_type == CART_KOF95 || cart_type == CART_ULTRAMAN)
  {
-  const std::string path = MDFN_MakeFName(MDFNMKF_FIRMWARE, 0, MDFN_GetSettingS((cart_type == CART_KOF95) ? "ss.cart.kof95_path" : "ss.cart.ultraman_path"));
-  FileStream fp(path.c_str(), MODE_READ);
+    const std::string path_cxx = MDFN_GetSettingS((cart_type == CART_KOF95) ? "ss.cart.kof95_path" : "ss.cart.ultraman_path");
+  const char *path = MDFN_MakeFName(MDFNMKF_FIRMWARE, 0, path_cxx.c_str());
+  FileStream fp(path, MODE_READ);
 
   fp.read(ExtRAM, 0x200000);
 

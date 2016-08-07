@@ -10,8 +10,6 @@ void GetFileBase(const char *f);
 // File-inclusion for-read-only path, for PSF and CUE/TOC sheet usage.
 bool MDFN_IsFIROPSafe(const std::string &path);
 
-std::string MDFN_MakeFName(int type, int id1, const char *cd1);
-
 void MDFN_ltrim(std::string &string);
 void MDFN_rtrim(std::string &string);
 void MDFN_trim(std::string &string);
