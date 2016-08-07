@@ -222,7 +222,7 @@ void CART_Init(const int cart_type)
  else if(cart_type == CART_KOF95 || cart_type == CART_ULTRAMAN)
  {
   const std::string path = MDFN_MakeFName(MDFNMKF_FIRMWARE, 0, MDFN_GetSettingS((cart_type == CART_KOF95) ? "ss.cart.kof95_path" : "ss.cart.ultraman_path"));
-  FileStream fp(path, FileStream::MODE_READ);
+  FileStream fp(path.c_str(), MODE_READ);
 
   fp.read(ExtRAM, 0x200000);
 
