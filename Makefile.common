@@ -1,0 +1,212 @@
+SOURCES_CXX :=
+SOURCES_C   :=
+
+DEPS_DIR     := $(CORE_DIR)/deps
+LIBRETRO_DIR := $(CORE_DIR)/libretro-common
+LIBKIRK_DIR  := $(DEPS_DIR)/libkirk
+MEDNAFEN_DIR := $(CORE_DIR)/mednafen
+CORE_EMU_DIR := $(MEDNAFEN_DIR)/psx
+RSXGL_DIR    := $(CORE_DIR)/rustation-libretro/src
+
+ifeq ($(HAVE_OPENGL), 1)
+ifeq ($(GLES), 1)
+GLFLAGS  := -DHAVE_OPENGLES -DHAVE_OPENGLES2
+CFLAGS   += $(GLFLAGS)
+CXXFLAGS += $(GLFLAGS)
+
+SOURCES_C += $(LIBRETRO_DIR)/glsym/glsym_es2.c
+else
+GLFLAGS   := -DHAVE_OPENGL -DCORE
+CFLAGS    += $(GLFLAGS)
+CXXFLAGS  += $(GLFLAGS)
+SOURCES_C += $(LIBRETRO_DIR)/glsym/glsym_gl.c
+endif
+
+SOURCES_C += $(LIBRETRO_DIR)/glsm/glsm.c \
+				 $(LIBRETRO_DIR)/glsym/rglgen.c
+
+SOURCES_CXX += $(CORE_DIR)/rsx/rsx_lib_gl.cpp
+
+### Rust-to-Cpp translated GL renderer
+SOURCES_CXX += \
+	$(RSXGL_DIR)/renderer/GlRenderer.cpp \
+	$(RSXGL_DIR)/retrogl/error.cpp \
+	$(RSXGL_DIR)/retrogl/framebuffer.cpp \
+	$(RSXGL_DIR)/retrogl/program.cpp \
+	$(RSXGL_DIR)/retrogl/shader.cpp \
+	$(RSXGL_DIR)/retrogl/texture.cpp \
+	$(RSXGL_DIR)/retrogl/vertex.cpp \
+	$(RSXGL_DIR)/retrogl/retrogl.cpp
+endif
+
+INCFLAGS := -I$(CORE_DIR) -I$(MEDNAFEN_DIR) -I$(MEDNAFEN_DIR)/include -I$(MEDNAFEN_DIR)/intl -I$(MEDNAFEN_DIR)/hw_sound -I$(MEDNAFEN_DIR)/hw_cpu -I$(MEDNAFEN_DIR)/hw_misc -I$(LIBRETRO_DIR)/include -I$(DEPS_DIR)/zlib
+
+
+SOURCES_C += $(DEPS_DIR)/zlib/adler32.c \
+				 $(DEPS_DIR)/zlib/compress.c \
+				 $(DEPS_DIR)/zlib/crc32.c \
+				 $(DEPS_DIR)/zlib/deflate.c \
+				 $(DEPS_DIR)/zlib/gzclose.c \
+				 $(DEPS_DIR)/zlib/gzlib.c \
+				 $(DEPS_DIR)/zlib/gzread.c \
+				 $(DEPS_DIR)/zlib/gzwrite.c \
+				 $(DEPS_DIR)/zlib/inffast.c \
+				 $(DEPS_DIR)/zlib/inflate.c \
+				 $(DEPS_DIR)/zlib/inftrees.c \
+				 $(DEPS_DIR)/zlib/trees.c \
+				 $(DEPS_DIR)/zlib/uncompr.c \
+				 $(DEPS_DIR)/zlib/zutil.c
+
+ifeq ($(HAVE_GRIFFIN),1)
+SOURCES_CXX += beetle_psx_griffin.cpp \
+	$(CORE_EMU_DIR)/dma.cpp \
+	$(CORE_EMU_DIR)/sio.cpp
+
+SOURCES_C += beetle_psx_griffin_c.c
+endif
+
+ifeq ($(DEBUG), 1)
+	SOURCES_CXX += $(CORE_EMU_DIR)/dis.cpp
+endif
+
+ifeq ($(NEED_THREADING), 1)
+   FLAGS += -DWANT_THREADING -DHAVE_THREADS
+endif
+
+ifeq ($(NEED_CRC32), 1)
+   FLAGS += -DWANT_CRC32
+	SOURCES_C += $(CORE_DIR)/scrc32.c
+endif
+
+ifeq ($(NEED_DEINTERLACER), 1)
+   FLAGS += -DNEED_DEINTERLACER
+endif
+
+ifeq ($(IS_X86), 1)
+FLAGS += -DARCH_X86
+endif
+
+ifeq ($(NEED_BPP), 8)
+FLAGS += -DWANT_8BPP
+endif
+
+ifeq ($(NEED_BPP), 16)
+FLAGS += -DWANT_16BPP
+endif
+
+ifeq ($(NEED_BPP), 32)
+FLAGS += -DWANT_32BPP
+endif
+
+ifeq ($(WANT_NEW_API), 1)
+FLAGS += -DWANT_NEW_API
+endif
+
+ifeq ($(NO_COMPUTED_GOTO), 1)
+FLAGS += -DNO_COMPUTED_GOTO
+endif
+
+ifeq ($(FRONTEND_SUPPORTS_RGB565), 1)
+FLAGS += -DFRONTEND_SUPPORTS_RGB565
+endif
+
+ifeq ($(NEED_CD), 1)
+   FLAGS += -DNEED_CD
+endif
+
+ifeq ($(NEED_TREMOR), 1)
+   FLAGS += -DNEED_TREMOR
+endif
+
+ifneq ($(HAVE_GRIFFIN), 1)
+   SOURCES_CXX += \
+	$(CORE_EMU_DIR)/irq.cpp \
+	$(CORE_EMU_DIR)/timer.cpp \
+	$(CORE_EMU_DIR)/dma.cpp \
+	$(CORE_EMU_DIR)/frontio.cpp \
+	$(CORE_EMU_DIR)/sio.cpp \
+	$(CORE_EMU_DIR)/cpu.cpp \
+	$(CORE_EMU_DIR)/gte.cpp \
+	$(CORE_EMU_DIR)/cdc.cpp \
+	$(CORE_EMU_DIR)/spu.cpp \
+	$(CORE_EMU_DIR)/gpu.cpp \
+	$(CORE_EMU_DIR)/mdec.cpp \
+	$(CORE_EMU_DIR)/input/gamepad.cpp \
+	$(CORE_EMU_DIR)/input/dualanalog.cpp \
+	$(CORE_EMU_DIR)/input/dualshock.cpp \
+	$(CORE_EMU_DIR)/input/justifier.cpp \
+	$(CORE_EMU_DIR)/input/guncon.cpp \
+	$(CORE_EMU_DIR)/input/negcon.cpp \
+	$(CORE_EMU_DIR)/input/memcard.cpp \
+	$(CORE_EMU_DIR)/input/multitap.cpp \
+	$(CORE_EMU_DIR)/input/mouse.cpp
+
+ifeq ($(HAVE_JIT), 1)
+	SOURCES_CXX += $(CORE_EMU_DIR)/decomp.cpp
+endif
+
+SOURCES_C += $(CORE_DIR)/libretro_cbs.c
+
+ifeq ($(NEED_TREMOR), 1)
+   SOURCES_C += $(wildcard $(MEDNAFEN_DIR)/tremor/*.c)
+endif
+
+ifeq ($(NEED_CD), 1)
+SOURCES_CXX += $(MEDNAFEN_DIR)/cdrom/CDAccess.cpp \
+	$(MEDNAFEN_DIR)/cdrom/CDAccess_Image.cpp \
+	$(MEDNAFEN_DIR)/cdrom/CDAccess_CCD.cpp \
+	$(MEDNAFEN_DIR)/cdrom/CDAccess_PBP.cpp \
+	$(MEDNAFEN_DIR)/cdrom/SimpleFIFO.cpp \
+	$(MEDNAFEN_DIR)/cdrom/audioreader.cpp \
+	$(MEDNAFEN_DIR)/cdrom/misc.cpp \
+	$(MEDNAFEN_DIR)/cdrom/cdromif.cpp
+endif
+
+SOURCES_C += \
+	$(MEDNAFEN_DIR)/cdrom/CDUtility.c \
+	$(MEDNAFEN_DIR)/cdrom/galois.c \
+	$(MEDNAFEN_DIR)/cdrom/l-ec.c \
+	$(MEDNAFEN_DIR)/cdrom/lec.c \
+	$(MEDNAFEN_DIR)/cdrom/recover-raw.c \
+	$(MEDNAFEN_DIR)/cdrom/edc_crc32.c
+
+SOURCES_CXX += \
+	$(MEDNAFEN_DIR)/error.cpp \
+	$(MEDNAFEN_DIR)/settings.cpp \
+	$(MEDNAFEN_DIR)/general.cpp \
+	$(MEDNAFEN_DIR)/FileStream.cpp \
+	$(MEDNAFEN_DIR)/MemoryStream.cpp \
+	$(MEDNAFEN_DIR)/Stream.cpp \
+	$(MEDNAFEN_DIR)/state.cpp \
+	$(MEDNAFEN_DIR)/mempatcher.cpp \
+	$(MEDNAFEN_DIR)/video/Deinterlacer.cpp \
+	$(MEDNAFEN_DIR)/video/surface.cpp \
+	$(CORE_DIR)/libretro.cpp
+
+SOURCES_C += \
+	$(MEDNAFEN_DIR)/file.c \
+	$(CORE_DIR)/rsx/rsx_lib_soft.c \
+	$(MEDNAFEN_DIR)/md5.c \
+	$(MEDNAFEN_DIR)/mednafen-endian.c
+
+SOURCES_CXX += $(CORE_DIR)/rsx/rsx_intf.cpp
+
+ifneq ($(STATIC_LINKING), 1)
+SOURCES_C += $(LIBRETRO_DIR)/streams/file_stream.c \
+				 $(LIBRETRO_DIR)/string/stdstring.c
+SOURCES_C += $(LIBKIRK_DIR)/aes.c \
+				 $(LIBKIRK_DIR)/amctrl.c \
+				 $(LIBKIRK_DIR)/bn.c \
+				 $(LIBKIRK_DIR)/des.c \
+				 $(LIBKIRK_DIR)/ec.c \
+				 $(LIBKIRK_DIR)/kirk_engine.c \
+				 $(LIBKIRK_DIR)/sha1.c
+
+ifeq ($(NEED_THREADING), 1)
+SOURCES_C += $(LIBRETRO_DIR)/rthreads/rthreads.c
+endif
+
+endif
+endif
+
+SOURCES_C += $(LIBRETRO_DIR)/file/retro_stat.c
