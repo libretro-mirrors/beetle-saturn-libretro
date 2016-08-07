@@ -34,7 +34,7 @@ NEED_THREADING = 1
 NEED_TREMOR = 1
 CORE_DEFINE := -DWANT_PSX_EMU
 
-TARGET_NAME := mednafen_psx_libretro
+TARGET_NAME := mednafen_saturn_libretro
 
 include ../Makefile.common
 
