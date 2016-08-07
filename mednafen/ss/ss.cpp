@@ -25,7 +25,6 @@
 #include <mednafen/cdrom/cdromif.h>
 #include <mednafen/general.h>
 #include <mednafen/FileStream.h>
-#include <mednafen/compress/GZFileStream.h>
 #include <mednafen/mempatcher.h>
 #include <mednafen/hash/sha256.h>
 #include <mednafen/hash/md5.h>
@@ -1494,8 +1493,7 @@ static MDFN_COLD void LoadCartNV(void)
 
  if(ext)
  {
-  //FileStream nvs(MDFN_MakeFName(MDFNMKF_SAV, 0, ext), FileStream::MODE_READ);
-  GZFileStream nvs(MDFN_MakeFName(MDFNMKF_SAV, 0, ext), GZFileStream::MODE::READ);
+  FileStream nvs(MDFN_MakeFName(MDFNMKF_SAV, 0, ext), FileStream::MODE_READ);
 
   nvs.read(nv_ptr, nv_size);
  }
@@ -1511,8 +1509,7 @@ static MDFN_COLD void SaveCartNV(void)
 
  if(ext)
  {
-  //FileStream nvs(MDFN_MakeFName(MDFNMKF_SAV, 0, ext), FileStream::MODE_WRITE_INPLACE);
-  GZFileStream nvs(MDFN_MakeFName(MDFNMKF_SAV, 0, ext), GZFileStream::MODE::WRITE);
+  FileStream nvs(MDFN_MakeFName(MDFNMKF_SAV, 0, ext), FileStream::MODE_WRITE_INPLACE);
 
   nvs.write(nv_ptr, nv_size);
 
