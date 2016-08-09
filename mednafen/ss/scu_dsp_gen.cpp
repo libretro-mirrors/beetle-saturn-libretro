@@ -97,7 +97,7 @@ static INLINE void CalcZS48(uint64 val)
   //  const unsigned y_op = (TA_instr >> 17) & 0x7;
 
 template<const bool looped, const unsigned alu_op, const unsigned x_op, const unsigned y_op, const unsigned d1_op>
-static NO_INLINE NO_CLONE void GeneralInstr(void)
+static NO_INLINE void GeneralInstr(void)
 {
  const uint32 instr = DSP_InstrPre<looped>();
  //

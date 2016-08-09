@@ -29,7 +29,7 @@ namespace MDFN_IEN_SS
 #include "scu_dsp_common.inc"
 
 template<bool looped, unsigned cond>
-static NO_INLINE NO_CLONE void JMPInstr(void)
+static NO_INLINE void JMPInstr(void)
 {
  const uint32 instr = DSP_InstrPre<looped>();
 

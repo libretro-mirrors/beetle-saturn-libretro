@@ -51,7 +51,9 @@ bool GetLine(const int line, uint16* buf, unsigned w, uint32 rot_x, uint32 rot_y
 uint8 PeekVRAM(const uint32 addr);
 void PokeVRAM(const uint32 addr, const uint8 val);
 
-void MakeDump(const std::string& path) MDFN_COLD;
+#ifdef HAVE_DEBUG
+void MakeDump(const std::string& path);
+#endif
 }
 
 }

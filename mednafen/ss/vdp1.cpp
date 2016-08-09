@@ -836,12 +836,14 @@ void PokeVRAM(const uint32 addr, const uint8 val)
 
 void MakeDump(const std::string& path)
 {
- FileStream fp(path, FileStream::MODE_WRITE);
+#ifdef HAVE_DEBUG
+ FileStream fp(path, MODE_WRITE);
 
  for(unsigned i = 0; i < 0x40000; i++)
   fp.print_format("0x%04x, ", VRAM[i]);
 
  fp.close();
+#endif
 }
 
 }

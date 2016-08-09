@@ -29,7 +29,7 @@ namespace MDFN_IEN_SS
 #include "scu_dsp_common.inc"
 
 template<bool looped, unsigned op>
-static NO_INLINE NO_CLONE void MiscInstr(void)
+static NO_INLINE void MiscInstr(void)
 {
  DSP_InstrPre<looped>();
 

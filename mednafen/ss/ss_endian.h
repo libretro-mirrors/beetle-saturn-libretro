@@ -1,3 +1,5 @@
+#include <algorithm>
+
 #define MDFN_ASSUME_ALIGNED(p, align) (p)
 
 #ifdef MSB_FIRST

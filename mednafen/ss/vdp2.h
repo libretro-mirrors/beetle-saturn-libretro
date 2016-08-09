@@ -59,7 +59,10 @@ uint32 GetRegister(const unsigned id, char* const special, const uint32 special_
 void SetRegister(const unsigned id, const uint32 value);
 uint8 PeekVRAM(const uint32 addr);
 void PokeVRAM(const uint32 addr, const uint8 val);
+
+#ifdef HAVE_DEBUG
 void MakeDump(const std::string& path) MDFN_COLD;
+#endif
 
 INLINE uint32 PeekLine(void) { extern int32 VCounter; return VCounter; }
 INLINE uint32 PeekHPos(void) { extern int32 HCounter; return HCounter; }

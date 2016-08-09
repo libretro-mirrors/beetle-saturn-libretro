@@ -25,6 +25,7 @@
 // SMPC clock change code.
 
 #include "ss.h"
+#include "ss_endian.h"
 #include <mednafen/mednafen.h>
 #include <mednafen/general.h>
 #include <mednafen/FileStream.h>
@@ -899,6 +900,7 @@ void SetLayerEnableMask(uint64 mask)
  VDP2REND_SetLayerEnableMask(mask);
 }
 
+#ifdef HAVE_DEBUG
 void MakeDump(const std::string& path)
 {
  FileStream fp(path, FileStream::MODE_WRITE);
@@ -920,7 +922,9 @@ void MakeDump(const std::string& path)
 
  fp.close();
 }
+#endif
 
 }
 
 }
+

@@ -1340,7 +1340,8 @@ static void Load(MDFNFILE* fp)
    {
       uint8 tmp[2];
 
-      fp->read(tmp, 2);
+      file_read(fp, tmp, 2, 1);
+      //fp->read(tmp, 2);
 
       *(uint16*)((uint8*)WorkRAMH + 0x4000 + i) = (tmp[0] << 8) | (tmp[1] << 0);
    }
