@@ -26,7 +26,6 @@
 #include <mednafen/general.h>
 #include <mednafen/Stream.h>
 #include <mednafen/cdrom/CDUtility.h>
-using namespace CDUtility;
 
 #include "smpc.h"
 #include "sound.h"

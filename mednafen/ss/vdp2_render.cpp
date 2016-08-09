@@ -31,6 +31,7 @@
 #include "vdp2_render.h"
 
 #include <retro_miscellaneous.h>
+#include <rthreads/rthreads.h>
 #include <array>
 #include <atomic>
 #include <algorithm>
@@ -3057,7 +3058,7 @@ static NO_INLINE void DrawLine(const uint16 out_line, const uint16 vdp2_line, co
 //
 //
 //
-static MDFN_Thread* RThread = NULL;
+static sthread_t *RThread = NULL;
 
 enum
 {
@@ -3099,7 +3100,7 @@ static INLINE void WWQ(uint16 command, uint32 arg32 = 0, uint16 arg16 = 0)
  WQ_InCount.fetch_add(1, std::memory_order_release);
 }
 
-static int RThreadEntry(void* data)
+static void RThreadEntry(void* data)
 {
  bool Running = true;
 
@@ -3156,8 +3157,6 @@ static int RThreadEntry(void* data)
   WQ_ReadPos = (WQ_ReadPos + 1) % WQ.size();
   WQ_InCount.fetch_sub(1, std::memory_order_release);
  }
-
- return 0;
 }
 
 
@@ -3179,7 +3178,7 @@ void VDP2REND_Init(const bool IsPAL, const int sls, const int sle)
  WQ_WritePos = 0;
  WQ_InCount.store(0, std::memory_order_release); 
  DrawCounter.store(0, std::memory_order_release);
- RThread = MDFND_CreateThread(RThreadEntry, NULL);
+ RThread = sthread_create(RThreadEntry, NULL);
 }
 
 void VDP2REND_FillVideoParams(MDFNGI* gi)
@@ -3206,7 +3205,7 @@ void VDP2REND_Kill(void)
  if(RThread != NULL)
  {
   WWQ(COMMAND_EXIT);
-  MDFND_WaitThread(RThread, NULL);
+  sthread_join(RThread);
  }
 }
 
