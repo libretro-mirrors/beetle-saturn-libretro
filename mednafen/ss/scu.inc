@@ -49,7 +49,9 @@
  (writes often take longer on the Saturn if the DMA write address doesn't increment).
 */
 
+#include <compat/intrinsics.h>
 #include "scu_dsp_common.inc"
+#include "ss_endian.h"
 
 static void DSP_Reset(bool powering_up);
 
@@ -155,8 +157,8 @@ static INLINE void RecalcMasterIntOut(void)
    0x0
   };
   const uint32 ipmd = IPending &~ (int16)IMask;
-  unsigned wi = MDFN_tzcount16(ipmd & 0xFFFF);
-  unsigned we = MDFN_tzcount16(ipmd >> 16);
+  unsigned wi = ((ipmd & 0xFFFF) <= 0) ? 16 : compat_ctz(ipmd & 0xFFFF);
+  unsigned we = ((ipmd >> 16)    <= 0) ? 16 : compat_ctz(ipmd >> 16);
   unsigned olev, ovec, bpos;
 
   olev = internal_tab[wi];
@@ -1618,7 +1620,7 @@ void DSP_Init(void)
 }
 
 template<bool looped, bool hold, bool format, bool dir, unsigned drw>
-static NO_INLINE NO_CLONE void DMAInstr(void)
+static NO_INLINE void DMAInstr(void)
 {
  const uint32 instr = DSP_InstrPre<looped>();
  const unsigned add_mode = (instr >> 15) & 0x7;

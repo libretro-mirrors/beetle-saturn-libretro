@@ -2214,8 +2214,10 @@ static NO_INLINE void DoIDIF(void)
 template<unsigned which, int DebugMode, bool delayed>
 INLINE void SH7095::Branch(uint32 target)
 {
+#ifdef HAVE_DEBUG
  if(DebugMode > 0)
   DBG_AddBranchTrace(which, target, -1);
+#endif
 
  PC = target;
 
@@ -2295,8 +2297,10 @@ uint32 NO_INLINE SH7095::Exception(const unsigned exnum, const unsigned vecnum)
   timestamp++;
  }
 
+#ifdef HAVE_DEBUG
  if(DebugMode)
   DBG_AddBranchTrace(this - CPU, new_PC, exnum, vecnum);
+#endif
 
  //SS_DBG(SS_DBG_WARNING | SS_DBG_SH2, "[%s] Exception %u, vecnum=%u, saved PC=0x%08x --- New PC=0x%08x\n", cpu_name, exnum, vecnum, PC, new_PC);
 
@@ -4250,7 +4254,7 @@ INLINE uint32 SH7095::GetRegister(const unsigned id, char* const special, const 
 	ret = VCRC;
 	if(special)
 	{
-	 trio_snprintf(special, special_len, "FIC: 0x%02x, FOC: 0x%02x", (ret >> 8) & 0x7F, ret & 0x7F);
+	 snprintf(special, special_len, "FIC: 0x%02x, FOC: 0x%02x", (ret >> 8) & 0x7F, ret & 0x7F);
 	}
 	break;
 
@@ -4495,7 +4499,7 @@ void MDFN_COLD SH7095::Disassemble(const uint16 instr, const uint32 PC, char* bu
  #define END_DIS_OP } break;
 
  default:
-	trio_sprintf(buffer, ".word 0x%04x", instr);
+	sprintf(buffer, ".word 0x%04x", instr);
 	break;
 
  //
@@ -4505,7 +4509,7 @@ void MDFN_COLD SH7095::Disassemble(const uint16 instr, const uint32 PC, char* bu
 	const unsigned n = instr_nyb2;
 	const int32 imm = (int8)instr;
 
-	trio_sprintf(buffer, "MOV     #%d,R%u", imm, n);
+	sprintf(buffer, "MOV     #%d,R%u", imm, n);
  END_DIS_OP
 
 
@@ -4517,7 +4521,7 @@ void MDFN_COLD SH7095::Disassemble(const uint16 instr, const uint32 PC, char* bu
 	const unsigned d = (instr >> 0) & 0xff;
 	const uint32 ea = PC + (d << 1);
 
-	trio_sprintf(buffer, "MOV.W   @(0x%03x,PC),R%u ! 0x%04x", (d << 1), n, DisPeek16(ea));
+	sprintf(buffer, "MOV.W   @(0x%03x,PC),R%u ! 0x%04x", (d << 1), n, DisPeek16(ea));
  END_DIS_OP
 
 
@@ -4529,7 +4533,7 @@ void MDFN_COLD SH7095::Disassemble(const uint16 instr, const uint32 PC, char* bu
 	const unsigned d = (instr >> 0) & 0xff;
 	const uint32 ea = (PC &~ 0x3) + (d << 2);
 
-	trio_sprintf(buffer, "MOV.L   @(0x%03x,PC),R%u ! 0x%08x", (d << 2), n, DisPeek32(ea));
+	sprintf(buffer, "MOV.L   @(0x%03x,PC),R%u ! 0x%08x", (d << 2), n, DisPeek32(ea));
  END_DIS_OP
 
 
@@ -4540,7 +4544,7 @@ void MDFN_COLD SH7095::Disassemble(const uint16 instr, const uint32 PC, char* bu
 	const unsigned n = instr_nyb2;
 	const unsigned m = instr_nyb1;
 
-	trio_sprintf(buffer, "MOV     R%u,R%u", m, n);
+	sprintf(buffer, "MOV     R%u,R%u", m, n);
  END_DIS_OP
 
 
@@ -4551,7 +4555,7 @@ void MDFN_COLD SH7095::Disassemble(const uint16 instr, const uint32 PC, char* bu
 	const unsigned n = instr_nyb2;
 	const unsigned m = instr_nyb1;
 
-	trio_sprintf(buffer, "MOV.B   R%u,@R%u", m, n);
+	sprintf(buffer, "MOV.B   R%u,@R%u", m, n);
  END_DIS_OP
 
 
@@ -4562,7 +4566,7 @@ void MDFN_COLD SH7095::Disassemble(const uint16 instr, const uint32 PC, char* bu
 	const unsigned n = instr_nyb2;
 	const unsigned m = instr_nyb1;
 
-	trio_sprintf(buffer, "MOV.W   R%u,@R%u", m, n);
+	sprintf(buffer, "MOV.W   R%u,@R%u", m, n);
  END_DIS_OP
 
 
@@ -4573,7 +4577,7 @@ void MDFN_COLD SH7095::Disassemble(const uint16 instr, const uint32 PC, char* bu
 	const unsigned n = instr_nyb2;
 	const unsigned m = instr_nyb1;
 
-	trio_sprintf(buffer, "MOV.L   R%u,@R%u", m, n);
+	sprintf(buffer, "MOV.L   R%u,@R%u", m, n);
  END_DIS_OP
 
 
@@ -4584,7 +4588,7 @@ void MDFN_COLD SH7095::Disassemble(const uint16 instr, const uint32 PC, char* bu
 	const unsigned n = instr_nyb2;
 	const unsigned m = instr_nyb1;
 
-	trio_sprintf(buffer, "MOV.B   @R%u,R%u", m, n);
+	sprintf(buffer, "MOV.B   @R%u,R%u", m, n);
  END_DIS_OP
 
 
@@ -4595,7 +4599,7 @@ void MDFN_COLD SH7095::Disassemble(const uint16 instr, const uint32 PC, char* bu
 	const unsigned n = instr_nyb2;
 	const unsigned m = instr_nyb1;
 
-	trio_sprintf(buffer, "MOV.W   @R%u,R%u", m, n);
+	sprintf(buffer, "MOV.W   @R%u,R%u", m, n);
  END_DIS_OP
 
 
@@ -4606,7 +4610,7 @@ void MDFN_COLD SH7095::Disassemble(const uint16 instr, const uint32 PC, char* bu
 	const unsigned n = instr_nyb2;
 	const unsigned m = instr_nyb1;
 
-	trio_sprintf(buffer, "MOV.L   @R%u,R%u", m, n);
+	sprintf(buffer, "MOV.L   @R%u,R%u", m, n);
  END_DIS_OP
 
 
@@ -4617,7 +4621,7 @@ void MDFN_COLD SH7095::Disassemble(const uint16 instr, const uint32 PC, char* bu
 	const unsigned n = instr_nyb2;
 	const unsigned m = instr_nyb1;
 
-	trio_sprintf(buffer, "MOV.B   R%u,@-R%u", m, n);
+	sprintf(buffer, "MOV.B   R%u,@-R%u", m, n);
  END_DIS_OP
 
 
@@ -4628,7 +4632,7 @@ void MDFN_COLD SH7095::Disassemble(const uint16 instr, const uint32 PC, char* bu
 	const unsigned n = instr_nyb2;
 	const unsigned m = instr_nyb1;
 
-	trio_sprintf(buffer, "MOV.W   R%u,@-R%u", m, n);
+	sprintf(buffer, "MOV.W   R%u,@-R%u", m, n);
  END_DIS_OP
 
 
@@ -4639,7 +4643,7 @@ void MDFN_COLD SH7095::Disassemble(const uint16 instr, const uint32 PC, char* bu
 	const unsigned n = instr_nyb2;
 	const unsigned m = instr_nyb1;
 
-	trio_sprintf(buffer, "MOV.L   R%u,@-R%u", m, n);
+	sprintf(buffer, "MOV.L   R%u,@-R%u", m, n);
  END_DIS_OP
 
 
@@ -4650,7 +4654,7 @@ void MDFN_COLD SH7095::Disassemble(const uint16 instr, const uint32 PC, char* bu
 	const unsigned n = instr_nyb2;
 	const unsigned m = instr_nyb1;
 
-	trio_sprintf(buffer, "MOV.B   @R%u+,R%u", m, n);
+	sprintf(buffer, "MOV.B   @R%u+,R%u", m, n);
  END_DIS_OP
 
 
@@ -4661,7 +4665,7 @@ void MDFN_COLD SH7095::Disassemble(const uint16 instr, const uint32 PC, char* bu
 	const unsigned n = instr_nyb2;
 	const unsigned m = instr_nyb1;
 
-	trio_sprintf(buffer, "MOV.W   @R%u+,R%u", m, n);
+	sprintf(buffer, "MOV.W   @R%u+,R%u", m, n);
  END_DIS_OP
 
 
@@ -4672,7 +4676,7 @@ void MDFN_COLD SH7095::Disassemble(const uint16 instr, const uint32 PC, char* bu
 	const unsigned n = instr_nyb2;
 	const unsigned m = instr_nyb1;
 
-	trio_sprintf(buffer, "MOV.L   @R%u+,R%u", m, n);
+	sprintf(buffer, "MOV.L   @R%u+,R%u", m, n);
  END_DIS_OP
 
 
@@ -4683,7 +4687,7 @@ void MDFN_COLD SH7095::Disassemble(const uint16 instr, const uint32 PC, char* bu
 	const unsigned n = instr_nyb1;
 	const unsigned d = (instr >> 0) & 0xf;
 
-	trio_sprintf(buffer, "MOV.B   R0,@(%u,R%u)", (d << 0), n);
+	sprintf(buffer, "MOV.B   R0,@(%u,R%u)", (d << 0), n);
  END_DIS_OP
 
 
@@ -4694,7 +4698,7 @@ void MDFN_COLD SH7095::Disassemble(const uint16 instr, const uint32 PC, char* bu
 	const unsigned n = instr_nyb1;
 	const unsigned d = (instr >> 0) & 0xf;
 
-	trio_sprintf(buffer, "MOV.W   R0,@(%u,R%u)", (d << 1), n);
+	sprintf(buffer, "MOV.W   R0,@(%u,R%u)", (d << 1), n);
  END_DIS_OP
 
 
@@ -4706,7 +4710,7 @@ void MDFN_COLD SH7095::Disassemble(const uint16 instr, const uint32 PC, char* bu
 	const unsigned m = instr_nyb1;
 	const unsigned d = (instr >> 0) & 0xf;
 
-	trio_sprintf(buffer, "MOV.L   R%u,@(%u,R%u)", m, (d << 2), n);
+	sprintf(buffer, "MOV.L   R%u,@(%u,R%u)", m, (d << 2), n);
  END_DIS_OP
 
 
@@ -4717,7 +4721,7 @@ void MDFN_COLD SH7095::Disassemble(const uint16 instr, const uint32 PC, char* bu
 	const unsigned m = instr_nyb1;
 	const unsigned d = (instr >> 0) & 0xf;
 
-	trio_sprintf(buffer, "MOV.B   @(%u,R%u),R0", (d << 0), m);
+	sprintf(buffer, "MOV.B   @(%u,R%u),R0", (d << 0), m);
  END_DIS_OP
 
 
@@ -4728,7 +4732,7 @@ void MDFN_COLD SH7095::Disassemble(const uint16 instr, const uint32 PC, char* bu
 	const unsigned m = instr_nyb1;
 	const unsigned d = (instr >> 0) & 0xf;
 
-	trio_sprintf(buffer, "MOV.W   @(%u,R%u),R0", (d << 1), m);
+	sprintf(buffer, "MOV.W   @(%u,R%u),R0", (d << 1), m);
  END_DIS_OP
 
 
@@ -4740,7 +4744,7 @@ void MDFN_COLD SH7095::Disassemble(const uint16 instr, const uint32 PC, char* bu
 	const unsigned m = instr_nyb1;
 	const unsigned d = (instr >> 0) & 0xf;
 
-	trio_sprintf(buffer, "MOV.L   @(%u,R%u),R%u", (d << 2), m, n);
+	sprintf(buffer, "MOV.L   @(%u,R%u),R%u", (d << 2), m, n);
  END_DIS_OP
 
 
@@ -4751,7 +4755,7 @@ void MDFN_COLD SH7095::Disassemble(const uint16 instr, const uint32 PC, char* bu
 	const unsigned n = instr_nyb2;
 	const unsigned m = instr_nyb1;
 
-	trio_sprintf(buffer, "MOV.B   R%u,@(R0,R%u)", m, n);
+	sprintf(buffer, "MOV.B   R%u,@(R0,R%u)", m, n);
  END_DIS_OP
 
 
@@ -4762,7 +4766,7 @@ void MDFN_COLD SH7095::Disassemble(const uint16 instr, const uint32 PC, char* bu
 	const unsigned n = instr_nyb2;
 	const unsigned m = instr_nyb1;
 
-	trio_sprintf(buffer, "MOV.W   R%u,@(R0,R%u)", m, n);
+	sprintf(buffer, "MOV.W   R%u,@(R0,R%u)", m, n);
  END_DIS_OP
 
 
@@ -4773,7 +4777,7 @@ void MDFN_COLD SH7095::Disassemble(const uint16 instr, const uint32 PC, char* bu
 	const unsigned n = instr_nyb2;
 	const unsigned m = instr_nyb1;
 
-	trio_sprintf(buffer, "MOV.L   R%u,@(R0,R%u)", m, n);
+	sprintf(buffer, "MOV.L   R%u,@(R0,R%u)", m, n);
  END_DIS_OP
 
 
@@ -4784,7 +4788,7 @@ void MDFN_COLD SH7095::Disassemble(const uint16 instr, const uint32 PC, char* bu
 	const unsigned n = instr_nyb2;
 	const unsigned m = instr_nyb1;
 
-	trio_sprintf(buffer, "MOV.B   @(R0,R%u),R%u", m, n);
+	sprintf(buffer, "MOV.B   @(R0,R%u),R%u", m, n);
  END_DIS_OP
 
 
@@ -4795,7 +4799,7 @@ void MDFN_COLD SH7095::Disassemble(const uint16 instr, const uint32 PC, char* bu
 	const unsigned n = instr_nyb2;
 	const unsigned m = instr_nyb1;
 
-	trio_sprintf(buffer, "MOV.W   @(R0,R%u),R%u", m, n);
+	sprintf(buffer, "MOV.W   @(R0,R%u),R%u", m, n);
  END_DIS_OP
 
 
@@ -4806,7 +4810,7 @@ void MDFN_COLD SH7095::Disassemble(const uint16 instr, const uint32 PC, char* bu
 	const unsigned n = instr_nyb2;
 	const unsigned m = instr_nyb1;
 
-	trio_sprintf(buffer, "MOV.L   @(R0,R%u),R%u", m, n);
+	sprintf(buffer, "MOV.L   @(R0,R%u),R%u", m, n);
  END_DIS_OP
 
 
@@ -4816,7 +4820,7 @@ void MDFN_COLD SH7095::Disassemble(const uint16 instr, const uint32 PC, char* bu
  BEGIN_DIS_OP(MOV_B_REG0_GBRINDIRDISP)
 	const unsigned d = (instr >> 0) & 0xff;
 
-	trio_sprintf(buffer, "MOV.B   R0,@(%u,GBR)", (d << 0));
+	sprintf(buffer, "MOV.B   R0,@(%u,GBR)", (d << 0));
  END_DIS_OP
 
 
@@ -4826,7 +4830,7 @@ void MDFN_COLD SH7095::Disassemble(const uint16 instr, const uint32 PC, char* bu
  BEGIN_DIS_OP(MOV_W_REG0_GBRINDIRDISP)
 	const unsigned d = (instr >> 0) & 0xff;
 
-	trio_sprintf(buffer, "MOV.W   R0,@(%u,GBR)", (d << 1));
+	sprintf(buffer, "MOV.W   R0,@(%u,GBR)", (d << 1));
  END_DIS_OP
 
 
@@ -4836,7 +4840,7 @@ void MDFN_COLD SH7095::Disassemble(const uint16 instr, const uint32 PC, char* bu
  BEGIN_DIS_OP(MOV_L_REG0_GBRINDIRDISP)
 	const unsigned d = (instr >> 0) & 0xff;
 
-	trio_sprintf(buffer, "MOV.L   R0,@(%u,GBR)", (d << 2));
+	sprintf(buffer, "MOV.L   R0,@(%u,GBR)", (d << 2));
  END_DIS_OP
 
 
@@ -4846,7 +4850,7 @@ void MDFN_COLD SH7095::Disassemble(const uint16 instr, const uint32 PC, char* bu
  BEGIN_DIS_OP(MOV_B_GBRINDIRDISP_REG0)
 	const unsigned d = (instr >> 0) & 0xff;
 
-	trio_sprintf(buffer, "MOV.B   @(%u,GBR),R0", (d << 0));
+	sprintf(buffer, "MOV.B   @(%u,GBR),R0", (d << 0));
  END_DIS_OP
 
 
@@ -4856,7 +4860,7 @@ void MDFN_COLD SH7095::Disassemble(const uint16 instr, const uint32 PC, char* bu
  BEGIN_DIS_OP(MOV_W_GBRINDIRDISP_REG0)
 	const unsigned d = (instr >> 0) & 0xff;
 
-	trio_sprintf(buffer, "MOV.W   @(%u,GBR),R0", (d << 1));
+	sprintf(buffer, "MOV.W   @(%u,GBR),R0", (d << 1));
  END_DIS_OP
 
 
@@ -4866,7 +4870,7 @@ void MDFN_COLD SH7095::Disassemble(const uint16 instr, const uint32 PC, char* bu
  BEGIN_DIS_OP(MOV_L_GBRINDIRDISP_REG0)
 	const unsigned d = (instr >> 0) & 0xff;
 
-	trio_sprintf(buffer, "MOV.L   @(%u,GBR),R0", (d << 2));
+	sprintf(buffer, "MOV.L   @(%u,GBR),R0", (d << 2));
  END_DIS_OP
 
 
@@ -4876,7 +4880,7 @@ void MDFN_COLD SH7095::Disassemble(const uint16 instr, const uint32 PC, char* bu
  BEGIN_DIS_OP(MOVA_PCREL_REG0)
 	const unsigned d = (instr >> 0) & 0xff;
 
-	trio_sprintf(buffer, "MOVA    @(%u,PC),R0", (d << 2));
+	sprintf(buffer, "MOVA    @(%u,PC),R0", (d << 2));
  END_DIS_OP
 
 
@@ -4886,7 +4890,7 @@ void MDFN_COLD SH7095::Disassemble(const uint16 instr, const uint32 PC, char* bu
  BEGIN_DIS_OP(MOVT_REG)
 	const unsigned n = instr_nyb2;
 
-	trio_sprintf(buffer, "MOVT    R%u", n);
+	sprintf(buffer, "MOVT    R%u", n);
  END_DIS_OP
 
 
@@ -4897,7 +4901,7 @@ void MDFN_COLD SH7095::Disassemble(const uint16 instr, const uint32 PC, char* bu
 	const unsigned n = instr_nyb2;
 	const unsigned m = instr_nyb1;
 
-	trio_sprintf(buffer, "SWAP.B  R%u,R%u", m, n);
+	sprintf(buffer, "SWAP.B  R%u,R%u", m, n);
  END_DIS_OP
 
 
@@ -4908,7 +4912,7 @@ void MDFN_COLD SH7095::Disassemble(const uint16 instr, const uint32 PC, char* bu
 	const unsigned n = instr_nyb2;
 	const unsigned m = instr_nyb1;
 
-	trio_sprintf(buffer, "SWAP.W  R%u,R%u", m, n);
+	sprintf(buffer, "SWAP.W  R%u,R%u", m, n);
  END_DIS_OP
 
 
@@ -4919,7 +4923,7 @@ void MDFN_COLD SH7095::Disassemble(const uint16 instr, const uint32 PC, char* bu
 	const unsigned n = instr_nyb2;
 	const unsigned m = instr_nyb1;
 
-	trio_sprintf(buffer, "XTRCT   R%u,R%u", m, n);
+	sprintf(buffer, "XTRCT   R%u,R%u", m, n);
  END_DIS_OP
 
 
@@ -4930,7 +4934,7 @@ void MDFN_COLD SH7095::Disassemble(const uint16 instr, const uint32 PC, char* bu
 	const unsigned n = instr_nyb2;
 	const unsigned m = instr_nyb1;
 
-	trio_sprintf(buffer, "ADD     R%u,R%u", m, n);
+	sprintf(buffer, "ADD     R%u,R%u", m, n);
  END_DIS_OP
 
 
@@ -4941,7 +4945,7 @@ void MDFN_COLD SH7095::Disassemble(const uint16 instr, const uint32 PC, char* bu
 	const unsigned n = instr_nyb2;
 	const int32 imm = (int8)instr;
 
-	trio_sprintf(buffer, "ADD     #%d,R%u", imm, n);
+	sprintf(buffer, "ADD     #%d,R%u", imm, n);
  END_DIS_OP
 
 
@@ -4952,7 +4956,7 @@ void MDFN_COLD SH7095::Disassemble(const uint16 instr, const uint32 PC, char* bu
 	const unsigned n = instr_nyb2;
 	const unsigned m = instr_nyb1;
 
-	trio_sprintf(buffer, "ADDC    R%u,R%u", m, n);
+	sprintf(buffer, "ADDC    R%u,R%u", m, n);
  END_DIS_OP
 
 
@@ -4963,7 +4967,7 @@ void MDFN_COLD SH7095::Disassemble(const uint16 instr, const uint32 PC, char* bu
 	const unsigned n = instr_nyb2;
 	const unsigned m = instr_nyb1;
 
-	trio_sprintf(buffer, "ADDV    R%u,R%u", m, n);
+	sprintf(buffer, "ADDV    R%u,R%u", m, n);
  END_DIS_OP
 
 
@@ -4973,7 +4977,7 @@ void MDFN_COLD SH7095::Disassemble(const uint16 instr, const uint32 PC, char* bu
  BEGIN_DIS_OP(CMP_EQ_IMM_REG0)
 	const int32 imm = (int8)instr;
 
-	trio_sprintf(buffer, "CMP/EQ  #%d,R0", imm);
+	sprintf(buffer, "CMP/EQ  #%d,R0", imm);
  END_DIS_OP
 
 
@@ -4984,7 +4988,7 @@ void MDFN_COLD SH7095::Disassemble(const uint16 instr, const uint32 PC, char* bu
 	const unsigned n = instr_nyb2;
 	const unsigned m = instr_nyb1;
 
-	trio_sprintf(buffer, "CMP/EQ  R%u,R%u", m, n);
+	sprintf(buffer, "CMP/EQ  R%u,R%u", m, n);
  END_DIS_OP
 
 
@@ -4995,7 +4999,7 @@ void MDFN_COLD SH7095::Disassemble(const uint16 instr, const uint32 PC, char* bu
 	const unsigned n = instr_nyb2;
 	const unsigned m = instr_nyb1;
 
-	trio_sprintf(buffer, "CMP/HS  R%u,R%u", m, n);
+	sprintf(buffer, "CMP/HS  R%u,R%u", m, n);
  END_DIS_OP
 
 
@@ -5006,7 +5010,7 @@ void MDFN_COLD SH7095::Disassemble(const uint16 instr, const uint32 PC, char* bu
 	const unsigned n = instr_nyb2;
 	const unsigned m = instr_nyb1;
 
-	trio_sprintf(buffer, "CMP/GE  R%u,R%u", m, n);
+	sprintf(buffer, "CMP/GE  R%u,R%u", m, n);
  END_DIS_OP
 
 
@@ -5017,7 +5021,7 @@ void MDFN_COLD SH7095::Disassemble(const uint16 instr, const uint32 PC, char* bu
 	const unsigned n = instr_nyb2;
 	const unsigned m = instr_nyb1;
 
-	trio_sprintf(buffer, "CMP/HI  R%u,R%u", m, n);
+	sprintf(buffer, "CMP/HI  R%u,R%u", m, n);
  END_DIS_OP
 
 
@@ -5028,7 +5032,7 @@ void MDFN_COLD SH7095::Disassemble(const uint16 instr, const uint32 PC, char* bu
 	const unsigned n = instr_nyb2;
 	const unsigned m = instr_nyb1;
 
-	trio_sprintf(buffer, "CMP/GT  R%u,R%u", m, n);
+	sprintf(buffer, "CMP/GT  R%u,R%u", m, n);
  END_DIS_OP
 
 
@@ -5038,7 +5042,7 @@ void MDFN_COLD SH7095::Disassemble(const uint16 instr, const uint32 PC, char* bu
  BEGIN_DIS_OP(CMP_PZ_REG)
 	const unsigned n = instr_nyb2;
 
-	trio_sprintf(buffer, "CMP/PZ  R%u", n);
+	sprintf(buffer, "CMP/PZ  R%u", n);
  END_DIS_OP
 
 
@@ -5048,7 +5052,7 @@ void MDFN_COLD SH7095::Disassemble(const uint16 instr, const uint32 PC, char* bu
  BEGIN_DIS_OP(CMP_PL_REG)
 	const unsigned n = instr_nyb2;
 
-	trio_sprintf(buffer, "CMP/PL  R%u", n);
+	sprintf(buffer, "CMP/PL  R%u", n);
  END_DIS_OP
 
 
@@ -5059,7 +5063,7 @@ void MDFN_COLD SH7095::Disassemble(const uint16 instr, const uint32 PC, char* bu
 	const unsigned n = instr_nyb2;
 	const unsigned m = instr_nyb1;
 
-	trio_sprintf(buffer, "CMP/STR R%u,R%u", m, n);
+	sprintf(buffer, "CMP/STR R%u,R%u", m, n);
  END_DIS_OP
 
 
@@ -5070,7 +5074,7 @@ void MDFN_COLD SH7095::Disassemble(const uint16 instr, const uint32 PC, char* bu
 	const unsigned n = instr_nyb2;
 	const unsigned m = instr_nyb1;
 
-	trio_sprintf(buffer, "DIV1    R%u,R%u", m, n);
+	sprintf(buffer, "DIV1    R%u,R%u", m, n);
  END_DIS_OP
 
 
@@ -5081,7 +5085,7 @@ void MDFN_COLD SH7095::Disassemble(const uint16 instr, const uint32 PC, char* bu
 	const unsigned n = instr_nyb2;
 	const unsigned m = instr_nyb1;
 
-	trio_sprintf(buffer, "DIV0S   R%u,R%u", m, n);
+	sprintf(buffer, "DIV0S   R%u,R%u", m, n);
  END_DIS_OP
 
 
@@ -5089,7 +5093,7 @@ void MDFN_COLD SH7095::Disassemble(const uint16 instr, const uint32 PC, char* bu
  // DIV0U 
  //
  BEGIN_DIS_OP(DIV0U)
-	trio_sprintf(buffer, "DIV0U");
+	sprintf(buffer, "DIV0U");
  END_DIS_OP
 
 
@@ -5100,7 +5104,7 @@ void MDFN_COLD SH7095::Disassemble(const uint16 instr, const uint32 PC, char* bu
 	const unsigned n = instr_nyb2;
 	const unsigned m = instr_nyb1;
 
-	trio_sprintf(buffer, "DMULS.L R%u,R%u", m, n);
+	sprintf(buffer, "DMULS.L R%u,R%u", m, n);
  END_DIS_OP
 
 
@@ -5111,7 +5115,7 @@ void MDFN_COLD SH7095::Disassemble(const uint16 instr, const uint32 PC, char* bu
 	const unsigned n = instr_nyb2;
 	const unsigned m = instr_nyb1;
 
-	trio_sprintf(buffer, "DMULU.L R%u,R%u", m, n);
+	sprintf(buffer, "DMULU.L R%u,R%u", m, n);
  END_DIS_OP
 
 
@@ -5121,7 +5125,7 @@ void MDFN_COLD SH7095::Disassemble(const uint16 instr, const uint32 PC, char* bu
  BEGIN_DIS_OP(DT)
 	const unsigned n = instr_nyb2;
 
-	trio_sprintf(buffer, "DT      R%u", n);
+	sprintf(buffer, "DT      R%u", n);
  END_DIS_OP
 
 
@@ -5132,7 +5136,7 @@ void MDFN_COLD SH7095::Disassemble(const uint16 instr, const uint32 PC, char* bu
 	const unsigned n = instr_nyb2;
 	const unsigned m = instr_nyb1;
 
-	trio_sprintf(buffer, "EXTS.B  R%u,R%u", m, n);
+	sprintf(buffer, "EXTS.B  R%u,R%u", m, n);
  END_DIS_OP
 
 
@@ -5143,7 +5147,7 @@ void MDFN_COLD SH7095::Disassemble(const uint16 instr, const uint32 PC, char* bu
 	const unsigned n = instr_nyb2;
 	const unsigned m = instr_nyb1;
 
-	trio_sprintf(buffer, "EXTS.W  R%u,R%u", m, n);
+	sprintf(buffer, "EXTS.W  R%u,R%u", m, n);
  END_DIS_OP
 
 
@@ -5154,7 +5158,7 @@ void MDFN_COLD SH7095::Disassemble(const uint16 instr, const uint32 PC, char* bu
 	const unsigned n = instr_nyb2;
 	const unsigned m = instr_nyb1;
 
-	trio_sprintf(buffer, "EXTU.B  R%u,R%u", m, n);
+	sprintf(buffer, "EXTU.B  R%u,R%u", m, n);
  END_DIS_OP
 
 
@@ -5165,7 +5169,7 @@ void MDFN_COLD SH7095::Disassemble(const uint16 instr, const uint32 PC, char* bu
 	const unsigned n = instr_nyb2;
 	const unsigned m = instr_nyb1;
 
-	trio_sprintf(buffer, "EXTU.W  R%u,R%u", m, n);
+	sprintf(buffer, "EXTU.W  R%u,R%u", m, n);
  END_DIS_OP
 
 
@@ -5176,7 +5180,7 @@ void MDFN_COLD SH7095::Disassemble(const uint16 instr, const uint32 PC, char* bu
 	const unsigned n = instr_nyb2;
 	const unsigned m = instr_nyb1;
 
-	trio_sprintf(buffer, "MAC.L   @R%u+,@R%u+", m, n);
+	sprintf(buffer, "MAC.L   @R%u+,@R%u+", m, n);
  END_DIS_OP
 
 
@@ -5187,7 +5191,7 @@ void MDFN_COLD SH7095::Disassemble(const uint16 instr, const uint32 PC, char* bu
 	const unsigned n = instr_nyb2;
 	const unsigned m = instr_nyb1;
 
-	trio_sprintf(buffer, "MAC.W   @R%u+,@R%u+", m, n);
+	sprintf(buffer, "MAC.W   @R%u+,@R%u+", m, n);
  END_DIS_OP
 
 
@@ -5198,7 +5202,7 @@ void MDFN_COLD SH7095::Disassemble(const uint16 instr, const uint32 PC, char* bu
 	const unsigned n = instr_nyb2;
 	const unsigned m = instr_nyb1;
 
-	trio_sprintf(buffer, "MUL.L   R%u,R%u", m, n);
+	sprintf(buffer, "MUL.L   R%u,R%u", m, n);
  END_DIS_OP
 
 
@@ -5209,7 +5213,7 @@ void MDFN_COLD SH7095::Disassemble(const uint16 instr, const uint32 PC, char* bu
 	const unsigned n = instr_nyb2;
 	const unsigned m = instr_nyb1;
 
-	trio_sprintf(buffer, "MULS.W  R%u,R%u", m, n);
+	sprintf(buffer, "MULS.W  R%u,R%u", m, n);
  END_DIS_OP
 
 
@@ -5220,7 +5224,7 @@ void MDFN_COLD SH7095::Disassemble(const uint16 instr, const uint32 PC, char* bu
 	const unsigned n = instr_nyb2;
 	const unsigned m = instr_nyb1;
 
-	trio_sprintf(buffer, "MULU.W  R%u,R%u", m, n);
+	sprintf(buffer, "MULU.W  R%u,R%u", m, n);
  END_DIS_OP
 
 
@@ -5231,7 +5235,7 @@ void MDFN_COLD SH7095::Disassemble(const uint16 instr, const uint32 PC, char* bu
 	const unsigned n = instr_nyb2;
 	const unsigned m = instr_nyb1;
 
-	trio_sprintf(buffer, "NEG     R%u,R%u", m, n);
+	sprintf(buffer, "NEG     R%u,R%u", m, n);
  END_DIS_OP
 
 
@@ -5242,7 +5246,7 @@ void MDFN_COLD SH7095::Disassemble(const uint16 instr, const uint32 PC, char* bu
 	const unsigned n = instr_nyb2;
 	const unsigned m = instr_nyb1;
 
-	trio_sprintf(buffer, "NEGC    R%u,R%u", m, n);
+	sprintf(buffer, "NEGC    R%u,R%u", m, n);
  END_DIS_OP
 
 
@@ -5253,7 +5257,7 @@ void MDFN_COLD SH7095::Disassemble(const uint16 instr, const uint32 PC, char* bu
 	const unsigned n = instr_nyb2;
 	const unsigned m = instr_nyb1;
 
-	trio_sprintf(buffer, "SUB     R%u,R%u", m, n);
+	sprintf(buffer, "SUB     R%u,R%u", m, n);
  END_DIS_OP
 
 
@@ -5264,7 +5268,7 @@ void MDFN_COLD SH7095::Disassemble(const uint16 instr, const uint32 PC, char* bu
 	const unsigned n = instr_nyb2;
 	const unsigned m = instr_nyb1;
 
-	trio_sprintf(buffer, "SUBC    R%u,R%u", m, n);
+	sprintf(buffer, "SUBC    R%u,R%u", m, n);
  END_DIS_OP
 
 
@@ -5275,7 +5279,7 @@ void MDFN_COLD SH7095::Disassemble(const uint16 instr, const uint32 PC, char* bu
 	const unsigned n = instr_nyb2;
 	const unsigned m = instr_nyb1;
 
-	trio_sprintf(buffer, "SUBV    R%u,R%u", m, n);
+	sprintf(buffer, "SUBV    R%u,R%u", m, n);
  END_DIS_OP
 
 
@@ -5286,7 +5290,7 @@ void MDFN_COLD SH7095::Disassemble(const uint16 instr, const uint32 PC, char* bu
 	const unsigned n = instr_nyb2;
 	const unsigned m = instr_nyb1;
 
-	trio_sprintf(buffer, "AND     R%u,R%u", m, n);
+	sprintf(buffer, "AND     R%u,R%u", m, n);
  END_DIS_OP
 
 
@@ -5296,7 +5300,7 @@ void MDFN_COLD SH7095::Disassemble(const uint16 instr, const uint32 PC, char* bu
  BEGIN_DIS_OP(AND_IMM_REG0)
 	const unsigned imm = (uint8)instr;
 
-	trio_sprintf(buffer, "AND     #%u,R0", imm);
+	sprintf(buffer, "AND     #%u,R0", imm);
  END_DIS_OP
 
 
@@ -5306,7 +5310,7 @@ void MDFN_COLD SH7095::Disassemble(const uint16 instr, const uint32 PC, char* bu
  BEGIN_DIS_OP(AND_B_IMM_IDXGBRINDIR)
 	const unsigned imm = (uint8)instr;
 
-	trio_sprintf(buffer, "AND.B   #%u,@(R0,GBR)", imm);
+	sprintf(buffer, "AND.B   #%u,@(R0,GBR)", imm);
  END_DIS_OP
 
 
@@ -5317,7 +5321,7 @@ void MDFN_COLD SH7095::Disassemble(const uint16 instr, const uint32 PC, char* bu
 	const unsigned n = instr_nyb2;
 	const unsigned m = instr_nyb1;
 
-	trio_sprintf(buffer, "NOT     R%u,R%u", m, n);
+	sprintf(buffer, "NOT     R%u,R%u", m, n);
  END_DIS_OP
 
 
@@ -5328,7 +5332,7 @@ void MDFN_COLD SH7095::Disassemble(const uint16 instr, const uint32 PC, char* bu
 	const unsigned n = instr_nyb2;
 	const unsigned m = instr_nyb1;
 
-	trio_sprintf(buffer, "OR      R%u,R%u", m, n);
+	sprintf(buffer, "OR      R%u,R%u", m, n);
  END_DIS_OP
 
 
@@ -5338,7 +5342,7 @@ void MDFN_COLD SH7095::Disassemble(const uint16 instr, const uint32 PC, char* bu
  BEGIN_DIS_OP(OR_IMM_REG0)
 	const unsigned imm = (uint8)instr;
 
-	trio_sprintf(buffer, "OR      #%u,R0", imm);
+	sprintf(buffer, "OR      #%u,R0", imm);
  END_DIS_OP
 
 
@@ -5348,7 +5352,7 @@ void MDFN_COLD SH7095::Disassemble(const uint16 instr, const uint32 PC, char* bu
  BEGIN_DIS_OP(OR_B_IMM_IDXGBRINDIR)
 	const unsigned imm = (uint8)instr;
 
-	trio_sprintf(buffer, "OR.B    #%u,@(R0,GBR)", imm);
+	sprintf(buffer, "OR.B    #%u,@(R0,GBR)", imm);
  END_DIS_OP
 
 
@@ -5358,7 +5362,7 @@ void MDFN_COLD SH7095::Disassemble(const uint16 instr, const uint32 PC, char* bu
  BEGIN_DIS_OP(TAS_B_REGINDIR)
 	const unsigned n = instr_nyb2;
 
-	trio_sprintf(buffer, "TAS.B   @R%u", n);
+	sprintf(buffer, "TAS.B   @R%u", n);
  END_DIS_OP
 
 
@@ -5369,7 +5373,7 @@ void MDFN_COLD SH7095::Disassemble(const uint16 instr, const uint32 PC, char* bu
 	const unsigned n = instr_nyb2;
 	const unsigned m = instr_nyb1;
 
-	trio_sprintf(buffer, "TST     R%u,R%u", m, n);
+	sprintf(buffer, "TST     R%u,R%u", m, n);
  END_DIS_OP
 
 
@@ -5379,7 +5383,7 @@ void MDFN_COLD SH7095::Disassemble(const uint16 instr, const uint32 PC, char* bu
  BEGIN_DIS_OP(TST_IMM_REG0)
 	const unsigned imm = (uint8)instr;
 
-	trio_sprintf(buffer, "TST     #%u,R0", imm);
+	sprintf(buffer, "TST     #%u,R0", imm);
  END_DIS_OP
 
 
@@ -5389,7 +5393,7 @@ void MDFN_COLD SH7095::Disassemble(const uint16 instr, const uint32 PC, char* bu
  BEGIN_DIS_OP(TST_B_IMM_IDXGBRINDIR)
 	const unsigned imm = (uint8)instr;
 
-	trio_sprintf(buffer, "TST.B   #%u,@(R0,GBR)", imm);
+	sprintf(buffer, "TST.B   #%u,@(R0,GBR)", imm);
  END_DIS_OP
 
 
@@ -5400,7 +5404,7 @@ void MDFN_COLD SH7095::Disassemble(const uint16 instr, const uint32 PC, char* bu
 	const unsigned n = instr_nyb2;
 	const unsigned m = instr_nyb1;
 
-	trio_sprintf(buffer, "XOR     R%u,R%u", m, n);
+	sprintf(buffer, "XOR     R%u,R%u", m, n);
  END_DIS_OP
 
 
@@ -5410,7 +5414,7 @@ void MDFN_COLD SH7095::Disassemble(const uint16 instr, const uint32 PC, char* bu
  BEGIN_DIS_OP(XOR_IMM_REG0)
 	const unsigned imm = (uint8)instr;
 
-	trio_sprintf(buffer, "XOR     #%u,R0", imm);
+	sprintf(buffer, "XOR     #%u,R0", imm);
  END_DIS_OP
 
 
@@ -5420,7 +5424,7 @@ void MDFN_COLD SH7095::Disassemble(const uint16 instr, const uint32 PC, char* bu
  BEGIN_DIS_OP(XOR_B_IMM_IDXGBRINDIR)
 	const unsigned imm = (uint8)instr;
 
-	trio_sprintf(buffer, "XOR.B   #%u,@(R0,GBR)", imm);
+	sprintf(buffer, "XOR.B   #%u,@(R0,GBR)", imm);
  END_DIS_OP
 
 
@@ -5430,7 +5434,7 @@ void MDFN_COLD SH7095::Disassemble(const uint16 instr, const uint32 PC, char* bu
  BEGIN_DIS_OP(ROTL_REG)
 	const unsigned n = instr_nyb2;
 
-	trio_sprintf(buffer, "ROTL    R%u", n);
+	sprintf(buffer, "ROTL    R%u", n);
  END_DIS_OP
 
 
@@ -5440,7 +5444,7 @@ void MDFN_COLD SH7095::Disassemble(const uint16 instr, const uint32 PC, char* bu
  BEGIN_DIS_OP(ROTR_REG)
 	const unsigned n = instr_nyb2;
 
-	trio_sprintf(buffer, "ROTR    R%u", n);
+	sprintf(buffer, "ROTR    R%u", n);
  END_DIS_OP
 
 
@@ -5450,7 +5454,7 @@ void MDFN_COLD SH7095::Disassemble(const uint16 instr, const uint32 PC, char* bu
  BEGIN_DIS_OP(ROTCL_REG)
 	const unsigned n = instr_nyb2;
 
-	trio_sprintf(buffer, "ROTCL   R%u", n);
+	sprintf(buffer, "ROTCL   R%u", n);
  END_DIS_OP
 
 
@@ -5460,7 +5464,7 @@ void MDFN_COLD SH7095::Disassemble(const uint16 instr, const uint32 PC, char* bu
  BEGIN_DIS_OP(ROTCR_REG)
 	const unsigned n = instr_nyb2;
 
-	trio_sprintf(buffer, "ROTCR   R%u", n);
+	sprintf(buffer, "ROTCR   R%u", n);
  END_DIS_OP
 
 
@@ -5470,7 +5474,7 @@ void MDFN_COLD SH7095::Disassemble(const uint16 instr, const uint32 PC, char* bu
  BEGIN_DIS_OP(SHAR_REG)
 	const unsigned n = instr_nyb2;
 
-	trio_sprintf(buffer, "SHAR    R%u", n);
+	sprintf(buffer, "SHAR    R%u", n);
  END_DIS_OP
 
 
@@ -5481,9 +5485,9 @@ void MDFN_COLD SH7095::Disassemble(const uint16 instr, const uint32 PC, char* bu
 	const unsigned n = instr_nyb2;
 
 	if(instr & 0x20)
-	 trio_sprintf(buffer, "SHAL    R%u", n);
+	 sprintf(buffer, "SHAL    R%u", n);
 	else
-	 trio_sprintf(buffer, "SHLL    R%u", n);
+	 sprintf(buffer, "SHLL    R%u", n);
  END_DIS_OP
 
 
@@ -5493,7 +5497,7 @@ void MDFN_COLD SH7095::Disassemble(const uint16 instr, const uint32 PC, char* bu
  BEGIN_DIS_OP(SHLR_REG)
 	const unsigned n = instr_nyb2;
 
-	trio_sprintf(buffer, "SHLR    R%u", n);
+	sprintf(buffer, "SHLR    R%u", n);
  END_DIS_OP
 
 
@@ -5503,7 +5507,7 @@ void MDFN_COLD SH7095::Disassemble(const uint16 instr, const uint32 PC, char* bu
  BEGIN_DIS_OP(SHLL2_REG)
 	const unsigned n = instr_nyb2;
 
-	trio_sprintf(buffer, "SHLL2   R%u", n);
+	sprintf(buffer, "SHLL2   R%u", n);
  END_DIS_OP
 
 
@@ -5513,7 +5517,7 @@ void MDFN_COLD SH7095::Disassemble(const uint16 instr, const uint32 PC, char* bu
  BEGIN_DIS_OP(SHLR2_REG)
 	const unsigned n = instr_nyb2;
 
-	trio_sprintf(buffer, "SHLR2   R%u", n);
+	sprintf(buffer, "SHLR2   R%u", n);
  END_DIS_OP
 
 
@@ -5523,7 +5527,7 @@ void MDFN_COLD SH7095::Disassemble(const uint16 instr, const uint32 PC, char* bu
  BEGIN_DIS_OP(SHLL8_REG)
 	const unsigned n = instr_nyb2;
 
-	trio_sprintf(buffer, "SHLL8   R%u", n);
+	sprintf(buffer, "SHLL8   R%u", n);
  END_DIS_OP
 
 
@@ -5533,7 +5537,7 @@ void MDFN_COLD SH7095::Disassemble(const uint16 instr, const uint32 PC, char* bu
  BEGIN_DIS_OP(SHLR8_REG)
 	const unsigned n = instr_nyb2;
 
-	trio_sprintf(buffer, "SHLR8   R%u", n);
+	sprintf(buffer, "SHLR8   R%u", n);
  END_DIS_OP
 
 
@@ -5543,7 +5547,7 @@ void MDFN_COLD SH7095::Disassemble(const uint16 instr, const uint32 PC, char* bu
  BEGIN_DIS_OP(SHLL16_REG)
 	const unsigned n = instr_nyb2;
 
-	trio_sprintf(buffer, "SHLL16  R%u", n);
+	sprintf(buffer, "SHLL16  R%u", n);
  END_DIS_OP
 
 
@@ -5553,7 +5557,7 @@ void MDFN_COLD SH7095::Disassemble(const uint16 instr, const uint32 PC, char* bu
  BEGIN_DIS_OP(SHLR16_REG)
 	const unsigned n = instr_nyb2;
 
-	trio_sprintf(buffer, "SHLR16  R%u", n);
+	sprintf(buffer, "SHLR16  R%u", n);
  END_DIS_OP
 
 
@@ -5561,7 +5565,7 @@ void MDFN_COLD SH7095::Disassemble(const uint16 instr, const uint32 PC, char* bu
  // BF 
  //
  BEGIN_DIS_OP(BF)
-	trio_sprintf(buffer, "BF      0x%08x", (uint32)(PC + ((uint32)(int8)instr << 1)));
+	sprintf(buffer, "BF      0x%08x", (uint32)(PC + ((uint32)(int8)instr << 1)));
  END_DIS_OP
 
 
@@ -5569,7 +5573,7 @@ void MDFN_COLD SH7095::Disassemble(const uint16 instr, const uint32 PC, char* bu
  // BF/S 
  //
  BEGIN_DIS_OP(BF_S)
-	trio_sprintf(buffer, "BF/S    0x%08x", (uint32)(PC + ((uint32)(int8)instr << 1)));
+	sprintf(buffer, "BF/S    0x%08x", (uint32)(PC + ((uint32)(int8)instr << 1)));
  END_DIS_OP
 
 
@@ -5577,7 +5581,7 @@ void MDFN_COLD SH7095::Disassemble(const uint16 instr, const uint32 PC, char* bu
  // BT 
  //
  BEGIN_DIS_OP(BT)
-	trio_sprintf(buffer, "BT      0x%08x", (uint32)(PC + ((uint32)(int8)instr << 1)));
+	sprintf(buffer, "BT      0x%08x", (uint32)(PC + ((uint32)(int8)instr << 1)));
  END_DIS_OP
 
 
@@ -5585,7 +5589,7 @@ void MDFN_COLD SH7095::Disassemble(const uint16 instr, const uint32 PC, char* bu
  // BT/S 
  //
  BEGIN_DIS_OP(BT_S)
-	trio_sprintf(buffer, "BT/S    0x%08x", (uint32)(PC + ((uint32)(int8)instr << 1)));
+	sprintf(buffer, "BT/S    0x%08x", (uint32)(PC + ((uint32)(int8)instr << 1)));
  END_DIS_OP
 
 
@@ -5593,7 +5597,7 @@ void MDFN_COLD SH7095::Disassemble(const uint16 instr, const uint32 PC, char* bu
  // BRA 
  //
  BEGIN_DIS_OP(BRA)
-	trio_sprintf(buffer, "BRA     0x%08x", (uint32)(PC + ((uint32)sign_x_to_s32(12, instr) << 1)));
+	sprintf(buffer, "BRA     0x%08x", (uint32)(PC + ((uint32)sign_x_to_s32(12, instr) << 1)));
  END_DIS_OP
 
 
@@ -5603,7 +5607,7 @@ void MDFN_COLD SH7095::Disassemble(const uint16 instr, const uint32 PC, char* bu
  BEGIN_DIS_OP(BRAF_REG)
 	const unsigned m = instr_nyb2;
 
-	trio_sprintf(buffer, "BRAF    R%u", m);
+	sprintf(buffer, "BRAF    R%u", m);
  END_DIS_OP
 
 
@@ -5611,7 +5615,7 @@ void MDFN_COLD SH7095::Disassemble(const uint16 instr, const uint32 PC, char* bu
  // BSR 
  //
  BEGIN_DIS_OP(BSR)
-	trio_sprintf(buffer, "BSR     0x%08x", (uint32)(PC + ((uint32)sign_x_to_s32(12, instr) << 1)));
+	sprintf(buffer, "BSR     0x%08x", (uint32)(PC + ((uint32)sign_x_to_s32(12, instr) << 1)));
  END_DIS_OP
 
 
@@ -5621,7 +5625,7 @@ void MDFN_COLD SH7095::Disassemble(const uint16 instr, const uint32 PC, char* bu
  BEGIN_DIS_OP(BSRF_REG)
 	const unsigned m = instr_nyb2;
 
-	trio_sprintf(buffer, "BSRF    R%u", m);
+	sprintf(buffer, "BSRF    R%u", m);
  END_DIS_OP
 
 
@@ -5631,7 +5635,7 @@ void MDFN_COLD SH7095::Disassemble(const uint16 instr, const uint32 PC, char* bu
  BEGIN_DIS_OP(JMP_REGINDIR)
 	const unsigned m = instr_nyb2;
 
-	trio_sprintf(buffer, "JMP     @R%u", m);
+	sprintf(buffer, "JMP     @R%u", m);
  END_DIS_OP
 
 
@@ -5641,7 +5645,7 @@ void MDFN_COLD SH7095::Disassemble(const uint16 instr, const uint32 PC, char* bu
  BEGIN_DIS_OP(JSR_REGINDIR)
 	const unsigned m = instr_nyb2;
 
-	trio_sprintf(buffer, "JSR     @R%u", m);
+	sprintf(buffer, "JSR     @R%u", m);
  END_DIS_OP
 
 
@@ -5649,7 +5653,7 @@ void MDFN_COLD SH7095::Disassemble(const uint16 instr, const uint32 PC, char* bu
  // RTS 
  //
  BEGIN_DIS_OP(RTS)
-	trio_sprintf(buffer, "RTS");
+	sprintf(buffer, "RTS");
  END_DIS_OP
 
 
@@ -5657,7 +5661,7 @@ void MDFN_COLD SH7095::Disassemble(const uint16 instr, const uint32 PC, char* bu
  // CLRT 
  //
  BEGIN_DIS_OP(CLRT)
-	trio_sprintf(buffer, "CLRT");
+	sprintf(buffer, "CLRT");
  END_DIS_OP
 
 
@@ -5665,7 +5669,7 @@ void MDFN_COLD SH7095::Disassemble(const uint16 instr, const uint32 PC, char* bu
  // CLRMAC 
  //
  BEGIN_DIS_OP(CLRMAC)
-	trio_sprintf(buffer, "CLRMAC");
+	sprintf(buffer, "CLRMAC");
  END_DIS_OP
 
 
@@ -5676,7 +5680,7 @@ void MDFN_COLD SH7095::Disassemble(const uint16 instr, const uint32 PC, char* bu
 	const unsigned m = instr_nyb2;
 	const unsigned cri = (instr >> 4) & 0x3;
 
-	trio_sprintf(buffer, "LDC     R%u, %s", m, CR_Names[cri]);
+	sprintf(buffer, "LDC     R%u, %s", m, CR_Names[cri]);
  END_DIS_OP
 
  //
@@ -5686,7 +5690,7 @@ void MDFN_COLD SH7095::Disassemble(const uint16 instr, const uint32 PC, char* bu
 	const unsigned m = instr_nyb2;
 	const unsigned cri = (instr >> 4) & 0x3;
 
-	trio_sprintf(buffer, "LDC.L   @R%u+, %s", m, CR_Names[cri]);
+	sprintf(buffer, "LDC.L   @R%u+, %s", m, CR_Names[cri]);
  END_DIS_OP
 
 
@@ -5697,7 +5701,7 @@ void MDFN_COLD SH7095::Disassemble(const uint16 instr, const uint32 PC, char* bu
 	const unsigned m = instr_nyb2;
 	const unsigned sri = (instr >> 4) & 0x3;
 
-	trio_sprintf(buffer, "LDS     R%u, %s", m, SR_Names[sri]);
+	sprintf(buffer, "LDS     R%u, %s", m, SR_Names[sri]);
  END_DIS_OP
 
 
@@ -5708,7 +5712,7 @@ void MDFN_COLD SH7095::Disassemble(const uint16 instr, const uint32 PC, char* bu
 	const unsigned m = instr_nyb2;
 	const unsigned sri = (instr >> 4) & 0x3;
 
-	trio_sprintf(buffer, "LDS.L   @R%u+, %s", m, SR_Names[sri]);
+	sprintf(buffer, "LDS.L   @R%u+, %s", m, SR_Names[sri]);
  END_DIS_OP
 
 
@@ -5716,7 +5720,7 @@ void MDFN_COLD SH7095::Disassemble(const uint16 instr, const uint32 PC, char* bu
  // NOP 
  //
  BEGIN_DIS_OP(NOP)
-	trio_sprintf(buffer, "NOP");
+	sprintf(buffer, "NOP");
  END_DIS_OP
 
 
@@ -5724,7 +5728,7 @@ void MDFN_COLD SH7095::Disassemble(const uint16 instr, const uint32 PC, char* bu
  // RTE 
  //
  BEGIN_DIS_OP(RTE)
-	trio_sprintf(buffer, "RTE");
+	sprintf(buffer, "RTE");
  END_DIS_OP
 
 
@@ -5732,7 +5736,7 @@ void MDFN_COLD SH7095::Disassemble(const uint16 instr, const uint32 PC, char* bu
  // SETT 
  //
  BEGIN_DIS_OP(SETT)
-	trio_sprintf(buffer, "SETT");
+	sprintf(buffer, "SETT");
  END_DIS_OP
 
 
@@ -5740,7 +5744,7 @@ void MDFN_COLD SH7095::Disassemble(const uint16 instr, const uint32 PC, char* bu
  // SLEEP 
  //
  BEGIN_DIS_OP(SLEEP)
-	trio_sprintf(buffer, "SLEEP");
+	sprintf(buffer, "SLEEP");
  END_DIS_OP
 
  //
@@ -5750,7 +5754,7 @@ void MDFN_COLD SH7095::Disassemble(const uint16 instr, const uint32 PC, char* bu
 	const unsigned n = instr_nyb2;
 	const unsigned cri = (instr >> 4) & 0x3;
 
-	trio_sprintf(buffer, "STS     %s, R%u", CR_Names[cri], n);
+	sprintf(buffer, "STS     %s, R%u", CR_Names[cri], n);
  END_DIS_OP
 
 
@@ -5761,7 +5765,7 @@ void MDFN_COLD SH7095::Disassemble(const uint16 instr, const uint32 PC, char* bu
 	const unsigned n = instr_nyb2;
 	const unsigned cri = (instr >> 4) & 0x3;
 
-	trio_sprintf(buffer, "STC.L   %s, @-R%u", CR_Names[cri], n);
+	sprintf(buffer, "STC.L   %s, @-R%u", CR_Names[cri], n);
  END_DIS_OP
 
 
@@ -5772,7 +5776,7 @@ void MDFN_COLD SH7095::Disassemble(const uint16 instr, const uint32 PC, char* bu
 	const unsigned n = instr_nyb2;
 	const unsigned sri = (instr >> 4) & 0x3;
 
-	trio_sprintf(buffer, "STS     %s, R%u", SR_Names[sri], n);
+	sprintf(buffer, "STS     %s, R%u", SR_Names[sri], n);
  END_DIS_OP
 
 
@@ -5783,7 +5787,7 @@ void MDFN_COLD SH7095::Disassemble(const uint16 instr, const uint32 PC, char* bu
 	const unsigned n = instr_nyb2;
 	const unsigned sri = (instr >> 4) & 0x3;
 
-	trio_sprintf(buffer, "STS.L   %s, @-R%u", SR_Names[sri], n);
+	sprintf(buffer, "STS.L   %s, @-R%u", SR_Names[sri], n);
  END_DIS_OP
 
 
@@ -5793,7 +5797,7 @@ void MDFN_COLD SH7095::Disassemble(const uint16 instr, const uint32 PC, char* bu
  BEGIN_DIS_OP(TRAPA)
 	const unsigned imm = (uint8)instr;
 
-	trio_sprintf(buffer, "TRAPA   #%u", imm);
+	sprintf(buffer, "TRAPA   #%u", imm);
  END_DIS_OP
 
  #undef BEGIN_DIS_OP

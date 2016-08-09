@@ -607,7 +607,7 @@ void SS_RequestMLExit(void)
 #pragma GCC push_options
 #pragma GCC optimize("Os,no-unroll-loops,no-peel-loops,no-crossjumping")
 template<bool DebugMode>
-static int32 NO_INLINE MDFN_HOT RunLoop(EmulateSpecStruct* espec)
+static int32 NO_INLINE RunLoop(EmulateSpecStruct* espec)
 {
  sscpu_timestamp_t eff_ts = 0;
 
@@ -617,15 +617,19 @@ static int32 NO_INLINE MDFN_HOT RunLoop(EmulateSpecStruct* espec)
  {
   do
   {
+#ifdef HAVE_DEBUG
    if(DebugMode)
     DBG_CPUHandler<0>(eff_ts);
+#endif
 
    CPU[0].Step<0, DebugMode>();
 
    while(MDFN_LIKELY(CPU[0].timestamp > CPU[1].timestamp))
    {
+#ifdef HAVE_DEBUG
     if(DebugMode)
      DBG_CPUHandler<1>(eff_ts);
+#endif
 
     CPU[1].Step<1, DebugMode>();
    }
@@ -694,7 +698,7 @@ static sscpu_timestamp_t MidSync(const sscpu_timestamp_t timestamp)
   //printf("%d\n", espec->SoundBufSize);
   //
   //
-  MDFN_MidSync(espec);
+  //MDFN_MidSync(espec);
   //
   //
   SMPC_UpdateInput();
@@ -835,62 +839,64 @@ static bool IsSaturnDisc(const uint8* sa32k)
 
 static void CalcGameID(uint8* id_out16, uint8* fd_id_out16, char* sgid)
 {
- std::unique_ptr<uint8[]> buf(new uint8[2048]);
- md5_context mctx;
+   md5_context mctx;
+   uint8_t *buf = new uint8_t[2048];
 
- mctx.starts();
+   mctx.starts();
 
- for(size_t x = 0; x < cdifs->size(); x++)
- {
-  auto* c = (*cdifs)[x];
-  CDUtility::TOC toc;
-
-  c->ReadTOC(&toc);
-
-  mctx.update_u32_as_lsb(toc.first_track);
-  mctx.update_u32_as_lsb(toc.last_track);
-  mctx.update_u32_as_lsb(toc.disc_type);
-
-  for(unsigned i = 1; i <= 100; i++)
-  {
-   const auto& t = toc.tracks[i];
-
-   mctx.update_u32_as_lsb(t.adr);
-   mctx.update_u32_as_lsb(t.control);
-   mctx.update_u32_as_lsb(t.lba);
-   mctx.update_u32_as_lsb(t.valid);
-  }
-
-  for(unsigned i = 0; i < 512; i++)
-  {
-   if(c->ReadSector(&buf[0], i, 1, true) >= 0x1)
+   for(size_t x = 0; x < cdifs->size(); x++)
    {
-    if(i == 0)
-    {
-     char* tmp;
-     memcpy(sgid, &buf[0x20], 16);
-     sgid[16] = 0;
-     if((tmp = strrchr(sgid, 'V')))
-     {
-      do
+      auto* c = (*cdifs)[x];
+      TOC toc;
+
+      c->ReadTOC(&toc);
+
+      mctx.update_u32_as_lsb(toc.first_track);
+      mctx.update_u32_as_lsb(toc.last_track);
+      mctx.update_u32_as_lsb(toc.disc_type);
+
+      for(unsigned i = 1; i <= 100; i++)
       {
-       *tmp = 0;
-      } while(tmp-- != sgid && (signed char)*tmp <= 0x20);
-     }
-    }
+         const auto& t = toc.tracks[i];
 
-    mctx.update(&buf[0], 2048);
+         mctx.update_u32_as_lsb(t.adr);
+         mctx.update_u32_as_lsb(t.control);
+         mctx.update_u32_as_lsb(t.lba);
+         mctx.update_u32_as_lsb(t.valid);
+      }
+
+      for(unsigned i = 0; i < 512; i++)
+      {
+         if(c->ReadSector((uint8_t*)&buf[0], i, 1) >= 0x1)
+         {
+            if(i == 0)
+            {
+               char* tmp;
+               memcpy(sgid, (void*)(buf[0x20]), 16);
+               sgid[16] = 0;
+               if((tmp = strrchr(sgid, 'V')))
+               {
+                  do
+                  {
+                     *tmp = 0;
+                  } while(tmp-- != sgid && (signed char)*tmp <= 0x20);
+               }
+            }
+
+            mctx.update(&buf[0], 2048);
+         }
+      }
+
+      if(x == 0)
+      {
+         md5_context fd_mctx = mctx;
+         fd_mctx.finish(fd_id_out16);
+      }
    }
-  }
 
-  if(x == 0)
-  {
-   md5_context fd_mctx = mctx;
-   fd_mctx.finish(fd_id_out16);
-  }
- }
+   free(buf);
 
- mctx.finish(id_out16);
+   mctx.finish(id_out16);
 }
 
 //
@@ -923,12 +929,12 @@ static const struct
 
 static bool DetectRegion(unsigned* const region)
 {
- std::unique_ptr<uint8[]> buf(new uint8[2048 * 16]);
+ uint8_t *buf = new uint8[2048 * 16];
  uint64 possible_regions = 0;
 
  for(auto& c : *cdifs)
  {
-  if(c->ReadSector(&buf[0], 0, 16, true) != 0x1)
+  if(c->ReadSector(&buf[0], 0, 16) != 0x1)
    continue;
 
   if(!IsSaturnDisc(&buf[0]))
@@ -947,6 +953,8 @@ static bool DetectRegion(unsigned* const region)
   }
   break;
  }
+
+ free(buf);
 
  for(auto const& rs : region_strings)
  {
@@ -1032,7 +1040,7 @@ static void MDFN_COLD InitCommon(const unsigned cart_type, const unsigned smpc_a
  ss_dbg_mask = MDFN_GetSettingUI("ss.dbg_mask");
  //
  {
-  MDFN_printf(_("Region: 0x%01x\n"), smpc_area);
+  printf(_("Region: 0x%01x\n"), smpc_area);
   const struct
   {
    const unsigned type;
@@ -1057,7 +1065,7 @@ static void MDFN_COLD InitCommon(const unsigned cart_type, const unsigned smpc_a
     break;
    }
   }
-  MDFN_printf(_("Cart: %s\n"), cn);
+  printf(_("Cart: %s\n"), cn);
  }
  //
 
@@ -1102,8 +1110,8 @@ static void MDFN_COLD InitCommon(const unsigned cart_type, const unsigned smpc_a
   biospath_sname = "ss.bios_na_eu";
 
  {
-  const std::string biospath = MDFN_MakeFName(MDFNMKF_FIRMWARE, 0, MDFN_GetSettingS(biospath_sname));
-  FileStream BIOSFile(biospath, FileStream::MODE_READ);
+  const std::string biospath = MDFN_MakeFName(MDFNMKF_FIRMWARE, 0, MDFN_GetSettingS(biospath_sname).c_str());
+  FileStream BIOSFile(biospath.c_str(), MODE_READ);
 
   if(BIOSFile.size() != 524288)
    throw MDFN_Error(0, _("BIOS file \"%s\" is of an incorrect size."), biospath.c_str());
@@ -1146,7 +1154,7 @@ static void MDFN_COLD InitCommon(const unsigned cart_type, const unsigned smpc_a
   //
   //
   for(unsigned i = 0; i < 262144; i++)
-   BIOSROM[i] = MDFN_de16msb(&BIOSROM[i]);
+   BIOSROM[i] = MDFN_de16msb((const uint8_t*)&BIOSROM[i]);
  }
 
  EmulatedSS.MasterClock = MDFN_MASTERCLOCK_FIXED(MasterClock);
@@ -1203,134 +1211,132 @@ static bool TestMagic(MDFNFILE* fp)
 static void Load(MDFNFILE* fp)
 {
 #if 0
- // cat regiondb.inc | sort | uniq --all-repeated=separate -w 102 
- {
-  FileStream rdbfp("/tmp/regiondb.inc", FileStream::MODE_WRITE);
-  Stream* s = fp->stream();
-  std::string linebuf;
-  static std::vector<CDIF *> CDInterfaces;
-
-  cdifs = &CDInterfaces;
-
-  while(s->get_line(linebuf) >= 0)
-  {
-   static uint8 sbuf[2048 * 16];
-   CDIF* iface = CDIF_Open(linebuf, false);
-   int m = iface->ReadSector(sbuf, 0, 16, true);
-   std::string fb;
-
-   assert(m == 0x1); 
-   assert(IsSaturnDisc(&sbuf[0]) == true);
-   //
-   uint8 dummytmp[16] = { 0 };
-   uint8 tmp[16] = { 0 };
-   const char* regstr;
-   unsigned region = ~0U;
-
-   MDFN_GetFilePathComponents(linebuf, nullptr, &fb);
-
-   if(!DetectRegionByFN(fb, &region))
-    abort();
-
-   switch(region)
+   // cat regiondb.inc | sort | uniq --all-repeated=separate -w 102 
    {
-    default: abort(); break;
-    case SMPC_AREA_NA: regstr = "SMPC_AREA_NA"; break;
-    case SMPC_AREA_JP: regstr = "SMPC_AREA_JP"; break;
-    case SMPC_AREA_EU_PAL: regstr = "SMPC_AREA_EU_PAL"; break;
-    case SMPC_AREA_KR: regstr = "SMPC_AREA_KR"; break;
-    case SMPC_AREA_CSA_NTSC: regstr = "SMPC_AREA_CSA_NTSC"; break;
+      FileStream rdbfp("/tmp/regiondb.inc", MODE_WRITE);
+      Stream* s = fp->stream();
+      std::string linebuf;
+      static std::vector<CDIF *> CDInterfaces;
+
+      cdifs = &CDInterfaces;
+
+      while(s->get_line(linebuf) >= 0)
+      {
+         static uint8 sbuf[2048 * 16];
+         CDIF* iface = CDIF_Open(linebuf, false);
+         int m = iface->ReadSector(sbuf, 0, 16, true);
+         std::string fb;
+
+         assert(m == 0x1); 
+         assert(IsSaturnDisc(&sbuf[0]) == true);
+         //
+         uint8 dummytmp[16] = { 0 };
+         uint8 tmp[16] = { 0 };
+         const char* regstr;
+         unsigned region = ~0U;
+
+         MDFN_GetFilePathComponents(linebuf, nullptr, &fb);
+
+         if(!DetectRegionByFN(fb, &region))
+            abort();
+
+         switch(region)
+         {
+            default: abort(); break;
+            case SMPC_AREA_NA: regstr = "SMPC_AREA_NA"; break;
+            case SMPC_AREA_JP: regstr = "SMPC_AREA_JP"; break;
+            case SMPC_AREA_EU_PAL: regstr = "SMPC_AREA_EU_PAL"; break;
+            case SMPC_AREA_KR: regstr = "SMPC_AREA_KR"; break;
+            case SMPC_AREA_CSA_NTSC: regstr = "SMPC_AREA_CSA_NTSC"; break;
+         }
+
+         CDInterfaces.clear();
+         CDInterfaces.push_back(iface);
+
+         CalcGameID(dummytmp, tmp);
+
+         unsigned tmpreg;
+         if(!DetectRegion(&tmpreg) || tmpreg != region)
+         {
+            rdbfp.print_format("{ { ");
+            for(unsigned i = 0; i < 16; i++)
+               rdbfp.print_format("0x%02x, ", tmp[i]);
+            rdbfp.print_format("}, %s }, // %s\n", regstr, fb.c_str());
+         }
+
+         delete iface;
+      }
    }
 
-   CDInterfaces.clear();
-   CDInterfaces.push_back(iface);
-
-   CalcGameID(dummytmp, tmp);
-
-   unsigned tmpreg;
-   if(!DetectRegion(&tmpreg) || tmpreg != region)
-   {
-    rdbfp.print_format("{ { ");
-    for(unsigned i = 0; i < 16; i++)
-     rdbfp.print_format("0x%02x, ", tmp[i]);
-    rdbfp.print_format("}, %s }, // %s\n", regstr, fb.c_str());
-   }
-
-   delete iface;
-  }
- }
-
- return;
+   return;
 #endif
- //uint8 elf_header[
+   //uint8 elf_header[
 
- cdifs = NULL;
+   cdifs = NULL;
 
- try
- {
-  if(MDFN_GetSettingS("ss.dbg_exe_cdpath") != "")
-  {
-   RMD_Drive dr;
+   unsigned i;
+   if(MDFN_GetSettingS("ss.dbg_exe_cdpath") != "")
+   {
+      RMD_Drive dr;
 
-   dr.Name = std::string("Virtual CD Drive");
-   dr.PossibleStates.push_back(RMD_State({"Tray Open", false, false, true}));
-   dr.PossibleStates.push_back(RMD_State({"Tray Closed (Empty)", false, false, false}));
-   dr.PossibleStates.push_back(RMD_State({"Tray Closed", true, true, false}));
-   dr.CompatibleMedia.push_back(0);
-   dr.MediaMtoPDelay = 2000;
+      dr.Name = std::string("Virtual CD Drive");
+      dr.PossibleStates.push_back(RMD_State({"Tray Open", false, false, true}));
+      dr.PossibleStates.push_back(RMD_State({"Tray Closed (Empty)", false, false, false}));
+      dr.PossibleStates.push_back(RMD_State({"Tray Closed", true, true, false}));
+      dr.CompatibleMedia.push_back(0);
+      dr.MediaMtoPDelay = 2000;
 
-   MDFNGameInfo->RMD->Drives.push_back(dr);
-   MDFNGameInfo->RMD->MediaTypes.push_back(RMD_MediaType({"CD"}));
-   MDFNGameInfo->RMD->Media.push_back(RMD_Media({"Test CD", 0}));
+      MDFNGameInfo->RMD->Drives.push_back(dr);
+      MDFNGameInfo->RMD->MediaTypes.push_back(RMD_MediaType({"CD"}));
+      MDFNGameInfo->RMD->Media.push_back(RMD_Media({"Test CD", 0}));
 
-   static std::vector<CDIF *> CDInterfaces;
-   CDInterfaces.clear();
-   CDInterfaces.push_back(CDIF_Open(MDFN_GetSettingS("ss.dbg_exe_cdpath").c_str(), false));
-   cdifs = &CDInterfaces;
-  }
+      static std::vector<CDIF *> CDInterfaces;
+      CDInterfaces.clear();
+      CDInterfaces.push_back(CDIF_Open(MDFN_GetSettingS("ss.dbg_exe_cdpath").c_str(), false));
+      cdifs = &CDInterfaces;
+   }
 
-  InitCommon(CART_MDFN_DEBUG, MDFN_GetSettingUI("ss.region_default"));
+   InitCommon(CART_MDFN_DEBUG, MDFN_GetSettingUI("ss.region_default"));
 
-  // 0x25FE00C4 = 0x1;
-  for(unsigned i = 0; i < fp->size(); i += 2)
-  {
-   uint8 tmp[2];
+   // 0x25FE00C4 = 0x1;
+   for(i = 0; i < fp->size(); i += 2)
+   {
+      uint8 tmp[2];
 
-   fp->read(tmp, 2);
+      fp->read(tmp, 2);
 
-   *(uint16*)((uint8*)WorkRAMH + 0x4000 + i) = (tmp[0] << 8) | (tmp[1] << 0);
-  }
-  BIOSROM[0] = 0x0600;
-  BIOSROM[1] = 0x4000; //0x4130; //0x4060;
+      *(uint16*)((uint8*)WorkRAMH + 0x4000 + i) = (tmp[0] << 8) | (tmp[1] << 0);
+   }
+   BIOSROM[0] = 0x0600;
+   BIOSROM[1] = 0x4000; //0x4130; //0x4060;
 
-  BIOSROM[2] = 0x0600;
-  BIOSROM[3] = 0x4000; //0x4130; //0x4060;
+   BIOSROM[2] = 0x0600;
+   BIOSROM[3] = 0x4000; //0x4130; //0x4060;
 
-  BIOSROM[4] = 0xDEAD;
-  BIOSROM[5] = 0xBEEF;
- }
- catch(...)
- {
-  Cleanup();
-  throw;
- }
+   BIOSROM[4] = 0xDEAD;
+   BIOSROM[5] = 0xBEEF;
 }
 
 static MDFN_COLD bool TestMagicCD(std::vector<CDIF *> *CDInterfaces)
 {
- std::unique_ptr<uint8[]> buf(new uint8[2048 * 16]);
+   bool is_cd = false;
+   uint8[] buf = new uint8[2048 * 16];
 
- if((*CDInterfaces)[0]->ReadSector(&buf[0], 0, 16, true) != 0x1)
-  return false;
+   if((*CDInterfaces)[0]->ReadSector(&buf[0], 0, 16, true) != 0x1)
+      return false;
 
- return IsSaturnDisc(&buf[0]);
+   is_cd = IsSaturnDisc(&buf[0]);
+
+   free(buf);
+
+   return is_cd;
 }
 
 static MDFN_COLD void DiscSanityChecks(void)
 {
  for(size_t i = 0; i < cdifs->size(); i++)
  {
-  CDUtility::TOC toc;
+  TOC toc;
 
   (*cdifs)[i]->ReadTOC(&toc);
 
@@ -1339,7 +1345,7 @@ static MDFN_COLD void DiscSanityChecks(void)
    if(!toc.tracks[track].valid)
     continue;
 
-   if(toc.tracks[track].control & CDUtility::SUBQ_CTRLF_DATA)
+   if(toc.tracks[track].control & SUBQ_CTRLF_DATA)
     continue;
    //
    //
@@ -1356,8 +1362,8 @@ static MDFN_COLD void DiscSanityChecks(void)
     if(!(*cdifs)[i]->ReadRawSectorPWOnly(pwbuf, lba, false))
      throw MDFN_Error(0, _("Disc %zu of %zu: Error reading sector at lba=%d in DiscSanityChecks()."), i + 1, cdifs->size(), lba);
 
-    CDUtility::subq_deinterleave(pwbuf, qbuf);
-    if(CDUtility::subq_check_checksum(qbuf) && (qbuf[0] & 0xF) == CDUtility::ADR_CURPOS)
+    subq_deinterleave(pwbuf, qbuf);
+    if(subq_check_checksum(qbuf) && (qbuf[0] & 0xF) == ADR_CURPOS)
     {
      const uint8 qm = qbuf[7];
      const uint8 qs = qbuf[8];
@@ -1366,10 +1372,10 @@ static MDFN_COLD void DiscSanityChecks(void)
 
      any_subq_curpos = true;
 
-     CDUtility::LBA_to_AMSF(lba, &lm, &ls, &lf);
-     lm = CDUtility::U8_to_BCD(lm);
-     ls = CDUtility::U8_to_BCD(ls);
-     lf = CDUtility::U8_to_BCD(lf);
+     LBA_to_AMSF(lba, &lm, &ls, &lf);
+     lm = U8_to_BCD(lm);
+     ls = U8_to_BCD(ls);
+     lf = U8_to_BCD(lf);
 
      if(lm != qm || ls != qs || lf != qf)
      {
@@ -1418,7 +1424,7 @@ static MDFN_COLD void LoadCD(std::vector<CDIF *>* CDInterfaces)
   if(MDFN_GetSettingB("ss.cd_sanity"))
    DiscSanityChecks();
   else
-   MDFN_printf(_("WARNING: CD (image) sanity checks disabled."));
+   printf(_("WARNING: CD (image) sanity checks disabled."));
 
    // TODO: auth ID calc
 
@@ -1441,16 +1447,16 @@ static MDFN_COLD void CloseGame(void)
  //
  //
 
- try { SaveBackupRAM(); } catch(std::exception& e) { MDFN_PrintError("%s", e.what()); }
- try { SaveCartNV();    } catch(std::exception& e) { MDFN_PrintError("%s", e.what()); }
- try { SaveRTC();	} catch(std::exception& e) { MDFN_PrintError("%s", e.what()); }
+ SaveBackupRAM();
+ SaveCartNV();
+ SaveRTC();
 
  Cleanup();
 }
 
 static MDFN_COLD void SaveBackupRAM(void)
 {
- FileStream brs(MDFN_MakeFName(MDFNMKF_SAV, 0, "bkr"), FileStream::MODE_WRITE_INPLACE);
+ FileStream brs(MDFN_MakeFName(MDFNMKF_SAV, 0, "bkr"), MODE_WRITE_INPLACE);
 
  brs.write(BackupRAM, sizeof(BackupRAM));
 
@@ -1459,7 +1465,7 @@ static MDFN_COLD void SaveBackupRAM(void)
 
 static MDFN_COLD void LoadBackupRAM(void)
 {
- FileStream brs(MDFN_MakeFName(MDFNMKF_SAV, 0, "bkr"), FileStream::MODE_READ);
+ FileStream brs(MDFN_MakeFName(MDFNMKF_SAV, 0, "bkr"), MODE_READ);
 
  brs.read(BackupRAM, sizeof(BackupRAM));
 }
@@ -1491,7 +1497,7 @@ static MDFN_COLD void LoadCartNV(void)
 
  if(ext)
  {
-  FileStream nvs(MDFN_MakeFName(MDFNMKF_SAV, 0, ext), FileStream::MODE_READ);
+  FileStream nvs(MDFN_MakeFName(MDFNMKF_SAV, 0, ext), MODE_READ);
 
   nvs.read(nv_ptr, nv_size);
  }
@@ -1507,7 +1513,7 @@ static MDFN_COLD void SaveCartNV(void)
 
  if(ext)
  {
-  FileStream nvs(MDFN_MakeFName(MDFNMKF_SAV, 0, ext), FileStream::MODE_WRITE_INPLACE);
+  FileStream nvs(MDFN_MakeFName(MDFNMKF_SAV, 0, ext), MODE_WRITE_INPLACE);
 
   nvs.write(nv_ptr, nv_size);
 
@@ -1517,7 +1523,7 @@ static MDFN_COLD void SaveCartNV(void)
 
 static MDFN_COLD void SaveRTC(void)
 {
- FileStream sds(MDFN_MakeFName(MDFNMKF_SAV, 0, "smpc"), FileStream::MODE_WRITE_INPLACE);
+ FileStream sds(MDFN_MakeFName(MDFNMKF_SAV, 0, "smpc"), MODE_WRITE_INPLACE);
 
  SMPC_SaveNV(&sds);
 
@@ -1526,7 +1532,7 @@ static MDFN_COLD void SaveRTC(void)
 
 static MDFN_COLD void LoadRTC(void)
 {
- FileStream sds(MDFN_MakeFName(MDFNMKF_SAV, 0, "smpc"), FileStream::MODE_READ);
+ FileStream sds(MDFN_MakeFName(MDFNMKF_SAV, 0, "smpc"), MODE_READ);
 
  SMPC_LoadNV(&sds);
 }

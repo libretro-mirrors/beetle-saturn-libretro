@@ -790,7 +790,7 @@ static DebuggerInfoStruct DBGInfo
  NULL,
 };
 #else
-static INLINE bool DBG_NeedCPUHooks(void) const { return false; } 
+static INLINE bool DBG_NeedCPUHooks(void) { return false; } 
 static INLINE void DBG_Init(void) { }
 static INLINE void DBG_Kill(void) { }
 #endif
