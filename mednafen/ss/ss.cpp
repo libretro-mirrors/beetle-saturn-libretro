@@ -1320,9 +1320,9 @@ static void Load(MDFNFILE* fp)
 static MDFN_COLD bool TestMagicCD(std::vector<CDIF *> *CDInterfaces)
 {
    bool is_cd = false;
-   uint8[] buf = new uint8[2048 * 16];
+   uint8 *buf = new uint8[2048 * 16];
 
-   if((*CDInterfaces)[0]->ReadSector(&buf[0], 0, 16, true) != 0x1)
+   if((*CDInterfaces)[0]->ReadSector(&buf[0], 0, 16) != 0x1)
       return false;
 
    is_cd = IsSaturnDisc(&buf[0]);
