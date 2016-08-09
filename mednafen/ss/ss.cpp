@@ -1277,6 +1277,7 @@ static void Load(MDFNFILE* fp)
    unsigned i;
    if(MDFN_GetSettingS("ss.dbg_exe_cdpath") != "")
    {
+      bool success;
       RMD_Drive dr;
 
       dr.Name = std::string("Virtual CD Drive");
@@ -1292,14 +1293,15 @@ static void Load(MDFNFILE* fp)
 
       static std::vector<CDIF *> CDInterfaces;
       CDInterfaces.clear();
-      CDInterfaces.push_back(CDIF_Open(MDFN_GetSettingS("ss.dbg_exe_cdpath").c_str(), false));
+      CDInterfaces.push_back(CDIF_Open(&success, MDFN_GetSettingS("ss.dbg_exe_cdpath").c_str(), false,
+               false));
       cdifs = &CDInterfaces;
    }
 
    InitCommon(CART_MDFN_DEBUG, MDFN_GetSettingUI("ss.region_default"));
 
    // 0x25FE00C4 = 0x1;
-   for(i = 0; i < fp->size(); i += 2)
+   for(i = 0; i < fp->size; i += 2)
    {
       uint8 tmp[2];
 
