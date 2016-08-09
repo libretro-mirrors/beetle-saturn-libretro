@@ -2,6 +2,7 @@
 #define _GIT_H
 
 #include <string>
+#include <vector>
 
 #include "video.h"
 #include "state.h"
@@ -46,12 +47,16 @@ typedef enum
    IDIT_BUTTON,
    IDIT_BUTTON_CAN_RAPID,
 
+   IDIT_SWITCH,		/* ceil(log2(n))-bit */
+   IDIT_STATUS,		/* ceil(log2(n))-bit */
+
    IDIT_X_AXIS,
    IDIT_Y_AXIS,
    IDIT_X_AXIS_REL,
    IDIT_Y_AXIS_REL,
 
    IDIT_BYTE_SPECIAL,
+   IDIT_RESET_BUTTON,	/* 1-bit */
 
    IDIT_BUTTON_ANALOG,
    IDIT_RUMBLE
@@ -59,36 +64,102 @@ typedef enum
 
 #define IDIT_BUTTON_ANALOG_FLAG_SQLR	0x00000001
 
-typedef struct
+struct IDIIS_StatusState
 {
-   const char *SettingName;
-   const char *Name;
-   const int ConfigOrder;
-   const InputDeviceInputType Type;
-   const char *ExcludeName;
-   const char *RotateName[3];
-   unsigned Flags;
-} InputDeviceInputInfoStruct;
+	const char* ShortName;
+	const char* Name;
+	int32 Color;	// (msb)0RGB(lsb), -1 for unused.
+};
 
-typedef struct
+struct InputDeviceInputInfoStruct
 {
-   const char *ShortName;
-   const char *FullName;
-   const char *Description;
+	const char *SettingName;	// No spaces, shouldbe all a-z0-9 and _. Definitely no ~!
+	const char *Name;
+        int ConfigOrder;          // Configuration order during in-game config process, -1 for no config.
+	InputDeviceInputType Type;
+	const char *ExcludeName;	// SettingName of a button that can't be pressed at the same time as this button
+					// due to physical limitations.
 
-   const void *PortExpanderDeviceInfo;
-   int NumInputs;
-   const InputDeviceInputInfoStruct *IDII;
-} InputDeviceInfoStruct;
+	const char *RotateName[3];	// 90, 180, 270
+	uint8 Flags;
+	uint8 BitSize;
+	uint16 BitOffset;
 
-typedef struct
+	union
+	{
+         struct
+         {
+	  const char** SwitchPosName;	//
+	  uint32 SwitchNumPos;
+         };
+
+	 struct
+	 {
+	  const IDIIS_StatusState* StatusStates;
+	  uint32 StatusNumStates;
+	 };
+	};
+};
+
+struct IDIISG : public std::vector<InputDeviceInputInfoStruct>
 {
-   const char *ShortName;
-   const char *FullName;
-   int NumTypes;
-   InputDeviceInfoStruct *DeviceInfo;
-   const char *DefaultDevice;
-} InputPortInfoStruct;
+ IDIISG();
+ IDIISG(std::initializer_list<InputDeviceInputInfoStruct> l);
+ uint32 InputByteSize;
+};
+
+extern const IDIISG IDII_Empty;
+
+struct IDIIS_Switch : public InputDeviceInputInfoStruct
+{
+	IDIIS_Switch(const char* sname, const char* name, int co, const char** spn, const uint32 spn_num)
+	{
+	 SettingName = sname;
+	 Name = name;
+	 ConfigOrder = co;
+	 Type = IDIT_SWITCH;
+
+	 ExcludeName = NULL;
+	 RotateName[0] = RotateName[1] = RotateName[2] = NULL;
+	 Flags = 0;
+	 SwitchPosName = spn;
+	 SwitchNumPos = spn_num;
+	}
+};
+
+struct IDIIS_Status : public InputDeviceInputInfoStruct
+{
+	IDIIS_Status(const char* sname, const char* name, const IDIIS_StatusState* ss, const uint32 ss_num)
+	{
+	 SettingName = sname;
+	 Name = name;
+	 ConfigOrder = -1;
+	 Type = IDIT_STATUS;
+
+	 ExcludeName = NULL;
+	 RotateName[0] = RotateName[1] = RotateName[2] = NULL;
+	 Flags = 0;
+	 StatusStates = ss;
+	 StatusNumStates = ss_num;
+	}
+};
+
+struct InputDeviceInfoStruct
+{
+ const char *ShortName;
+ const char *FullName;
+ const char *Description;
+
+ const IDIISG& IDII;
+};
+
+struct InputPortInfoStruct
+{
+ const char *ShortName;
+ const char *FullName;
+ const std::vector<InputDeviceInfoStruct> &DeviceInfo;
+ const char *DefaultDevice;	// Default device for this port.
+};
 
 typedef struct
 {
@@ -316,6 +387,11 @@ typedef enum
    MODPRIO_EXTERNAL_HIGH = 40
 } ModPrio;
 
+#define IDIT_BUTTON_ANALOG_FLAG_SQLR	0x00000001	// Denotes analog data that may need to be scaled to ensure a more squareish logical range(for emulated
+							// analog sticks).
+
+
+
 class CDIF;
 
 #define MDFN_MASTERCLOCK_FIXED(n)	((int64_t)((double)(n) * (INT64_C(1) << 32)))
@@ -388,5 +464,7 @@ typedef struct
    float mouse_scale_x, mouse_scale_y;
    float mouse_offs_x, mouse_offs_y;
 } MDFNGI;
+
+int StateAction(StateMem *sm, int load, int data_only);
 
 #endif

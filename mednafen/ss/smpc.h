@@ -24,6 +24,8 @@
 #ifndef __MDFN_SS_SMPC_H
 #define __MDFN_SS_SMPC_H
 
+#include "../Stream.h"
+
 namespace MDFN_IEN_SS
 {
 
@@ -54,13 +56,13 @@ enum
  SMPC_RTC_LANG_JAPANESE = 5
 };
 
-void SMPC_Init(const uint8 area_code, const int32 master_clock) MDFN_COLD;
+void SMPC_Init(const uint8 area_code, const int32 master_clock);
 bool SMPC_IsSlaveOn(void);
-void SMPC_Reset(bool powering_up) MDFN_COLD;
-void SMPC_LoadNV(Stream* s) MDFN_COLD;
-void SMPC_SaveNV(Stream* s) MDFN_COLD;
+void SMPC_Reset(bool powering_up);
+void SMPC_LoadNV(Stream* s);
+void SMPC_SaveNV(Stream* s);
 
-void SMPC_SetRTC(const struct tm* ht, const uint8 lang) MDFN_COLD;
+void SMPC_SetRTC(const struct tm* ht, const uint8 lang);
 
 void SMPC_Write(const sscpu_timestamp_t timestamp, uint8 A, uint8 V);
 uint8 SMPC_Read(const sscpu_timestamp_t timestamp, uint8 A);
@@ -70,7 +72,7 @@ void SMPC_ResetTS(void);
 
 int32 SMPC_StartFrame(EmulateSpecStruct* espec);
 void SMPC_UpdateInput(void);
-void SMPC_SetInput(unsigned port, const char* type, uint8* ptr) MDFN_COLD;
+void SMPC_SetInput(unsigned port, const char* type, uint8* ptr);
 
 void SMPC_SetVB(sscpu_timestamp_t event_timestamp, bool vb_status);
 

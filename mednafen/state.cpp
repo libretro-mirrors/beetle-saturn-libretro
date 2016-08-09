@@ -467,7 +467,7 @@ int MDFNSS_SaveSM(void *st_p, int, int, const void*, const void*, const void*)
    MDFN_en32lsb(header + 28, neoheight);
    smem_write(st, header, 32);
 
-   if(!MDFNGameInfo->StateAction(st, 0, 0))
+   if(!StateAction(st, 0, 0))
       return(0);
 
    uint32_t sizy = st->loc;
@@ -490,5 +490,5 @@ int MDFNSS_LoadSM(void *st_p, int, int)
 
    stateversion = MDFN_de32lsb(header + 16);
 
-   return(MDFNGameInfo->StateAction(st, stateversion, 0));
+   return StateAction(st, stateversion, 0);
 }
