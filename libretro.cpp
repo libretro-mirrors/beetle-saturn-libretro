@@ -22,6 +22,7 @@ static retro_audio_sample_batch_t audio_batch_cb;
 static retro_input_poll_t input_poll_cb;
 static retro_input_state_t input_state_cb;
 static retro_rumble_interface rumble;
+static retro_environment_t environ_cb;
 
 static unsigned players = 2;
 static unsigned frame_count = 0;
@@ -29,8 +30,6 @@ static unsigned internal_frame_count = 0;
 static bool failed_init = false;
 static unsigned image_offset = 0;
 static unsigned image_crop = 0;
-static bool crop_overscan = false;
-static bool enable_memcard1 = false;
 
 // Sets how often (in number of output frames/retro_run invocations)
 // the internal framerace counter should be updated if
@@ -395,16 +394,6 @@ static void check_variables(bool startup)
       else
          players = 2;
    }
-
-   var.key = "beetle_psx_crop_overscan";
-   
-   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
-     {
-       if (strcmp(var.value, "enabled") == 0)
-         crop_overscan = true;
-       else if (strcmp(var.value, "disabled") == 0)
-         crop_overscan = false;
-     }
 }
 
 #ifdef NEED_CD
@@ -1038,7 +1027,14 @@ void retro_get_system_info(struct retro_system_info *info)
 
 void retro_get_system_av_info(struct retro_system_av_info *info)
 {
-   rsx_intf_get_system_av_info(info);
+   memset(info, 0, sizeof(*info));
+   info->timing.fps            = MEDNAFEN_CORE_TIMING_FPS;
+   info->timing.sample_rate    = 44100;
+   info->geometry.base_width   = MEDNAFEN_CORE_GEOMETRY_BASE_W;
+   info->geometry.base_height  = MEDNAFEN_CORE_GEOMETRY_BASE_H;
+   info->geometry.max_width    = MEDNAFEN_CORE_GEOMETRY_MAX_W;
+   info->geometry.max_height   = MEDNAFEN_CORE_GEOMETRY_MAX_H;
+   info->geometry.aspect_ratio = MEDNAFEN_CORE_GEOMETRY_ASPECT_RATIO;
 }
 
 void retro_deinit(void)
@@ -1116,7 +1112,6 @@ void retro_set_environment(retro_environment_t cb)
       { "beetle_psx_initial_scanline_pal", "Initial scanline PAL; 0|1|2|3|4|5|6|7|8|9|10|10|11|12|13|14|15|16|17|18|19|20|21|22|23|24|25|26|27|28|29|30|31|32|33|34|35|36|37|38|39|40" },
       { "beetle_psx_last_scanline", "Last scanline; 239|238|237|236|235|234|232|231|230|229|228|227|226|225|224|223|222|221|220|219|218|217|216|215|214|213|212|211|210" },
       { "beetle_psx_last_scanline_pal", "Last scanline PAL; 287|286|285|284|283|283|282|281|280|279|278|277|276|275|274|273|272|271|270|269|268|267|266|265|264|263|262|261|260" },
-      { "beetle_psx_crop_overscan", "Crop Overscan; enabled|disabled" },
       { NULL, NULL },
    };
    static const struct retro_controller_description pads[] = {
