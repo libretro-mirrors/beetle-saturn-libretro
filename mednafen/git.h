@@ -164,6 +164,44 @@ enum
    MDFN_MSC__LAST = 0x3F
 };
 
+struct RMD_Media
+{
+ std::string Name;
+ unsigned MediaType;	// Index into RMD_Layout::MediaTypes
+ std::vector<std::string> Orientations;	// The vector may be empty.
+};
+
+struct RMD_MediaType
+{
+ std::string Name;
+};
+
+struct RMD_State
+{
+ std::string Name;
+
+ bool MediaPresent;
+ bool MediaUsable;	// Usually the same as MediaPresent.
+ bool MediaCanChange;
+};
+
+struct RMD_Drive
+{
+ std::string Name;
+
+ std::vector<RMD_State> PossibleStates;	// Ideally, only one state will have MediaPresent == true.
+ std::vector<unsigned> CompatibleMedia;	// Indexes into RMD_Layout::MediaTypes
+ unsigned MediaMtoPDelay;		// Recommended minimum delay, in milliseconds, between a MediaPresent == false state and a MediaPresent == true state; to be enforced
+					// by the media changing user interface.
+};
+
+struct RMD_Layout
+{
+ std::vector<RMD_Drive> Drives;
+ std::vector<RMD_MediaType> MediaTypes;
+ std::vector<RMD_Media> Media;
+};
+
 typedef struct
 {
    // Pitch(32-bit) must be equal to width and >= the "fb_width" specified in the MDFNGI struct for the emulated system.
@@ -370,6 +408,8 @@ typedef struct
 
    VideoSystems VideoSystem;
    GameMediumTypes GameType;
+
+   RMD_Layout* RMD;
 
    //int DiskLogicalCount;	// A single double-sided disk would be 2 here.
    //const char *DiskNames;	// Null-terminated.
