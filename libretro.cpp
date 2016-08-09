@@ -198,6 +198,7 @@ static void update_md5_checksum(CDIF *iface)
 // Untested ...
 static bool disk_replace_image_index(unsigned index, const struct retro_game_info *info)
 {
+#if 0
    if (index >= disk_get_num_images() || !eject_state)
       return false;
 
@@ -228,6 +229,9 @@ static bool disk_replace_image_index(unsigned index, const struct retro_game_inf
    /* Ugly, but needed to get proper disk swapping effect. */
    update_md5_checksum(iface);
    return true;
+#else
+   return false;
+#endif
 }
 
 static bool disk_add_image_index(void)
@@ -1135,8 +1139,6 @@ void retro_set_environment(retro_environment_t cb)
 
    cb(RETRO_ENVIRONMENT_SET_VARIABLES, (void*)vars);
    environ_cb(RETRO_ENVIRONMENT_SET_CONTROLLER_INFO, (void*)ports);
-
-   rsx_intf_set_environment(cb);
 }
 
 void retro_set_audio_sample(retro_audio_sample_t cb)
@@ -1162,8 +1164,6 @@ void retro_set_input_state(retro_input_state_t cb)
 void retro_set_video_refresh(retro_video_refresh_t cb)
 {
    video_cb = cb;
-
-   rsx_intf_set_video_refresh(cb);
 }
 
 static size_t serialize_size;
