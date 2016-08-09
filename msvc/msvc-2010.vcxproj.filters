@@ -305,9 +305,6 @@
     <ClCompile Include="..\libretro-common\glsym\rglgen.c">
       <Filter>libretro-common\glsym</Filter>
     </ClCompile>
-    <ClCompile Include="..\mednafen\cdrom\CDAccess_PBP.cpp">
-      <Filter>mednafen\cdrom</Filter>
-    </ClCompile>
     <ClCompile Include="..\deps\zlib\gzread.c">
       <Filter>deps\zlib</Filter>
     </ClCompile>
