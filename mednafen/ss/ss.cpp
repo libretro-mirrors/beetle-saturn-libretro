@@ -38,6 +38,8 @@
 
 extern MDFNGI EmulatedSS;
 
+#include "../MemoryStream.h"
+
 #include "ss.h"
 #include "sound.h"
 #include "smpc.h"
@@ -47,6 +49,39 @@ extern MDFNGI EmulatedSS;
 #include "scu.h"
 #include "cart.h"
 #include "db.h"
+
+void MDFN_BackupSavFile(const uint8 max_backup_count, const char* sav_ext)
+{
+#if 0
+ FileStream cts(MDFN_MakeFName(MDFNMKF_SAVBACK, -1, sav_ext), MODE_READ_WRITE, true);
+ std::unique_ptr<MemoryStream> tmp;
+ uint8 counter = max_backup_count - 1;
+
+ cts.read(&counter, 1, false);
+
+ tmp.reset(new MemoryStream(new FileStream(MDFN_MakeFName(MDFNMKF_SAV, 0, sav_ext), MODE_READ)));
+ MemoryStream oldbks(new FileStream(MDFN_MakeFName(MDFNMKF_SAVBACK, counter, sav_ext), MODE_READ));
+
+ if(oldbks.size() == tmp->size() && !memcmp(oldbks.map(), tmp->map(), oldbks.size()))
+ {
+    //puts("Skipped backup.");
+    return;
+ }
+
+ counter = (counter + 1) % max_backup_count;
+ FileStream bks(MDFN_MakeFName(MDFNMKF_SAVBACK, counter, sav_ext), MODE_WRITE, 9);
+
+ bks.write(tmp->map(), tmp->size());
+
+ bks.close();
+
+ //
+ //
+ cts.rewind();
+ cts.write(&counter, 1);
+ cts.close();
+#endif
+}
 
 namespace MDFN_IEN_SS
 {
@@ -1678,46 +1713,6 @@ using namespace MDFN_IEN_SS;
 
 MDFNGI EmulatedSS =
 {
- "ss",
- "Sega Saturn",
- KnownExtensions,
- MODPRIO_INTERNAL_HIGH,
- #ifdef WANT_DEBUGGER
- &DBGInfo,
- #else
- NULL,
- #endif
- SMPC_PortInfo,
-#if 0
- Load,
- TestMagic,
-#else
- NULL,
- NULL,
-#endif
- LoadCD,
- TestMagicCD,
- CloseGame,
-
- VDP2::SetLayerEnableMask,
- "NBG0\0NBG1\0NBG2\0NBG3\0RBG0\0RBG1\0Sprite\0",
-
- NULL,
- NULL,
-
- NULL,
- 0,
-
- CheatInfo,
-
- false,
- NULL, //StateAction,
- Emulate,
- NULL,
- SMPC_SetInput,
- SetMedia,
- DoSimpleCommand,
- NULL,
  SSSettings,
  0,
  0,
