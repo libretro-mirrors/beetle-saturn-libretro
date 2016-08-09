@@ -29,6 +29,7 @@
 #include "vdp2_common.h"
 #include "vdp2_render.h"
 
+#include <retro_miscellaneous.h>
 #include <array>
 #include <atomic>
 #include <algorithm>
@@ -2653,9 +2654,9 @@ static NO_INLINE void DrawLine(const uint16 out_line, const uint16 vdp2_line, co
  back_rgb24 = rgb15_to_rgb24(CurBackColor);
 
  if(BorderMode)
-  border_ncf = espec->surface->MakeColor((uint8)(back_rgb24 >> 0), (uint8)(back_rgb24 >> 8), (uint8)(back_rgb24 >> 16));
+  border_ncf = MAKECOLOR((uint8)(back_rgb24 >> 0), (uint8)(back_rgb24 >> 8), (uint8)(back_rgb24 >> 16), 0);
  else
-  border_ncf = espec->surface->MakeColor(0, 0, 0);
+  border_ncf = MAKECOLOR(0, 0, 0, 0);
 
  if(vdp2_line == 0xFFFF)
  {
@@ -3085,7 +3086,7 @@ static int32 LastDrawnLine;
 static INLINE void WWQ(uint16 command, uint32 arg32 = 0, uint16 arg16 = 0)
 {
  while(MDFN_UNLIKELY(WQ_InCount.load(std::memory_order_acquire) == WQ.size()))
-  MDFND_Sleep(1);
+  retro_sleep(1);
 
  WQ_Entry* wqe = &WQ[WQ_WritePos];
 
@@ -3106,7 +3107,7 @@ static int RThreadEntry(void* data)
   while(MDFN_UNLIKELY(WQ_InCount.load(std::memory_order_acquire) == 0))
   {
    if(LastDrawnLine < 192) // || (LastDrawnLine == VisibleLines - 1))
-    MDFND_Sleep(1);
+    retro_sleep(1);
    else
    {
     for(int i = 1000; i; i--)
@@ -3235,7 +3236,7 @@ void VDP2REND_EndFrame(void)
  while(MDFN_UNLIKELY(DrawCounter.load(std::memory_order_acquire) != 0))
  {
   //fprintf(stderr, "SLEEEEP\n");
-  //MDFND_Sleep(1);
+  //retro_sleep(1);
  }
 
  if(OutLineCounter < VisibleLines)
@@ -3250,7 +3251,7 @@ void VDP2REND_EndFrame(void)
     out_line = (out_line << 1) | espec->InterlaceField;
 
    target = espec->surface->pixels + out_line * espec->surface->pitchinpix;
-   target[0] = target[1] = target[2] = target[3] = espec->surface->MakeColor(0, 0, 0);
+   target[0] = target[1] = target[2] = target[3] = MAKECOLOR(0, 0, 0, 0);
    espec->LineWidths[out_line] = 4;
   } while(++OutLineCounter < VisibleLines);
  }
