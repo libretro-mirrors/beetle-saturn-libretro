@@ -25,6 +25,7 @@
 // Ignore T4-T7 in hires and 31KHz monitor mode.
 
 #include "ss.h"
+#include "ss_memory.h"
 #include <mednafen/mednafen.h>
 #include "vdp2_common.h"
 #include "vdp2_render.h"
