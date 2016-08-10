@@ -1888,6 +1888,7 @@ static bool disk_set_image_index(unsigned index)
 #endif
 }
 
+#if 0
 // Mednafen PSX really doesn't support adding disk images on the fly ...
 // Hack around this.
 static void update_md5_checksum(CDIF *iface)
@@ -1918,6 +1919,7 @@ static void update_md5_checksum(CDIF *iface)
    char *md5 = md5_asciistr(MDFNGameInfo->MD5);
    log_cb(RETRO_LOG_INFO, "[Mednafen]: Updated md5 checksum: %s.\n", md5);
 }
+#endif
 
 // Untested ...
 static bool disk_replace_image_index(unsigned index, const struct retro_game_info *info)
