@@ -52,8 +52,6 @@
 #include <mednafen/cdrom/CDUtility.h>
 #include <mednafen/cdrom/cdromif.h>
 
-namespace MDFN_IEN_SS
-{
 
 enum
 {
@@ -3390,9 +3388,4 @@ void CDB_Write_DBM(uint32 offset, uint16 DB, uint16 mask)
  }
 
  SS_SetEventNT(SS_EVENT_CDB, nt);
-}
-
-
-
-
 }

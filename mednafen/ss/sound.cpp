@@ -33,8 +33,6 @@
 #include "scu.h"
 #include "cdb.h"
 
-namespace MDFN_IEN_SS
-{
 #else
 namespace MDFN_IEN_SSFPLAY
 {
@@ -353,5 +351,7 @@ static void SoundCPU_BusRESET(bool state)
  }
 }
 
+#ifdef MDFN_SSFPLAY_COMPILE
 }
+#endif
 

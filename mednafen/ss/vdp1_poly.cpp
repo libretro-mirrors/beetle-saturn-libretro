@@ -23,9 +23,6 @@
 #include "vdp1.h"
 #include "vdp1_common.h"
 
-namespace MDFN_IEN_SS
-{
-
 namespace VDP1
 {
 
@@ -140,5 +137,4 @@ int32 CMD_Polygon(const uint16* cmd_data)
 }
 
 
-}
 }

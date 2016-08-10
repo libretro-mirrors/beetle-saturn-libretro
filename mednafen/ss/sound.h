@@ -22,9 +22,6 @@
 #ifndef __MDFN_SS_SOUND_H
 #define __MDFN_SS_SOUND_H
 
-namespace MDFN_IEN_SS
-{
-
 void SOUND_Init(void) MDFN_COLD;
 void SOUND_Reset(bool powering_up) MDFN_COLD;
 void SOUND_Kill(void) MDFN_COLD;
@@ -45,6 +42,5 @@ void SOUND_Write16(uint32 A, uint16 V);
 
 uint8 SOUND_PeekRAM(uint32 A);
 void SOUND_PokeRAM(uint32 A, uint8 V);
-}
 
 #endif

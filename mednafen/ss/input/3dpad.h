@@ -22,9 +22,6 @@
 #ifndef __MDFN_SS_INPUT_3DPAD_H
 #define __MDFN_SS_INPUT_3DPAD_H
 
-namespace MDFN_IEN_SS
-{
-
 class IODevice_3DPad final : public IODevice
 {
  public:
@@ -51,7 +48,5 @@ class IODevice_3DPad final : public IODevice
 
 
 extern IDIISG IODevice_3DPad_IDII;
-
-}
 
 #endif

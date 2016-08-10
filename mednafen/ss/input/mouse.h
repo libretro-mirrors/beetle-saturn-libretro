@@ -22,9 +22,6 @@
 #ifndef __MDFN_SS_INPUT_MOUSE_H
 #define __MDFN_SS_INPUT_MOUSE_H
 
-namespace MDFN_IEN_SS
-{
-
 class IODevice_Mouse final : public IODevice
 {
  public:
@@ -50,7 +47,5 @@ class IODevice_Mouse final : public IODevice
 
 
 extern IDIISG IODevice_Mouse_IDII;
-
-}
 
 #endif

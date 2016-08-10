@@ -24,9 +24,6 @@
 #ifndef __MDFN_SS_VDP1_COMMON_H
 #define __MDFN_SS_VDP1_COMMON_H
 
-namespace MDFN_IEN_SS
-{
-
 namespace VDP1
 {
 
@@ -663,8 +660,5 @@ struct EdgeStepper
 //
 //
 }
-
-}
-
 
 #endif

@@ -22,9 +22,6 @@
 #ifndef __MDFN_SS_VDP1_H
 #define __MDFN_SS_VDP1_H
 
-namespace MDFN_IEN_SS
-{
-
 namespace VDP1
 {
 
@@ -55,8 +52,5 @@ void PokeVRAM(const uint32 addr, const uint8 val);
 void MakeDump(const std::string& path);
 #endif
 }
-
-}
-
 
 #endif

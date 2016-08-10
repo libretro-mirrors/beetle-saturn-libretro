@@ -22,9 +22,6 @@
 #ifndef __MDFN_SS_SCU_H
 #define __MDFN_SS_SCU_H
 
-namespace MDFN_IEN_SS
-{
-
 enum
 {
  SCU_INT_VBIN = 0x00,
@@ -88,6 +85,5 @@ enum
 
 uint32 SCU_GetRegister(const unsigned id, char* const special, const uint32 special_len) MDFN_COLD;
 void SCU_SetRegister(const unsigned id, const uint32 value) MDFN_COLD;
-}
 
 #endif

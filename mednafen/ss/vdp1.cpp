@@ -39,8 +39,6 @@
 enum { VDP1_UpdateTimingGran = 263 };
 enum { VDP1_IdleTimingGran = 1019 };
 
-namespace MDFN_IEN_SS
-{
 namespace VDP1
 {
 
@@ -844,8 +842,6 @@ void MakeDump(const std::string& path)
 
  fp.close();
 #endif
-}
-
 }
 
 }

@@ -140,7 +140,6 @@ SOURCES_CXX += \
 
 SOURCES_C += \
 	$(MEDNAFEN_DIR)/file.c \
-	$(MEDNAFEN_DIR)/md5.c \
 	$(MEDNAFEN_DIR)/mednafen-endian.c
 
 SOURCES_CXX += $(MEDNAFEN_DIR)/hash/sha256.cpp \

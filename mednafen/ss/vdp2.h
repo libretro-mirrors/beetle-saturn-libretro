@@ -22,8 +22,6 @@
 #ifndef __MDFN_SS_VDP2_H
 #define __MDFN_SS_VDP2_H
 
-namespace MDFN_IEN_SS
-{
 namespace VDP2
 {
 
@@ -66,6 +64,5 @@ void MakeDump(const std::string& path) MDFN_COLD;
 
 INLINE uint32 PeekLine(void) { extern int32 VCounter; return VCounter; }
 INLINE uint32 PeekHPos(void) { extern int32 HCounter; return HCounter; }
-}
 }
 #endif

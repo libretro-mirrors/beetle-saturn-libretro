@@ -24,8 +24,6 @@
 
 #pragma GCC optimize("Os")
 
-namespace MDFN_IEN_SS
-{
 #include "scu_dsp_common.inc"
 
 template<bool looped, unsigned dest, unsigned cond>
@@ -71,6 +69,4 @@ void (*DSP_MVIFuncTable[2][16][128])(void) =
 {
  #include "scu_dsp_mvitab.inc"
 };
-
-}
 

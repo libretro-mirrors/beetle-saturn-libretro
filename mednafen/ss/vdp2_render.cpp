@@ -36,8 +36,6 @@
 #include <atomic>
 #include <algorithm>
 
-namespace MDFN_IEN_SS
-{
 //uint8 vdp2rend_prepad_bss
 
 static EmulateSpecStruct* espec = NULL;
@@ -3307,6 +3305,4 @@ void VDP2REND_Write16_DB(uint32 A, uint16 DB)
   WWQ(COMMAND_WRITE16, A, DB);
  //else
  // MemW<uint16>(A, DB);
-}
-
 }

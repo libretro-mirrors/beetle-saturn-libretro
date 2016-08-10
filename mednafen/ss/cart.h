@@ -22,9 +22,6 @@
 #ifndef __MDFN_SS_CART_H
 #define __MDFN_SS_CART_H
 
-namespace MDFN_IEN_SS
-{
-
 struct CartInfo
 {
  void (*Reset)(bool powering_up);
@@ -78,6 +75,4 @@ void CART_GetNVInfo(const char** ext, void** nv_ptr, uint64* nv_size) MDFN_COLD;
 bool CART_GetClearNVDirty(void);
 void CART_Reset(bool powering_up) MDFN_COLD;
 
-
-}
 #endif

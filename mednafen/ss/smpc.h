@@ -26,9 +26,6 @@
 
 #include "../Stream.h"
 
-namespace MDFN_IEN_SS
-{
-
 enum
 {
  SMPC_AREA_JP		= 0x1,
@@ -91,5 +88,4 @@ class IODevice
 
 extern const std::vector<InputPortInfoStruct> SMPC_PortInfo;
 
-}
 #endif

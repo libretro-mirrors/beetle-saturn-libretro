@@ -27,8 +27,6 @@
 #include <stdint.h>
 #include <stdarg.h>
 
-namespace MDFN_IEN_SS
-{
  enum
  {
   SS_DBG_ERROR     = 0x00001,
@@ -131,6 +129,5 @@ namespace MDFN_IEN_SS
  void SS_SetPhysMemMap(uint32 Astart, uint32 Aend, uint16* ptr, uint32 length, bool is_writeable = false);
 
  void SS_Reset(bool powering_up);
-}
 
 #endif

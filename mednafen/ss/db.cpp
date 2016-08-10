@@ -27,9 +27,6 @@
 #include "cart.h"
 #include "db.h"
 
-namespace MDFN_IEN_SS
-{
-
 bool DB_LookupRegionDB(const uint8* fd_id, unsigned* const region)
 {
  static const struct
@@ -151,6 +148,4 @@ bool DB_LookupCartDB(const char* sgid, int* const cart_type)
   }
  }
  return false;
-}
-
 }

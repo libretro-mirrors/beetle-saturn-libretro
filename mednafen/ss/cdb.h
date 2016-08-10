@@ -24,9 +24,6 @@
 
 class CDIF;
 
-namespace MDFN_IEN_SS
-{
-
 void CDB_Init(void) MDFN_COLD;
 void CDB_Kill(void) MDFN_COLD;
 
@@ -46,7 +43,5 @@ void CDB_GetCDDA(uint16* outbuf);	// writes to outbuf[0] and outbuf[1]
 void CDB_SetClockRatio(uint32 ratio);
 void CDB_ResetCD(void);
 void CDB_SetCDActive(bool active);
-
-}
 
 #endif

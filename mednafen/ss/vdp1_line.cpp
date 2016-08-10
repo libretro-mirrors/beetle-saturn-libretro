@@ -23,9 +23,6 @@
 #include "vdp1.h"
 #include "vdp1_common.h"
 
-namespace MDFN_IEN_SS
-{
-
 namespace VDP1
 {
 
@@ -121,8 +118,6 @@ int32 CMD_Polyline(const uint16* cmd_data)
 int32 CMD_Line(const uint16* cmd_data)
 {
  return CMD_Line_Polyline_T<1>(cmd_data);
-}
-
 }
 
 }

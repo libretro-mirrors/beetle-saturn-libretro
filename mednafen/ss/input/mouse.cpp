@@ -22,9 +22,6 @@
 #include "common.h"
 #include "mouse.h"
 
-namespace MDFN_IEN_SS
-{
-
 IODevice_Mouse::IODevice_Mouse() : buttons(0)
 {
 
@@ -167,6 +164,3 @@ IDIISG IODevice_Mouse_IDII =
  { "middle", "Middle Button", 1, IDIT_BUTTON },
  { "start", "Start", 3, IDIT_BUTTON },
 };
-
-
-}

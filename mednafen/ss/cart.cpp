@@ -88,9 +88,6 @@ static INLINE uint16 MDFN_de16msb(const void* ptr)
  return MDFN_demsb<uint16, aligned>(ptr);
 }
 
-namespace MDFN_IEN_SS
-{
-
 static uint16 ExtRAM[0x200000];	// Also used for cart ROM
 static size_t ExtRAM_Mask;
 
@@ -336,7 +333,5 @@ void CART_GetNVInfo(const char** ext, void** nv_ptr, uint64* nv_size)
 
 void CART_Kill(void)
 {
-
-}
 
 }

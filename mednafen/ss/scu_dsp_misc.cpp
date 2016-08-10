@@ -24,8 +24,6 @@
 
 #pragma GCC optimize("Os")
 
-namespace MDFN_IEN_SS
-{
 #include "scu_dsp_common.inc"
 
 template<bool looped, unsigned op>
@@ -65,5 +63,3 @@ void (*DSP_MiscFuncTable[2][4])(void) =
 {
  #include "scu_dsp_misctab.inc"
 };
-
-}

@@ -25,9 +25,6 @@
 
 //#pragma GCC optimize("Os,no-crossjumping")
 
-namespace MDFN_IEN_SS
-{
-
 namespace VDP1
 {
 
@@ -312,5 +309,4 @@ int32 CMD_ScaledSprite(const uint16* cmd_data)
 }
 
 
-}
 }

@@ -40,8 +40,6 @@
 
 #include <time.h>
 
-namespace MDFN_IEN_SS
-{
 #include "sh7095.h"
 
 enum
@@ -1216,6 +1214,3 @@ const std::vector<InputPortInfoStruct> SMPC_PortInfo =
 
  { "builtin", "Builtin", InputDeviceInfoBuiltin, "builtin" },
 };
-
-
-}

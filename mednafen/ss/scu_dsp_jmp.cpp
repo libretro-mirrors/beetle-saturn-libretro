@@ -24,8 +24,6 @@
 
 #pragma GCC optimize("Os")
 
-namespace MDFN_IEN_SS
-{
 #include "scu_dsp_common.inc"
 
 template<bool looped, unsigned cond>
@@ -41,5 +39,3 @@ void (*DSP_JMPFuncTable[2][128])(void) =
 {
  #include "scu_dsp_jmptab.inc"
 };
-
-}

@@ -37,9 +37,6 @@
 #include "vdp2_common.h"
 #include "vdp2_render.h"
 
-namespace MDFN_IEN_SS
-{
-
 namespace VDP2
 {
 
@@ -925,6 +922,3 @@ void MakeDump(const std::string& path)
 #endif
 
 }
-
-}
-

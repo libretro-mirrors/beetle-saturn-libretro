@@ -22,9 +22,6 @@
 #ifndef __MDFN_SS_INPUT_GAMEPAD_H
 #define __MDFN_SS_INPUT_GAMEPAD_H
 
-namespace MDFN_IEN_SS
-{
-
 class IODevice_Gamepad final : public IODevice
 {
  public:
@@ -43,7 +40,5 @@ class IODevice_Gamepad final : public IODevice
 
 
 extern IDIISG IODevice_Gamepad_IDII;
-
-}
 
 #endif

@@ -22,9 +22,6 @@
 #include "common.h"
 #include "3dpad.h"
 
-namespace MDFN_IEN_SS
-{
-
 IODevice_3DPad::IODevice_3DPad() : dbuttons(0), mode(false)
 {
 
@@ -200,8 +197,3 @@ IDIISG IODevice_3DPad_IDII =
  { "rs", "Right Shoulder (Analog)", 12, IDIT_BUTTON_ANALOG },
  { "ls", "Left Shoulder (Analog)", 11, IDIT_BUTTON_ANALOG },
 };
-
-
-
-
-}

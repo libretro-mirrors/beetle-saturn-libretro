@@ -29,8 +29,6 @@
 
   // MOV [s],[d] when moving from/to the same data RAM bank seems to be treated like a NOP...
 
-namespace MDFN_IEN_SS
-{
 #include "scu_dsp_common.inc"
 
 static INLINE void SetC(bool value)
@@ -376,5 +374,3 @@ void (*DSP_GenFuncTable[2][16][8][8][4])(void) =
 {
  #include "scu_dsp_gentab.inc"
 };
-
-}

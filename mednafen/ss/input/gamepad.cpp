@@ -22,9 +22,6 @@
 #include "common.h"
 #include "gamepad.h"
 
-namespace MDFN_IEN_SS
-{
-
 IODevice_Gamepad::IODevice_Gamepad() : buttons(~3)
 {
 
@@ -92,6 +89,3 @@ IDIISG IODevice_Gamepad_IDII =
  { NULL, "empty", 0, IDIT_BUTTON },
  { "ls", "Left Shoulder", 11, IDIT_BUTTON },
 };
-
-
-}

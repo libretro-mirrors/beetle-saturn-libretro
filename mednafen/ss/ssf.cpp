@@ -39,8 +39,6 @@ typedef int32 sscpu_timestamp_t;
 #undef SS_DBG
 #undef MDFN_SSFPLAY_COMPILE
 
-namespace MDFN_IEN_SSFPLAY
-{
 static SSFLoader* ssf_loader = NULL;
 
 static void Emulate(EmulateSpecStruct* espec)
@@ -157,7 +155,6 @@ static MDFNSetting SSFPlaySettings[] =
 
 
 static std::vector<InputPortInfoStruct> DummyPortInfo;
-}
 
 using namespace MDFN_IEN_SSFPLAY;
 

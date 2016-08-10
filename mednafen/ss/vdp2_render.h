@@ -22,9 +22,6 @@
 #ifndef __MDFN_SS_VDP2_RENDER_H
 #define __MDFN_SS_VDP2_RENDER_H
 
-namespace MDFN_IEN_SS
-{
-
 void VDP2REND_Init(const bool IsPAL, const int sls, const int sle) MDFN_COLD;
 void VDP2REND_FillVideoParams(MDFNGI* gi) MDFN_COLD;
 void VDP2REND_Kill(void) MDFN_COLD;
@@ -53,7 +50,5 @@ void VDP2REND_DrawLine(int vdp2_line, const bool field);
 
 void VDP2REND_Write8_DB(uint32 A, uint16 DB);
 void VDP2REND_Write16_DB(uint32 A, uint16 DB);
-
-}
 
 #endif
