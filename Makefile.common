@@ -25,9 +25,9 @@ SOURCES_C += $(DEPS_DIR)/zlib/adler32.c \
 				 $(DEPS_DIR)/zlib/zutil.c
 
 ifeq ($(HAVE_GRIFFIN),1)
-SOURCES_CXX += beetle_psx_griffin.cpp
+SOURCES_CXX += beetle_ss_griffin.cpp
 
-SOURCES_C += beetle_psx_griffin_c.c
+SOURCES_C += beetle_ss_griffin_c.c
 endif
 
 ifeq ($(NEED_THREADING), 1)
@@ -100,6 +100,8 @@ ifneq ($(HAVE_GRIFFIN), 1)
 	$(CORE_EMU_DIR)/input/gamepad.cpp \
 	$(CORE_EMU_DIR)/input/3dpad.cpp \
 	$(CORE_EMU_DIR)/input/mouse.cpp
+
+SOURCES_CXX += $(MEDNAFEN_DIR)/hw_cpu/m68k/m68k.cpp
 
 SOURCES_C += $(CORE_DIR)/libretro_cbs.c
 
