@@ -2242,7 +2242,7 @@ static MDFNGI *MDFNI_LoadCD(const char *force_module, const char *devicename)
    {
       md5_context layout_md5;
 
-      md5_starts(&layout_md5);
+      layout_md5.starts();
 
       for(unsigned i = 0; i < CDInterfaces.size(); i++)
       {
@@ -2251,18 +2251,18 @@ static MDFNGI *MDFNI_LoadCD(const char *force_module, const char *devicename)
          TOC_Clear(&toc);
          CDInterfaces[i]->ReadTOC(&toc);
 
-         md5_update_u32_as_lsb(&layout_md5, toc.first_track);
-         md5_update_u32_as_lsb(&layout_md5, toc.last_track);
-         md5_update_u32_as_lsb(&layout_md5, toc.tracks[100].lba);
+         layout_md5.update_u32_as_lsb(toc.first_track);
+         layout_md5.update_u32_as_lsb(toc.last_track);
+         layout_md5.update_u32_as_lsb(toc.tracks[100].lba);
 
          for(uint32 track = toc.first_track; track <= toc.last_track; track++)
          {
-            md5_update_u32_as_lsb(&layout_md5, toc.tracks[track].lba);
-            md5_update_u32_as_lsb(&layout_md5, toc.tracks[track].control & 0x4);
+            layout_md5.update_u32_as_lsb(toc.tracks[track].lba);
+            layout_md5.update_u32_as_lsb(toc.tracks[track].control & 0x4);
          }
       }
 
-      md5_finish(&layout_md5, LayoutMD5);
+      layout_md5.finish(LayoutMD5);
    }
 
    // TODO: include module name in hash
