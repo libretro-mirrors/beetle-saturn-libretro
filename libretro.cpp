@@ -1604,9 +1604,9 @@ static MDFN_COLD void LoadRTC(void)
  SMPC_LoadNV(&sds);
 }
 
-static void StateAction(StateMem *sm, const unsigned load, const bool data_only)
+int StateAction(StateMem *sm, const unsigned load, const bool data_only)
 {
-
+   return 0;
 }
 
 static MDFN_COLD bool SetMedia(uint32 drive_idx, uint32 state_idx, uint32 media_idx, uint32 orientation_idx)
@@ -1800,8 +1800,6 @@ static void extract_directory(char *buf, const char *path, size_t size)
 }
 
 //forward decls
-extern void SetInput(int port, const char *type, void *ptr);
-
 static bool overscan;
 static double last_sound_rate;
 
@@ -2549,13 +2547,11 @@ bool retro_load_game(const struct retro_game_info *info)
    deint.ClearState();
 #endif
 
-   //SetInput(0, "gamepad", &input_buf[0]);
-   //SetInput(1, "gamepad", &input_buf[1]);
+   //SMPC_SetInput(0, "gamepad", &input_buf[0]);
+   //SMPC_SetInput(1, "gamepad", &input_buf[1]);
 
    for (unsigned i = 0; i < players; i++)
-   {
-      SetInput(i, "gamepad", &input_buf[i]);
-   }
+      SMPC_SetInput(i, "gamepad", (uint8*)&input_buf[i]);
    boot = false;
 
    frame_count = 0;
@@ -2796,19 +2792,19 @@ void retro_set_controller_port_device(unsigned in_port, unsigned device)
       case RETRO_DEVICE_JOYPAD:
       case RETRO_DEVICE_PS1PAD:
          log_cb(RETRO_LOG_INFO, "[%s]: Selected controller type standard gamepad.\n", MEDNAFEN_CORE_NAME);
-         SetInput(in_port, "gamepad", &buf.u8[in_port]);
+         SMPC_SetInput(in_port, "gamepad", (uint8*)&buf.u8[in_port]);
          break;
       case RETRO_DEVICE_DUALANALOG:
          log_cb(RETRO_LOG_INFO, "[%s]: Selected controller type Dual Analog.\n", MEDNAFEN_CORE_NAME);
-         SetInput(in_port, "dualanalog", &buf.u8[in_port]);
+         SMPC_SetInput(in_port, "dualanalog", (uint8*)&buf.u8[in_port]);
          break;
       case RETRO_DEVICE_DUALSHOCK:
          log_cb(RETRO_LOG_INFO, "[%s]: Selected controller type DualShock.\n", MEDNAFEN_CORE_NAME);
-         SetInput(in_port, "dualshock", &buf.u8[in_port]);
+         SMPC_SetInput(in_port, "dualshock", (uint8*)&buf.u8[in_port]);
          break;
       case RETRO_DEVICE_FLIGHTSTICK:
          log_cb(RETRO_LOG_INFO, "[%s]: Selected controller type FlightStick.\n", MEDNAFEN_CORE_NAME);
-         SetInput(in_port, "analogjoy", &buf.u8[in_port]);
+         SMPC_SetInput(in_port, "analogjoy", (uint8*)&buf.u8[in_port]);
          break;
       default:
          log_cb(RETRO_LOG_WARN, "[%s]: Unsupported controller device %u, falling back to gamepad.\n", MEDNAFEN_CORE_NAME,device);
