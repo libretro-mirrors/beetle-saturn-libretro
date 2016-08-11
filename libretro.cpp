@@ -2738,7 +2738,7 @@ void retro_run(void)
    unsigned width        = rects[0];
    unsigned height       = spec.DisplayRect.h;
 
-   int16_t *interbuf = (int16_t*)&IntermediateBuffer;
+   int16_t *interbuf = (int16_t*)&espec->SoundBuf;
 
    video_frames++;
    audio_frames += spec.SoundBufSize;

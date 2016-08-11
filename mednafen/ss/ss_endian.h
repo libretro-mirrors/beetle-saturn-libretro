@@ -8,6 +8,7 @@
  #define MDFN_ENDIANH_IS_BIGENDIAN 0
 #endif
 
+
 /*
  Regarding safety of calling MDFN_*sb<true> on dynamically-allocated memory with new uint8[], see C++ standard 3.7.3.1(i.e. it should be
  safe provided the offsets into the memory are aligned/multiples of the MDFN_*sb access type).  malloc()'d and calloc()'d
@@ -203,4 +204,16 @@ template<typename T, bool aligned = false>
 static INLINE void MDFN_enlsb(void* ptr, T value)
 {
  MDFN_enXsb<0, T, aligned>(ptr, value);
+}
+
+template<typename T, bool aligned = false>
+static INLINE void MDFN_enmsb(void* ptr, T value)
+{
+ MDFN_enXsb<1, T, aligned>(ptr, value);
+}
+
+template<bool aligned = false>
+static INLINE void MDFN_en64msb(void* ptr, uint64 value)
+{
+ MDFN_enmsb<uint64, aligned>(ptr, value);
 }

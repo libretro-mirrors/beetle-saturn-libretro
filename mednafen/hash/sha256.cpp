@@ -20,12 +20,13 @@
 */
 
 #include <mednafen/mednafen.h>
-#include <mednafen/endian.h>
 
 #include "sha256.h"
 
 #include <stdio.h>
 #include <string.h>
+
+#include "../ss/ss_endian.h"
 
 static const uint32 K[64] =
 {
