@@ -51,14 +51,24 @@ int64 MDFN_GetSettingI(const char *name)
 {
    if (!strcmp("psx.region_default", name)) /* make configurable */
       return 1; /* REGION_JP = 0, REGION_NA = 1, REGION_EU = 2 */
-   if (!strcmp("psx.slstart", name))
+   if (!strcmp("ss.slstart", name))
       return setting_initial_scanline;
-   if (!strcmp("psx.slstartp", name))
+   if (!strcmp("ss.slstartp", name))
       return setting_initial_scanline_pal;
-   if (!strcmp("psx.slend", name))
+   if (!strcmp("ss.slend", name))
       return setting_last_scanline;
-   if (!strcmp("psx.slendp", name))
+   if (!strcmp("ss.slendp", name))
       return setting_last_scanline_pal;
+   if (!strcmp("ss.cart", name))
+   {
+      /* 0 - auto
+       * 1 - none
+       * 2 - backup
+       * 3 - extram1
+       * 4 - extram4
+       */
+      return 0;
+   }
    fprintf(stderr, "unhandled setting I: %s\n", name);
    return 0;
 }
@@ -99,7 +109,7 @@ bool MDFN_GetSettingB(const char *name)
       return setting_psx_multitap_port_1;
    if (!strcmp("psx.input.pport2.multitap", name)) /* make configurable */
       return setting_psx_multitap_port_2;
-   if (!strcmp("psx.region_autodetect", name)) /* make configurable */
+   if (!strcmp("ss.region_autodetect", name)) /* make configurable */
       return 1;
    if (!strcmp("psx.input.analog_mode_ct", name)) /* make configurable */
       return setting_psx_analog_toggle;
@@ -119,12 +129,10 @@ bool MDFN_GetSettingB(const char *name)
 
 std::string MDFN_GetSettingS(const char *name)
 {
-   if (!strcmp("psx.bios_eu", name))
-      return std::string("scph5502.bin");
-   if (!strcmp("psx.bios_jp", name))
-      return std::string("scph5500.bin");
-   if (!strcmp("psx.bios_na", name))
-      return std::string("scph5501.bin");
+   if (!strcmp("ss.bios_jp", name))
+      return std::string("sega_101.bin");
+   if (!strcmp("ss.bios_na_eu", name))
+      return std::string("mpr-17933.bin");
    if (!strcmp("psx.region_default", name)) /* make configurable */
       return "na";
    /* FILESYS */
@@ -162,5 +170,19 @@ bool MDFNI_SetSettingB(const char *name, bool value)
 
 bool MDFNI_SetSettingUI(const char *name, uint64_t value)
 {
+   if (!strcmp("ss.region_default", name))
+   {
+      /*
+       * 0 - jp
+       * 1 - na 
+       * 2 - eu
+       * 3 - kr
+       * 4 - tw
+       * 5 - as
+       * 6 - br
+       * 7 - la
+       */
+      return 0;
+   }
    return false;
 }
