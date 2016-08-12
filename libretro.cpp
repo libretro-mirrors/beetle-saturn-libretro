@@ -910,7 +910,7 @@ static bool IsSaturnDisc(const uint8* sa32k)
 static void CalcGameID(uint8* id_out16, uint8* fd_id_out16, char* sgid)
 {
    md5_context mctx;
-   uint8_t *buf = new uint8_t[2048];
+   uint8_t buf[2048];
 
    log_cb(RETRO_LOG_INFO, "Start calculating game ID, discs: %d...\n", cdifs ? cdifs->size() : 0);
 
@@ -944,7 +944,7 @@ static void CalcGameID(uint8* id_out16, uint8* fd_id_out16, char* sgid)
             if(i == 0)
             {
                char* tmp;
-               memcpy(sgid, (void*)(buf[0x20]), 16);
+               memcpy(sgid, (void*)(&buf[0x20]), 16);
                sgid[16] = 0;
                if((tmp = strrchr(sgid, 'V')))
                {
@@ -965,9 +965,6 @@ static void CalcGameID(uint8* id_out16, uint8* fd_id_out16, char* sgid)
          fd_mctx.finish(fd_id_out16);
       }
    }
-
-   if (buf)
-      free(buf);
 
    mctx.finish(id_out16);
 }
