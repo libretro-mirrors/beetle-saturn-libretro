@@ -1515,24 +1515,31 @@ static MDFN_COLD bool LoadCD(std::vector<CDIF *>* CDInterfaces)
    uint8 fd_id[16];
    char sgid[16 + 1];
    cdifs = CDInterfaces;
+
+   log_cb(RETRO_LOG_INFO, "Calculating game ID...\n");
    CalcGameID(MDFNGameInfo->MD5, fd_id, sgid);
 
    if(MDFN_GetSettingB("ss.region_autodetect"))
+   {
+      log_cb(RETRO_LOG_INFO, "Trying to autodetect region...\n");
       if(!DB_LookupRegionDB(fd_id, &region))
       {
          log_cb(RETRO_LOG_INFO, "[Mednafen]: Could not find region inside DB.\n");
          DetectRegion(&region);
       }
+   }
    //
    //
    if((cart_type = MDFN_GetSettingI("ss.cart")) == CART__RESERVED)
    {
+      log_cb(RETRO_LOG_INFO, "Trying to lookup cartridge from DB...\n");
       cart_type = CART_BACKUP_MEM;
       DB_LookupCartDB(sgid, &cart_type);
    }
 
    if(MDFN_GetSettingB("ss.cd_sanity"))
    {
+      log_cb(RETRO_LOG_INFO, "Trying to do CD sanity checks...\n");
       if (!DiscSanityChecks())
          return false;
    }
@@ -2277,6 +2284,7 @@ static MDFNGI *MDFNI_LoadCD(const char *devicename)
       log_cb(RETRO_LOG_DEBUG, "Leadout: %6d\n", toc.tracks[100].lba);
    }
 
+   log_cb(RETRO_LOG_DEBUG, "Calculating layout MD5.\n");
    // Calculate layout MD5.  The system emulation LoadCD() code is free to ignore this value and calculate
    // its own, or to use it to look up a game in its database.
    {
@@ -2305,6 +2313,7 @@ static MDFNGI *MDFNI_LoadCD(const char *devicename)
       layout_md5.finish(LayoutMD5);
    }
 
+   log_cb(RETRO_LOG_DEBUG, "Done calculating layout MD5.\n");
    // TODO: include module name in hash
    memcpy(MDFNGameInfo->MD5, LayoutMD5, 16);
 
