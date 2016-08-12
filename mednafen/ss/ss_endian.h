@@ -1,60 +1,6 @@
 #include <algorithm>
 
-#define MDFN_ASSUME_ALIGNED(p, align) (p)
-
-#ifdef MSB_FIRST
- #define MDFN_ENDIANH_IS_BIGENDIAN 1
-#else
- #define MDFN_ENDIANH_IS_BIGENDIAN 0
-#endif
-
-
-/*
- Regarding safety of calling MDFN_*sb<true> on dynamically-allocated memory with new uint8[], see C++ standard 3.7.3.1(i.e. it should be
- safe provided the offsets into the memory are aligned/multiples of the MDFN_*sb access type).  malloc()'d and calloc()'d
- memory should be safe as well.
-
- Statically-allocated arrays/memory should be unioned with a big POD type or C++11 "alignas"'d.  (May need to audit code to ensure
- this is being done).
-*/
-
-static INLINE uint16 MDFN_bswap16(uint16 v)
-{
- return (v << 8) | (v >> 8);
-}
-
-static INLINE uint32 MDFN_bswap32(uint32 v)
-{
- return (v << 24) | ((v & 0xFF00) << 8) | ((v >> 8) & 0xFF00) | (v >> 24);
-}
-
-static INLINE uint64 MDFN_bswap64(uint64 v)
-{
- return (v << 56) | (v >> 56) | ((v & 0xFF00) << 40) | ((v >> 40) & 0xFF00) | ((uint64)MDFN_bswap32(v >> 16) << 16);
-}
-
-// X endian.
-template<int isbigendian, typename T, bool aligned>
-static INLINE T MDFN_deXsb(const void* ptr)
-{
- T tmp;
-
- memcpy(&tmp, MDFN_ASSUME_ALIGNED(ptr, (aligned ? sizeof(T) : 1)), sizeof(T));
-
- if(isbigendian != -1 && isbigendian != MDFN_ENDIANH_IS_BIGENDIAN)
- {
-  static_assert(sizeof(T) == 1 || sizeof(T) == 2 || sizeof(T) == 4 || sizeof(T) == 8, "Gummy penguins.");
-
-  if(sizeof(T) == 8)
-   return MDFN_bswap64(tmp);
-  else if(sizeof(T) == 4)
-   return MDFN_bswap32(tmp);
-  else if(sizeof(T) == 2)
-   return MDFN_bswap16(tmp);
- }
-
- return tmp;
-}
+#include "../mednafen-endian.h"
 
 //
 // Native endian.

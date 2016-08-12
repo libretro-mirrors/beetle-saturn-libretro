@@ -29,65 +29,6 @@
 
 #include "cart.h"
 
-#ifdef MSB_FIRST
- #define MDFN_ENDIANH_IS_BIGENDIAN 1
-#else
- #define MDFN_ENDIANH_IS_BIGENDIAN 0
-#endif
-
-#define MDFN_ASSUME_ALIGNED(p, align) (p)
-
-static INLINE uint16 MDFN_bswap16(uint16 v)
-{
- return (v << 8) | (v >> 8);
-}
-
-static INLINE uint32 MDFN_bswap32(uint32 v)
-{
- return (v << 24) | ((v & 0xFF00) << 8) | ((v >> 8) & 0xFF00) | (v >> 24);
-}
-
-static INLINE uint64 MDFN_bswap64(uint64 v)
-{
- return (v << 56) | (v >> 56) | ((v & 0xFF00) << 40) | ((v >> 40) & 0xFF00) | ((uint64)MDFN_bswap32(v >> 16) << 16);
-}
-
-// X endian.
-template<int isbigendian, typename T, bool aligned>
-static INLINE T MDFN_deXsb(const void* ptr)
-{
- T tmp;
-
- memcpy(&tmp, MDFN_ASSUME_ALIGNED(ptr, (aligned ? sizeof(T) : 1)), sizeof(T));
-
- if(isbigendian != -1 && isbigendian != MDFN_ENDIANH_IS_BIGENDIAN)
- {
-  static_assert(sizeof(T) == 1 || sizeof(T) == 2 || sizeof(T) == 4 || sizeof(T) == 8, "Gummy penguins.");
-
-  if(sizeof(T) == 8)
-   return MDFN_bswap64(tmp);
-  else if(sizeof(T) == 4)
-   return MDFN_bswap32(tmp);
-  else if(sizeof(T) == 2)
-   return MDFN_bswap16(tmp);
- }
-
- return tmp;
-}
-
-// Big endian.
-template<typename T, bool aligned = false>
-static INLINE T MDFN_demsb(const void* ptr)
-{
- return MDFN_deXsb<1, T, aligned>(ptr);
-}
-
-template<bool aligned = false>
-static INLINE uint16 MDFN_de16msb(const void* ptr)
-{
- return MDFN_demsb<uint16, aligned>(ptr);
-}
-
 static uint16 ExtRAM[0x200000];	// Also used for cart ROM
 static size_t ExtRAM_Mask;
 
