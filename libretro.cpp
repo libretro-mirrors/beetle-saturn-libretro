@@ -912,11 +912,13 @@ static void CalcGameID(uint8* id_out16, uint8* fd_id_out16, char* sgid)
    md5_context mctx;
    uint8_t *buf = new uint8_t[2048];
 
+   log_cb(RETRO_LOG_INFO, "Start calculating game ID, discs: %d...\n", cdifs ? cdifs->size() : 0);
+
    mctx.starts();
 
    for(size_t x = 0; x < cdifs->size(); x++)
    {
-      auto* c = (*cdifs)[x];
+      CDIF *c = (*cdifs)[x];
       TOC toc;
 
       c->ReadTOC(&toc);
@@ -964,7 +966,8 @@ static void CalcGameID(uint8* id_out16, uint8* fd_id_out16, char* sgid)
       }
    }
 
-   free(buf);
+   if (buf)
+      free(buf);
 
    mctx.finish(id_out16);
 }
