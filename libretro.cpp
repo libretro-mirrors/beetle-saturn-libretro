@@ -33,7 +33,7 @@
 #define MEDNAFEN_CORE_VERSION "v0.9.38.7"
 #define MEDNAFEN_CORE_EXTENSIONS "pce|cue|ccd"
 #define MEDNAFEN_CORE_TIMING_FPS 59.82
-#define MEDNAFEN_CORE_GEOMETRY_BASE_W 320
+#define MEDNAFEN_CORE_GEOMETRY_BASE_W 302
 #define MEDNAFEN_CORE_GEOMETRY_BASE_H 240
 #define MEDNAFEN_CORE_GEOMETRY_MAX_W 704
 #define MEDNAFEN_CORE_GEOMETRY_MAX_H 512
@@ -2807,17 +2807,6 @@ void retro_set_controller_port_device(unsigned in_port, unsigned device)
    }
 #endif
 }
-
-#if defined(HAVE_OPENGL)
-#define FIRST_RENDERER "opengl"
-#define EXT_RENDERER "|software"
-#elif defined(HAVE_RUST)
-#define FIRST_RENDERER "opengl-rust"
-#define EXT_RENDERER "|software"
-#else
-#define FIRST_RENDERER "software"
-#define EXT_RENDERER ""
-#endif
 
 void retro_set_environment(retro_environment_t cb)
 {
