@@ -35,8 +35,8 @@
 #define MEDNAFEN_CORE_TIMING_FPS 59.82
 #define MEDNAFEN_CORE_GEOMETRY_BASE_W 320
 #define MEDNAFEN_CORE_GEOMETRY_BASE_H 240
-#define MEDNAFEN_CORE_GEOMETRY_MAX_W 740
-#define MEDNAFEN_CORE_GEOMETRY_MAX_H 448
+#define MEDNAFEN_CORE_GEOMETRY_MAX_W 704
+#define MEDNAFEN_CORE_GEOMETRY_MAX_H 512
 #define MEDNAFEN_CORE_GEOMETRY_ASPECT_RATIO (4.0 / 3.0)
 
 struct retro_perf_callback perf_cb;
@@ -1852,7 +1852,7 @@ static MDFN_Surface *surf = NULL;
 static void alloc_surface() {
   MDFN_PixelFormat pix_fmt(MDFN_COLORSPACE_RGB, 16, 8, 0, 24);
   uint32_t width  = MEDNAFEN_CORE_GEOMETRY_MAX_W;
-  uint32_t height = 480;
+  uint32_t height = MEDNAFEN_CORE_GEOMETRY_MAX_H;
 
   if (surf != NULL) {
     delete surf;
@@ -2776,7 +2776,7 @@ void retro_run(void)
    video_frames++;
    audio_frames += spec.SoundBufSize;
 
-   video_cb(surf->pixels + surf->pitch32 * spec.DisplayRect.y, width, height, width << 1);
+   video_cb(surf->pixels + surf->pitch32 * spec.DisplayRect.y, width, height, height * 4);
    audio_batch_cb(espec->SoundBuf, spec.SoundBufSize);
 }
 
