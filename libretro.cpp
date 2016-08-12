@@ -1424,70 +1424,79 @@ static MDFN_COLD bool TestMagicCD(std::vector<CDIF *> *CDInterfaces)
    return is_cd;
 }
 
-static MDFN_COLD void DiscSanityChecks(void)
+static bool DiscSanityChecks(void)
 {
- for(size_t i = 0; i < cdifs->size(); i++)
- {
-  TOC toc;
+   size_t i;
 
-  (*cdifs)[i]->ReadTOC(&toc);
-
-  for(int32 track = 1; track <= 99; track++)
-  {
-   if(!toc.tracks[track].valid)
-    continue;
-
-   if(toc.tracks[track].control & SUBQ_CTRLF_DATA)
-    continue;
-   //
-   //
-   //
-   const int32 start_lba = toc.tracks[track].lba;
-   const int32 end_lba = start_lba + 32 - 1;
-   bool any_subq_curpos = false;
-
-   for(int32 lba = start_lba; lba <= end_lba; lba++)
+   for(i = 0; i < cdifs->size(); i++)
    {
-    uint8 pwbuf[96];
-    uint8 qbuf[12];
+      TOC toc;
 
-    if(!(*cdifs)[i]->ReadRawSectorPWOnly(pwbuf, lba, false))
-     throw MDFN_Error(0, _("Disc %zu of %zu: Error reading sector at lba=%d in DiscSanityChecks()."), i + 1, cdifs->size(), lba);
+      (*cdifs)[i]->ReadTOC(&toc);
 
-    subq_deinterleave(pwbuf, qbuf);
-    if(subq_check_checksum(qbuf) && (qbuf[0] & 0xF) == ADR_CURPOS)
-    {
-     const uint8 qm = qbuf[7];
-     const uint8 qs = qbuf[8];
-     const uint8 qf = qbuf[9];
-     uint8 lm, ls, lf;
+      for(int32 track = 1; track <= 99; track++)
+      {
+         if(!toc.tracks[track].valid)
+            continue;
 
-     any_subq_curpos = true;
+         if(toc.tracks[track].control & SUBQ_CTRLF_DATA)
+            continue;
+         //
+         //
+         //
+         const int32 start_lba = toc.tracks[track].lba;
+         const int32 end_lba = start_lba + 32 - 1;
+         bool any_subq_curpos = false;
 
-     LBA_to_AMSF(lba, &lm, &ls, &lf);
-     lm = U8_to_BCD(lm);
-     ls = U8_to_BCD(ls);
-     lf = U8_to_BCD(lf);
+         for(int32 lba = start_lba; lba <= end_lba; lba++)
+         {
+            uint8 pwbuf[96];
+            uint8 qbuf[12];
 
-     if(lm != qm || ls != qs || lf != qf)
-     {
-      throw MDFN_Error(0, _("Disc %zu of %zu: Time mismatch at lba=%d(%02x:%02x:%02x); Q subchannel: %02x:%02x:%02x"),
-		i + 1, cdifs->size(),
-		lba,
-		lm, ls, lf,
-		qm, qs, qf);
-     }
-    }
+            if(!(*cdifs)[i]->ReadRawSectorPWOnly(pwbuf, lba, false))
+            {
+               printf("Disc %zu of %zu: Error reading sector at lba=%d in DiscSanityChecks().\n", i + 1, cdifs->size(), lba);
+               return false;
+            }
+
+            subq_deinterleave(pwbuf, qbuf);
+            if(subq_check_checksum(qbuf) && (qbuf[0] & 0xF) == ADR_CURPOS)
+            {
+               const uint8 qm = qbuf[7];
+               const uint8 qs = qbuf[8];
+               const uint8 qf = qbuf[9];
+               uint8 lm, ls, lf;
+
+               any_subq_curpos = true;
+
+               LBA_to_AMSF(lba, &lm, &ls, &lf);
+               lm = U8_to_BCD(lm);
+               ls = U8_to_BCD(ls);
+               lf = U8_to_BCD(lf);
+
+               if(lm != qm || ls != qs || lf != qf)
+               {
+                  printf("Disc %zu of %zu: Time mismatch at lba=%d(%02x:%02x:%02x); Q subchannel: %02x:%02x:%02x\n",
+                        i + 1, cdifs->size(),
+                        lba,
+                        lm, ls, lf,
+                        qm, qs, qf);
+                  return false;
+               }
+            }
+         }
+
+         if(!any_subq_curpos)
+         {
+            printf("Disc %zu of %zu: No valid Q subchannel ADR_CURPOS data present at lba %d-%d?!\n", i + 1, cdifs->size(), start_lba, end_lba);
+            return false;
+         }
+
+         break;
+      }
    }
 
-   if(!any_subq_curpos)
-   {
-    throw MDFN_Error(0, _("Disc %zu of %zu: No valid Q subchannel ADR_CURPOS data present at lba %d-%d?!"), i + 1, cdifs->size(), start_lba, end_lba);
-   }
-
-   break;
-  }
- }
+   return true;
 }
 
 static MDFN_COLD bool LoadCD(std::vector<CDIF *>* CDInterfaces)
@@ -1512,7 +1521,10 @@ static MDFN_COLD bool LoadCD(std::vector<CDIF *>* CDInterfaces)
    }
 
    if(MDFN_GetSettingB("ss.cd_sanity"))
-      DiscSanityChecks();
+   {
+      if (!DiscSanityChecks())
+         return false;
+   }
    else
       printf(_("WARNING: CD (image) sanity checks disabled."));
 
