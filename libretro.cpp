@@ -1104,7 +1104,7 @@ static bool DetectRegionByFN(const std::string& fn, unsigned* const region)
  return false;
 }
 
-static void MDFN_COLD InitCommon(const unsigned cart_type, const unsigned smpc_area)
+static bool InitCommon(const unsigned cart_type, const unsigned smpc_area)
 {
  ss_dbg_mask = MDFN_GetSettingUI("ss.dbg_mask");
  //
@@ -1214,10 +1214,16 @@ static void MDFN_COLD InitCommon(const unsigned cart_type, const unsigned smpc_a
     if(BIOS_SHA256 == dbe.hash)
     {
      if(!(dbe.areas & (1U << smpc_area)))
-      throw MDFN_Error(0, _("Wrong BIOS for region being emulated."));
+     {
+        printf("Wrong BIOS for region being emulated.\n");
+        return false;
+     }
     }
     else if(fn == dbe.fn)	// Discourage people from renaming files instead of changing settings.
-     throw MDFN_Error(0, _("BIOS hash does not match that as expected by filename."));
+    {
+       printf("BIOS hash does not match that as expected by filename.\n");
+       return false;
+    }
    }
   }
   //
@@ -1261,15 +1267,23 @@ static void MDFN_COLD InitCommon(const unsigned cart_type, const unsigned smpc_a
   struct tm* ht;
 
   if((ut = time(NULL)) == (time_t)-1)
-   throw MDFN_Error(ErrnoHolder(errno));
+  {
+     printf("AutoRTC error #1\n");
+     return false;
+  }
 
   if((ht = localtime(&ut)) == NULL)
-   throw MDFN_Error(ErrnoHolder(errno));
+  {
+     printf("AutoRTC error #2\n");
+     return false;
+  }
 
   SMPC_SetRTC(ht, MDFN_GetSettingUI("ss.smpc.autortc.lang"));
  }
  //
  SS_Reset(true);
+
+ return true;
 }
 
 static bool TestMagic(MDFNFILE* fp)
@@ -1367,7 +1381,8 @@ static bool Load(MDFNFILE* fp)
       cdifs = &CDInterfaces;
    }
 
-   InitCommon(CART_MDFN_DEBUG, MDFN_GetSettingUI("ss.region_default"));
+   if (!InitCommon(CART_MDFN_DEBUG, MDFN_GetSettingUI("ss.region_default")))
+      return false;
 
    // 0x25FE00C4 = 0x1;
    for(i = 0; i < fp->size; i += 2)
@@ -1501,7 +1516,8 @@ static MDFN_COLD bool LoadCD(std::vector<CDIF *>* CDInterfaces)
    // TODO: auth ID calc
 
 
-   InitCommon(cart_type, region);
+   if (!InitCommon(cart_type, region))
+      return false;
 
    return true;
 }

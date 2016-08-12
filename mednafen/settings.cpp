@@ -42,6 +42,8 @@ uint64_t MDFN_GetSettingUI(const char *name)
 {
    if (!strcmp("psx.spu.resamp_quality", name)) /* make configurable */
       return 4;
+   if (!strcmp("ss.dbg_mask", name))
+      return 1;
 
    fprintf(stderr, "unhandled setting UI: %s\n", name);
    return 0;
@@ -116,6 +118,8 @@ bool MDFN_GetSettingB(const char *name)
    if (!strcmp("psx.fastboot", name))
       return setting_psx_fastboot;
    if (!strcmp("ss.bios_sanity", name))
+      return true;
+   if (!strcmp("ss.cd_sanity", name))
       return true;
    /* CDROM */
    if (!strcmp("cdrom.lec_eval", name))
