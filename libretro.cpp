@@ -2754,6 +2754,23 @@ void retro_run(void)
 
    Emulate(espec);
 
+#ifdef NEED_DEINTERLACER
+   if (spec.InterlaceOn)
+   {
+      if (!PrevInterlaced)
+         deint.ClearState();
+
+      deint.Process(spec.surface, spec.DisplayRect, spec.LineWidths, spec.InterlaceField);
+
+      PrevInterlaced = true;
+
+      spec.InterlaceOn = false;
+      spec.InterlaceField = 0;
+   }
+   else
+      PrevInterlaced = false;
+#endif
+
    unsigned width        = rects[0];
    unsigned height       = spec.DisplayRect.h;
 
