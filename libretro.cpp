@@ -1028,6 +1028,7 @@ static bool DetectRegion(unsigned* const region)
  {
   if(possible_regions & ((uint64)1 << rs.region))
   {
+     log_cb(RETRO_LOG_INFO, "[Mednafen]: Found region: %d\n", (uint64)1 << rs.region);
    *region = rs.region;
    return true;
   }
@@ -1510,7 +1511,10 @@ static MDFN_COLD bool LoadCD(std::vector<CDIF *>* CDInterfaces)
 
    if(MDFN_GetSettingB("ss.region_autodetect"))
       if(!DB_LookupRegionDB(fd_id, &region))
+      {
+         log_cb(RETRO_LOG_INFO, "[Mednafen]: Could not find region inside DB\n");
          DetectRegion(&region);
+      }
    //
    //
    if((cart_type = MDFN_GetSettingI("ss.cart")) == CART__RESERVED)
