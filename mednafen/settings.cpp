@@ -115,6 +115,8 @@ bool MDFN_GetSettingB(const char *name)
       return setting_psx_analog_toggle;
    if (!strcmp("psx.fastboot", name))
       return setting_psx_fastboot;
+   if (!strcmp("ss.bios_sanity", name))
+      return true;
    /* CDROM */
    if (!strcmp("cdrom.lec_eval", name))
       return 1;
