@@ -1106,192 +1106,196 @@ static bool DetectRegionByFN(const std::string& fn, unsigned* const region)
  return false;
 }
 
+typedef struct
+{
+   const unsigned type;
+   const char *name;
+} CartName;
+
 static bool InitCommon(const unsigned cart_type, const unsigned smpc_area)
 {
- ss_dbg_mask = MDFN_GetSettingUI("ss.dbg_mask");
- //
- {
-    log_cb(RETRO_LOG_INFO, "[Mednafen]: Region: 0x%01x.\n", smpc_area);
-  const struct
-  {
-   const unsigned type;
-   const char* name;
-  } CartNames[] =
-  {
-   { CART_NONE, _("None") },
-   { CART_BACKUP_MEM, _("Backup Memory") },
-   { CART_EXTRAM_1M, _("1MiB Extended RAM") },
-   { CART_EXTRAM_4M, _("4MiB Extended RAM") },
-   { CART_KOF95, _("King of Fighters '95 ROM") },
-   { CART_ULTRAMAN, _("Ultraman ROM") },
-   { CART_MDFN_DEBUG, _("Mednafen Debug") }, 
-  };
-  const char* cn = _("Unknown");
 
-  for(auto const& cne : CartNames)
-  {
-   if(cne.type == cart_type)
+   unsigned i;
+   ss_dbg_mask = MDFN_GetSettingUI("ss.dbg_mask");
+
    {
-    cn = cne.name;
-    break;
+      log_cb(RETRO_LOG_INFO, "[Mednafen]: Region: 0x%01x.\n", smpc_area);
+      const CartName CartNames[] =
+      {
+         { CART_NONE, "None" },
+         { CART_BACKUP_MEM, "Backup Memory" },
+         { CART_EXTRAM_1M, "1MiB Extended RAM" },
+         { CART_EXTRAM_4M, "4MiB Extended RAM" },
+         { CART_KOF95, "King of Fighters '95 ROM" },
+         { CART_ULTRAMAN, "Ultraman ROM" },
+         { CART_MDFN_DEBUG, "Mednafen Debug" }
+      };
+      const char* cn = "Unknown";
+
+      for(i = 0; i < ARRAY_SIZE(CartNames); i++)
+      {
+         CartName cne = CartNames[i];
+         if(cne.type != cart_type)
+            continue;
+         cn = cne.name;
+         break;
+      }
+      log_cb(RETRO_LOG_INFO, "[Mednafen]: Cart: %s.\n", cn);
    }
-  }
-  log_cb(RETRO_LOG_INFO, "[Mednafen]: Cart: %s.\n", cn);
- }
- //
+   //
 
- for(unsigned c = 0; c < 2; c++)
- {
-  CPU[c].Init();
-  CPU[c].SetMD5((bool)c);
- }
-
- //
- // Initialize backup memory.
- // 
- memset(BackupRAM, 0x00, sizeof(BackupRAM));
- for(unsigned i = 0; i < 0x40; i++)
-  BackupRAM[i] = BRAM_Init_Data[i & 0x0F];
-
- // Call InitFastMemMap() before functions like SOUND_Init()
- InitFastMemMap();
- SS_SetPhysMemMap(0x00000000, 0x000FFFFF, BIOSROM, sizeof(BIOSROM));
- SS_SetPhysMemMap(0x00200000, 0x003FFFFF, WorkRAML, sizeof(WorkRAML), true);
- SS_SetPhysMemMap(0x06000000, 0x07FFFFFF, WorkRAMH, sizeof(WorkRAMH), true);
- MDFNMP_RegSearchable(0x00200000, sizeof(WorkRAML));
- MDFNMP_RegSearchable(0x06000000, sizeof(WorkRAMH));
-
- CART_Init(cart_type);
-
- //
- //
- //
- const bool PAL = (smpc_area & SMPC_AREA__PAL_MASK);
- const int32 MasterClock = PAL ? 1734687500 : 1746818182;	// NTSC: 1746818181.8181818181, PAL: 1734687500-ish
- const char* biospath_sname;
- int sls = MDFN_GetSettingI(PAL ? "ss.slstartp" : "ss.slstart");
- int sle = MDFN_GetSettingI(PAL ? "ss.slendp" : "ss.slend");
-
- if(sls > sle)
-  std::swap(sls, sle);
-
- if(smpc_area == SMPC_AREA_JP || smpc_area == SMPC_AREA_ASIA_NTSC)
-  biospath_sname = "ss.bios_jp";
- else
-  biospath_sname = "ss.bios_na_eu";
-
- {
-  const std::string biospath = MDFN_MakeFName(MDFNMKF_FIRMWARE, 0, MDFN_GetSettingS(biospath_sname).c_str());
-  FileStream BIOSFile(biospath.c_str(), MODE_READ);
-
-  if(BIOSFile.size() != 524288)
-  {
-     log_cb(RETRO_LOG_ERROR, "BIOS file \"%s\" is of an incorrect size.\n", biospath.c_str());
-     return false;
-  }
-
-  BIOSFile.read(BIOSROM, 512 * 1024);
-  BIOS_SHA256 = sha256(BIOSROM, 512 * 1024);
-
-  if(MDFN_GetSettingB("ss.bios_sanity"))
-  {
-   static const struct
+   for(i = 0; i < 2; i++)
    {
-    const char* fn;
-    sha256_digest hash;
-    const uint32 areas;
-   } BIOSDB[] =
-   {
-    { "sega1003.bin",  "cc1e1b7f88f1c6e6fc35994bae2c2292e06fdae258c79eb26a1f1391e72914a8"_sha256, (1U << SMPC_AREA_JP) | (1U << SMPC_AREA_ASIA_NTSC),  },
-    { "sega_100.bin",  "ae4058627bb5db9be6d8d83c6be95a4aa981acc8a89042e517e73317886c8bc2"_sha256, (1U << SMPC_AREA_JP) | (1U << SMPC_AREA_ASIA_NTSC),  },
-    { "sega_101.bin",  "dcfef4b99605f872b6c3b6d05c045385cdea3d1b702906a0ed930df7bcb7deac"_sha256, (1U << SMPC_AREA_JP) | (1U << SMPC_AREA_ASIA_NTSC),  },
-    { "sega_100a.bin", "87293093fad802fcff31fcab427a16caff1acbc5184899b8383b360fd58efb73"_sha256, (~0U) & ~((1U << SMPC_AREA_JP) | (1U << SMPC_AREA_ASIA_NTSC)) },
-    { "mpr-17933.bin", "96e106f740ab448cf89f0dd49dfbac7fe5391cb6bd6e14ad5e3061c13330266f"_sha256, (~0U) & ~((1U << SMPC_AREA_JP) | (1U << SMPC_AREA_ASIA_NTSC)) },
-   };
-   std::string fnbase, fnext;
-   std::string fn;
-
-   MDFN_GetFilePathComponents(biospath, nullptr, &fnbase, &fnext);
-   fn = fnbase + fnext;
-
-   for(auto const& dbe : BIOSDB)
-   {
-    if(BIOS_SHA256 == dbe.hash)
-    {
-     if(!(dbe.areas & (1U << smpc_area)))
-     {
-        log_cb(RETRO_LOG_ERROR, "Wrong BIOS for region being emulated.\n");
-        return false;
-     }
-    }
-    else if(fn == dbe.fn)	// Discourage people from renaming files instead of changing settings.
-    {
-        log_cb(RETRO_LOG_ERROR, 
-              "BIOS hash does not match that as expected by filename.\n");
-       return false;
-    }
+      CPU[i].Init();
+      CPU[i].SetMD5((bool)i);
    }
-  }
-  //
-  //
-  for(unsigned i = 0; i < 262144; i++)
-   BIOSROM[i] = MDFN_de16msb((const uint8_t*)&BIOSROM[i]);
- }
 
- EmulatedSS.MasterClock = MDFN_MASTERCLOCK_FIXED(MasterClock);
+   //
+   // Initialize backup memory.
+   // 
+   memset(BackupRAM, 0x00, sizeof(BackupRAM));
+   for(i = 0; i < 0x40; i++)
+      BackupRAM[i] = BRAM_Init_Data[i & 0x0F];
 
- SCU_Init();
- SMPC_Init(smpc_area, MasterClock);
- VDP1::Init();
- VDP2::Init(PAL, sls, sle);
- VDP2::FillVideoParams(&EmulatedSS);
- CDB_Init();
- SOUND_Init();
+   // Call InitFastMemMap() before functions like SOUND_Init()
+   InitFastMemMap();
+   SS_SetPhysMemMap(0x00000000, 0x000FFFFF, BIOSROM, sizeof(BIOSROM));
+   SS_SetPhysMemMap(0x00200000, 0x003FFFFF, WorkRAML, sizeof(WorkRAML), true);
+   SS_SetPhysMemMap(0x06000000, 0x07FFFFFF, WorkRAMH, sizeof(WorkRAMH), true);
+   MDFNMP_RegSearchable(0x00200000, sizeof(WorkRAML));
+   MDFNMP_RegSearchable(0x06000000, sizeof(WorkRAMH));
 
- InitEvents();
+   CART_Init(cart_type);
 
- DBG_Init();
- //
- //
- //
- try { LoadRTC();       } catch(MDFN_Error& e) { if(e.GetErrno() != ENOENT) throw; }
- try { LoadBackupRAM(); } catch(MDFN_Error& e) { if(e.GetErrno() != ENOENT) throw; }
- try { LoadCartNV();    } catch(MDFN_Error& e) { if(e.GetErrno() != ENOENT) throw; }
+   //
+   //
+   //
+   const bool PAL = (smpc_area & SMPC_AREA__PAL_MASK);
+   const int32 MasterClock = PAL ? 1734687500 : 1746818182;	// NTSC: 1746818181.8181818181, PAL: 1734687500-ish
+   const char* biospath_sname;
+   int sls = MDFN_GetSettingI(PAL ? "ss.slstartp" : "ss.slstart");
+   int sle = MDFN_GetSettingI(PAL ? "ss.slendp" : "ss.slend");
 
- BackupBackupRAM();
- BackupCartNV();
+   if(sls > sle)
+      std::swap(sls, sle);
 
- BackupRAM_Dirty = false;
- BackupRAM_SaveDelay = 0;
+   if(smpc_area == SMPC_AREA_JP || smpc_area == SMPC_AREA_ASIA_NTSC)
+      biospath_sname = "ss.bios_jp";
+   else
+      biospath_sname = "ss.bios_na_eu";
 
- CART_GetClearNVDirty();
- CartNV_SaveDelay = 0;
- //
- if(MDFN_GetSettingB("ss.smpc.autortc"))
- {
-  time_t ut;
-  struct tm* ht;
+   {
+      const std::string biospath = MDFN_MakeFName(MDFNMKF_FIRMWARE, 0, MDFN_GetSettingS(biospath_sname).c_str());
+      FileStream BIOSFile(biospath.c_str(), MODE_READ);
 
-  if((ut = time(NULL)) == (time_t)-1)
-  {
-     log_cb(RETRO_LOG_ERROR, 
-           "AutoRTC error #1\n");
-     return false;
-  }
+      if(BIOSFile.size() != 524288)
+      {
+         log_cb(RETRO_LOG_ERROR, "BIOS file \"%s\" is of an incorrect size.\n", biospath.c_str());
+         return false;
+      }
 
-  if((ht = localtime(&ut)) == NULL)
-  {
-     log_cb(RETRO_LOG_ERROR, 
-           "AutoRTC error #2\n");
-     return false;
-  }
+      BIOSFile.read(BIOSROM, 512 * 1024);
+      BIOS_SHA256 = sha256(BIOSROM, 512 * 1024);
 
-  SMPC_SetRTC(ht, MDFN_GetSettingUI("ss.smpc.autortc.lang"));
- }
- //
- SS_Reset(true);
+      if(MDFN_GetSettingB("ss.bios_sanity"))
+      {
+         static const struct
+         {
+            const char* fn;
+            sha256_digest hash;
+            const uint32 areas;
+         } BIOSDB[] =
+         {
+            { "sega1003.bin",  "cc1e1b7f88f1c6e6fc35994bae2c2292e06fdae258c79eb26a1f1391e72914a8"_sha256, (1U << SMPC_AREA_JP) | (1U << SMPC_AREA_ASIA_NTSC),  },
+            { "sega_100.bin",  "ae4058627bb5db9be6d8d83c6be95a4aa981acc8a89042e517e73317886c8bc2"_sha256, (1U << SMPC_AREA_JP) | (1U << SMPC_AREA_ASIA_NTSC),  },
+            { "sega_101.bin",  "dcfef4b99605f872b6c3b6d05c045385cdea3d1b702906a0ed930df7bcb7deac"_sha256, (1U << SMPC_AREA_JP) | (1U << SMPC_AREA_ASIA_NTSC),  },
+            { "sega_100a.bin", "87293093fad802fcff31fcab427a16caff1acbc5184899b8383b360fd58efb73"_sha256, (~0U) & ~((1U << SMPC_AREA_JP) | (1U << SMPC_AREA_ASIA_NTSC)) },
+            { "mpr-17933.bin", "96e106f740ab448cf89f0dd49dfbac7fe5391cb6bd6e14ad5e3061c13330266f"_sha256, (~0U) & ~((1U << SMPC_AREA_JP) | (1U << SMPC_AREA_ASIA_NTSC)) },
+         };
+         std::string fnbase, fnext;
+         std::string fn;
 
- return true;
+         MDFN_GetFilePathComponents(biospath, nullptr, &fnbase, &fnext);
+         fn = fnbase + fnext;
+
+         for(auto const& dbe : BIOSDB)
+         {
+            if(BIOS_SHA256 == dbe.hash)
+            {
+               if(!(dbe.areas & (1U << smpc_area)))
+               {
+                  log_cb(RETRO_LOG_ERROR, "Wrong BIOS for region being emulated.\n");
+                  return false;
+               }
+            }
+            else if(fn == dbe.fn)	// Discourage people from renaming files instead of changing settings.
+            {
+               log_cb(RETRO_LOG_ERROR, 
+                     "BIOS hash does not match that as expected by filename.\n");
+               return false;
+            }
+         }
+      }
+      //
+      //
+      for(unsigned i = 0; i < 262144; i++)
+         BIOSROM[i] = MDFN_de16msb((const uint8_t*)&BIOSROM[i]);
+   }
+
+   EmulatedSS.MasterClock = MDFN_MASTERCLOCK_FIXED(MasterClock);
+
+   SCU_Init();
+   SMPC_Init(smpc_area, MasterClock);
+   VDP1::Init();
+   VDP2::Init(PAL, sls, sle);
+   VDP2::FillVideoParams(&EmulatedSS);
+   CDB_Init();
+   SOUND_Init();
+
+   InitEvents();
+
+   DBG_Init();
+   //
+   //
+   //
+   try { LoadRTC();       } catch(MDFN_Error& e) { if(e.GetErrno() != ENOENT) throw; }
+   try { LoadBackupRAM(); } catch(MDFN_Error& e) { if(e.GetErrno() != ENOENT) throw; }
+   try { LoadCartNV();    } catch(MDFN_Error& e) { if(e.GetErrno() != ENOENT) throw; }
+
+   BackupBackupRAM();
+   BackupCartNV();
+
+   BackupRAM_Dirty = false;
+   BackupRAM_SaveDelay = 0;
+
+   CART_GetClearNVDirty();
+   CartNV_SaveDelay = 0;
+   //
+   if(MDFN_GetSettingB("ss.smpc.autortc"))
+   {
+      time_t ut;
+      struct tm* ht;
+
+      if((ut = time(NULL)) == (time_t)-1)
+      {
+         log_cb(RETRO_LOG_ERROR, 
+               "AutoRTC error #1\n");
+         return false;
+      }
+
+      if((ht = localtime(&ut)) == NULL)
+      {
+         log_cb(RETRO_LOG_ERROR, 
+               "AutoRTC error #2\n");
+         return false;
+      }
+
+      SMPC_SetRTC(ht, MDFN_GetSettingUI("ss.smpc.autortc.lang"));
+   }
+   //
+   SS_Reset(true);
+
+   return true;
 }
 
 static bool TestMagic(MDFNFILE* fp)
