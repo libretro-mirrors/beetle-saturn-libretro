@@ -1518,6 +1518,7 @@ static MDFN_COLD bool LoadCD(std::vector<CDIF *>* CDInterfaces)
 
    log_cb(RETRO_LOG_INFO, "Calculating game ID...\n");
    CalcGameID(MDFNGameInfo->MD5, fd_id, sgid);
+   log_cb(RETRO_LOG_INFO, "Game ID is now: %s\n", sgid);
 
    if(MDFN_GetSettingB("ss.region_autodetect"))
    {
