@@ -222,7 +222,6 @@ static void MapPorts(void)
 
 void SMPC_SetInput(unsigned port, const char* type, uint8* ptr)
 {
-   printf("SMPC_SetInput: [%d] %s \n", port, type);
  if(port == 12) 
  {
   MiscInputPtr = ptr;
@@ -424,20 +423,13 @@ int32 SMPC_StartFrame(EmulateSpecStruct* espec)
 
 void SMPC_UpdateInput(void)
 {
- printf("SMPC_UpdateInput - GETS HERE -1 ....... \n");
  if (MiscInputPtr)
     ResetButtonPhysStatus = (bool)(*MiscInputPtr & 0x1);
- else
- {
-    printf("MiscInputPtr is NULL!!!!!\n");
- }
- printf("SMPC_UpdateInput - GETS HERE 0..........\n");
  for(unsigned vp = 0; vp < 12; vp++)
  {
     if (VirtualPorts[vp])
        VirtualPorts[vp]->UpdateInput(VirtualPortsDPtr[vp]);
  }
- printf("SMPC_UpdateInput - GETS HERE.........\n");
 }
 
 

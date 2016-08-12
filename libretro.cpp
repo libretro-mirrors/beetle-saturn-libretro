@@ -784,11 +784,8 @@ static void Emulate(EmulateSpecStruct* espec_arg)
  AllowMidSync = MDFN_GetSettingB("ss.midsync");
  MDFNGameInfo->mouse_sensitivity = MDFN_GetSettingF("ss.input.mouse_sensitivity");
 
- printf("Emulate 0.\n");
  cur_clock_div = SMPC_StartFrame(espec);
- printf("Emulate 1.\n");
  SMPC_UpdateInput();
- printf("Emulate 2.\n");
  VDP2::StartFrame(espec, cur_clock_div == 61);
  SOUND_StartFrame(espec->SoundRate / espec->soundmultiplier, MDFN_GetSettingUI("ss.scsp.resamp_quality"));
  espec->SoundBufSize = 0;
