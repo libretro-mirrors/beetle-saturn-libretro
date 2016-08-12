@@ -1183,7 +1183,10 @@ static bool InitCommon(const unsigned cart_type, const unsigned smpc_area)
   FileStream BIOSFile(biospath.c_str(), MODE_READ);
 
   if(BIOSFile.size() != 524288)
-   throw MDFN_Error(0, _("BIOS file \"%s\" is of an incorrect size."), biospath.c_str());
+  {
+   printf("BIOS file \"%s\" is of an incorrect size.\n", biospath.c_str());
+   return false;
+  }
 
   BIOSFile.read(BIOSROM, 512 * 1024);
   BIOS_SHA256 = sha256(BIOSROM, 512 * 1024);
