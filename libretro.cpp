@@ -2771,6 +2771,7 @@ void retro_run(void)
    video_frames++;
    audio_frames += spec.SoundBufSize;
 
+   video_cb(surf, width, height, width << 1);
    audio_batch_cb(interbuf, spec.SoundBufSize);
 }
 
