@@ -2730,7 +2730,7 @@ void retro_run(void)
    video_frames++;
    audio_frames += spec.SoundBufSize;
 
-   video_cb(surf->pixels + surf->pitch32 * spec.DisplayRect.y, width, height, height * 4);
+   video_cb(surf->pixels + surf->pitchinpix * spec.DisplayRect.y, width, height, surf->pitchinpix);
    audio_batch_cb(espec->SoundBuf, spec.SoundBufSize);
 }
 
