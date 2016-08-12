@@ -77,13 +77,14 @@ int64 MDFN_GetSettingI(const char *name)
       return setting_last_scanline_pal;
    if (!strcmp("ss.cart", name))
    {
-      /* 0 - auto
-       * 1 - none
-       * 2 - backup
-       * 3 - extram1
-       * 4 - extram4
+      /* -1 - reserved
+       *  0 - auto
+       *  1 - none
+       *  2 - backup
+       *  3 - extram1
+       *  4 - extram4
        */
-      return 0;
+      return -1;
    }
    fprintf(stderr, "unhandled setting I: %s\n", name);
    return 0;
