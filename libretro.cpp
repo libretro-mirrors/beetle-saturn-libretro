@@ -902,6 +902,8 @@ static bool IsSaturnDisc(const uint8* sa32k)
  if(memcmp(&sa32k[0], "SEGA SEGASATURN ", 16))
   return false;
 
+ log_cb(RETRO_LOG_INFO, "[Mednafen]: Is a Saturn disc.\n");
+
  return true;
 }
 
@@ -1109,7 +1111,7 @@ static bool InitCommon(const unsigned cart_type, const unsigned smpc_area)
  ss_dbg_mask = MDFN_GetSettingUI("ss.dbg_mask");
  //
  {
-  printf(_("Region: 0x%01x\n"), smpc_area);
+    log_cb(RETRO_LOG_INFO, "[Mednafen]: Region: 0x%01x.\n", smpc_area);
   const struct
   {
    const unsigned type;
@@ -1134,7 +1136,7 @@ static bool InitCommon(const unsigned cart_type, const unsigned smpc_area)
     break;
    }
   }
-  printf(_("Cart: %s\n"), cn);
+  log_cb(RETRO_LOG_INFO, "[Mednafen]: Cart: %s.\n", cn);
  }
  //
 
@@ -1184,8 +1186,8 @@ static bool InitCommon(const unsigned cart_type, const unsigned smpc_area)
 
   if(BIOSFile.size() != 524288)
   {
-   printf("BIOS file \"%s\" is of an incorrect size.\n", biospath.c_str());
-   return false;
+     log_cb(RETRO_LOG_ERROR, "BIOS file \"%s\" is of an incorrect size.\n", biospath.c_str());
+     return false;
   }
 
   BIOSFile.read(BIOSROM, 512 * 1024);
@@ -1218,13 +1220,14 @@ static bool InitCommon(const unsigned cart_type, const unsigned smpc_area)
     {
      if(!(dbe.areas & (1U << smpc_area)))
      {
-        printf("Wrong BIOS for region being emulated.\n");
+        log_cb(RETRO_LOG_ERROR, "Wrong BIOS for region being emulated.\n");
         return false;
      }
     }
     else if(fn == dbe.fn)	// Discourage people from renaming files instead of changing settings.
     {
-       printf("BIOS hash does not match that as expected by filename.\n");
+        log_cb(RETRO_LOG_ERROR, 
+              "BIOS hash does not match that as expected by filename.\n");
        return false;
     }
    }
@@ -1271,13 +1274,15 @@ static bool InitCommon(const unsigned cart_type, const unsigned smpc_area)
 
   if((ut = time(NULL)) == (time_t)-1)
   {
-     printf("AutoRTC error #1\n");
+     log_cb(RETRO_LOG_ERROR, 
+           "AutoRTC error #1\n");
      return false;
   }
 
   if((ht = localtime(&ut)) == NULL)
   {
-     printf("AutoRTC error #2\n");
+     log_cb(RETRO_LOG_ERROR, 
+           "AutoRTC error #2\n");
      return false;
   }
 
@@ -1455,7 +1460,8 @@ static bool DiscSanityChecks(void)
 
             if(!(*cdifs)[i]->ReadRawSectorPWOnly(pwbuf, lba, false))
             {
-               printf("Disc %zu of %zu: Error reading sector at lba=%d in DiscSanityChecks().\n", i + 1, cdifs->size(), lba);
+               log_cb(RETRO_LOG_ERROR, 
+                     "Disc %zu of %zu: Error reading sector at lba=%d in DiscSanityChecks().\n", i + 1, cdifs->size(), lba);
                return false;
             }
 
@@ -1476,7 +1482,8 @@ static bool DiscSanityChecks(void)
 
                if(lm != qm || ls != qs || lf != qf)
                {
-                  printf("Disc %zu of %zu: Time mismatch at lba=%d(%02x:%02x:%02x); Q subchannel: %02x:%02x:%02x\n",
+                  log_cb(RETRO_LOG_ERROR, 
+                  "Disc %zu of %zu: Time mismatch at lba=%d(%02x:%02x:%02x); Q subchannel: %02x:%02x:%02x\n",
                         i + 1, cdifs->size(),
                         lba,
                         lm, ls, lf,
@@ -1488,7 +1495,8 @@ static bool DiscSanityChecks(void)
 
          if(!any_subq_curpos)
          {
-            printf("Disc %zu of %zu: No valid Q subchannel ADR_CURPOS data present at lba %d-%d?!\n", i + 1, cdifs->size(), start_lba, end_lba);
+            log_cb(RETRO_LOG_ERROR, 
+                  "Disc %zu of %zu: No valid Q subchannel ADR_CURPOS data present at lba %d-%d?!\n", i + 1, cdifs->size(), start_lba, end_lba);
             return false;
          }
 
@@ -1512,7 +1520,7 @@ static MDFN_COLD bool LoadCD(std::vector<CDIF *>* CDInterfaces)
    if(MDFN_GetSettingB("ss.region_autodetect"))
       if(!DB_LookupRegionDB(fd_id, &region))
       {
-         log_cb(RETRO_LOG_INFO, "[Mednafen]: Could not find region inside DB\n");
+         log_cb(RETRO_LOG_INFO, "[Mednafen]: Could not find region inside DB.\n");
          DetectRegion(&region);
       }
    //
@@ -1529,7 +1537,10 @@ static MDFN_COLD bool LoadCD(std::vector<CDIF *>* CDInterfaces)
          return false;
    }
    else
-      printf(_("WARNING: CD (image) sanity checks disabled."));
+   {
+      log_cb(RETRO_LOG_WARN, 
+            "WARNING: CD (image) sanity checks disabled.\n");
+    }
 
    // TODO: auth ID calc
 
@@ -2238,16 +2249,11 @@ static MDFNGI *MDFNI_LoadCD(const char *force_module, const char *devicename)
             CDInterfaces.push_back(image);
          }
       }
-      else if(devicename && strlen(devicename) > 4 && !strcasecmp(devicename + strlen(devicename) - 4, ".pbp"))
-      {
-         bool success = true;
-         CDIF *image  = CDIF_Open(&success, devicename, false, old_cdimagecache);
-         CDInterfaces.push_back(image);
-      }
       else
       {
          bool success = true;
          CDIF *image  = CDIF_Open(&success, devicename, false, old_cdimagecache);
+         log_cb(RETRO_LOG_INFO, "Pushing CD image onto stack: %s.\n", devicename);
          CDInterfaces.push_back(image);
       }
    }

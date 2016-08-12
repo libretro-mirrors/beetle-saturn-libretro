@@ -134,7 +134,7 @@ bool MDFN_GetSettingB(const char *name)
    if (!strcmp("ss.bios_sanity", name))
       return true;
    if (!strcmp("ss.cd_sanity", name))
-      return true;
+      return false;
    if (!strcmp("ss.midsync", name))
       return false;
    /* CDROM */
