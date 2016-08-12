@@ -73,6 +73,7 @@ char retro_cd_base_name[4096];
 #endif
 
 extern MDFNGI EmulatedSS;
+MDFNGI *MDFNGameInfo = &EmulatedSS;
 
 #include "../MemoryStream.h"
 
