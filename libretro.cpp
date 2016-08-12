@@ -1664,8 +1664,10 @@ static void DoSimpleCommand(int cmd)
 {
  switch(cmd)
  {
-  case MDFN_MSC_POWER: SS_Reset(true); break;
-  // MDFN_MSC_RESET is not handled here; special reset button handling in smpc.cpp.
+    case MDFN_MSC_POWER:
+       SS_Reset(true);
+       break;
+       // MDFN_MSC_RESET is not handled here; special reset button handling in smpc.cpp.
  }
 }
 
@@ -2073,7 +2075,11 @@ void retro_init(void)
 
 void retro_reset(void)
 {
+#if 0
    DoSimpleCommand(MDFN_MSC_RESET);
+#else
+   DoSimpleCommand(MDFN_MSC_POWER);
+#endif
 }
 
 bool retro_load_game_special(unsigned, const struct retro_game_info *, size_t)
