@@ -42,6 +42,20 @@ uint64_t MDFN_GetSettingUI(const char *name)
 {
    if (!strcmp("psx.spu.resamp_quality", name)) /* make configurable */
       return 4;
+   if (!strcmp("ss.region_default", name))
+   {
+      /*
+       * 0 - jp
+       * 1 - na 
+       * 2 - eu
+       * 3 - kr
+       * 4 - tw
+       * 5 - as
+       * 6 - br
+       * 7 - la
+       */
+      return 0;
+   }
    if (!strcmp("ss.dbg_mask", name))
       return 1;
 
@@ -51,8 +65,8 @@ uint64_t MDFN_GetSettingUI(const char *name)
 
 int64 MDFN_GetSettingI(const char *name)
 {
-   if (!strcmp("psx.region_default", name)) /* make configurable */
-      return 1; /* REGION_JP = 0, REGION_NA = 1, REGION_EU = 2 */
+   if (!strcmp("ss.region_default", name))
+      return MDFN_GetSettingUI("ss.region_default");
    if (!strcmp("ss.slstart", name))
       return setting_initial_scanline;
    if (!strcmp("ss.slstartp", name))
@@ -176,19 +190,5 @@ bool MDFNI_SetSettingB(const char *name, bool value)
 
 bool MDFNI_SetSettingUI(const char *name, uint64_t value)
 {
-   if (!strcmp("ss.region_default", name))
-   {
-      /*
-       * 0 - jp
-       * 1 - na 
-       * 2 - eu
-       * 3 - kr
-       * 4 - tw
-       * 5 - as
-       * 6 - br
-       * 7 - la
-       */
-      return 0;
-   }
    return false;
 }
