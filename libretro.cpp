@@ -1605,7 +1605,7 @@ static MDFN_COLD void LoadRTC(void)
  SMPC_LoadNV(&sds);
 }
 
-int StateAction(StateMem *sm, const unsigned load, const bool data_only)
+int StateAction(StateMem *sm, int load, int data_only)
 {
    return 0;
 }
