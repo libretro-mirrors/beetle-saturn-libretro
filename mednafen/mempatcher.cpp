@@ -29,7 +29,7 @@
 #include "mednafen.h"
 
 #include "general.h"
-#include "md5.h"
+#include "hash/md5.h"
 #include "mempatcher.h"
 
 #include "../libretro.h"

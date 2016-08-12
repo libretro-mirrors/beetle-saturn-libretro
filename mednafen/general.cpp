@@ -27,7 +27,7 @@
 #include "general.h"
 #include "state.h"
 
-#include "md5.h"
+#include "hash/md5.h"
 
 using namespace std;
 

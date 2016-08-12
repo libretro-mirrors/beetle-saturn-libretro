@@ -1603,20 +1603,32 @@ void DSP_Init(void)
 {
  DSP.LastTS = 0;
 
+ printf("Test 0.\n");
+
  for(auto* f : DSP_GenFuncTable)
   assert((uintptr_t)f == DSP_INSTR_BASE_UIPT + ((uintptr_t)(DSP_INSTR_RECOVER_TCAST)(uint32)((uintptr_t)f - DSP_INSTR_BASE_UIPT)));
+
+ printf("Test 1.\n");
 
  for(auto* f : DSP_DMAFuncTable)
   assert((uintptr_t)f == DSP_INSTR_BASE_UIPT + ((uintptr_t)(DSP_INSTR_RECOVER_TCAST)(uint32)((uintptr_t)f - DSP_INSTR_BASE_UIPT)));
 
+ printf("Test 2.\n");
+
  for(auto* f : DSP_MVIFuncTable)
   assert((uintptr_t)f == DSP_INSTR_BASE_UIPT + ((uintptr_t)(DSP_INSTR_RECOVER_TCAST)(uint32)((uintptr_t)f - DSP_INSTR_BASE_UIPT)));
+
+ printf("Test 3.\n");
 
  for(auto* f : DSP_JMPFuncTable)
   assert((uintptr_t)f == DSP_INSTR_BASE_UIPT + ((uintptr_t)(DSP_INSTR_RECOVER_TCAST)(uint32)((uintptr_t)f - DSP_INSTR_BASE_UIPT)));
 
+ printf("Test 4.\n");
+
  for(auto* f : DSP_MiscFuncTable)
   assert((uintptr_t)f == DSP_INSTR_BASE_UIPT + ((uintptr_t)(DSP_INSTR_RECOVER_TCAST)(uint32)((uintptr_t)f - DSP_INSTR_BASE_UIPT)));
+
+ printf("Test 5.\n");
 }
 
 template<bool looped, bool hold, bool format, bool dir, unsigned drw>
