@@ -236,24 +236,6 @@ void SOUND_StartFrame(double rate, uint32 quality)
 
 int32 SOUND_FlushOutput(int16* SoundBuf, const int32 SoundBufMaxSize, const bool reverse)
 {
- if(SoundBuf && reverse)
- {
-  for(unsigned lr = 0; lr < 2; lr++)
-  {
-   int16* p0 = &IBuffer[0][lr];
-   int16* p1 = &IBuffer[IBufferCount - 1][lr];
-   unsigned count = IBufferCount >> 1;
-
-   while(MDFN_LIKELY(count--))
-   {
-    std::swap(*p0, *p1);
-
-    p0 += 2;
-    p1 -= 2;
-   }
-  }
- }
- 
   int32 ret = IBufferCount;
 
   memcpy(SoundBuf, IBuffer, IBufferCount * 2 * sizeof(int16));

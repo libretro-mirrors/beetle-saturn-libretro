@@ -759,9 +759,8 @@ static sscpu_timestamp_t MidSync(const sscpu_timestamp_t timestamp)
   // (which is not a problem in and of itself, but it's preferable to keep settings from altering emulation behavior when they don't need to).
   //
   //printf("MidSync: %d\n", VDP2::PeekLine());
-  if(!espec->NeedSoundReverse)
   {
-   espec->SoundBufSize += SOUND_FlushOutput(espec->SoundBuf + (espec->SoundBufSize * 2), espec->SoundBufMaxSize - espec->SoundBufSize, espec->NeedSoundReverse);
+   espec->SoundBufSize += SOUND_FlushOutput(espec->SoundBuf + (espec->SoundBufSize * 2), espec->SoundBufMaxSize - espec->SoundBufSize, false);
    espec->MasterCycles = timestamp * cur_clock_div;
   }
   //printf("%d\n", espec->SoundBufSize);
@@ -2748,12 +2747,13 @@ void retro_run(void)
    static int32 rects[MEDNAFEN_CORE_GEOMETRY_MAX_H];
    rects[0] = ~0;
 
+   static int16_t sound_buf[0x10000];
    EmulateSpecStruct spec = {0};
    spec.surface = surf;
    spec.SoundRate = 44100;
-   spec.SoundBuf = NULL;
+   spec.SoundBuf = sound_buf;
    spec.LineWidths = rects;
-   spec.SoundBufMaxSize = 0;
+   spec.SoundBufMaxSize = sizeof(sound_buf) / 2;
    spec.SoundVolume = 1.0;
    spec.soundmultiplier = 1.0;
    spec.SoundBufSize = 0;
@@ -2762,19 +2762,22 @@ void retro_run(void)
 
    EmulateSpecStruct *espec = (EmulateSpecStruct*)&spec;
 
+   if (spec.SoundRate != last_sound_rate)
+   {
+      spec.SoundFormatChanged = true;
+      last_sound_rate = spec.SoundRate;
+   }
+
    Emulate(espec);
 
-   const void *fb        = NULL;
    unsigned width        = rects[0];
    unsigned height       = spec.DisplayRect.h;
-
-   int16_t *interbuf = (int16_t*)&espec->SoundBuf;
 
    video_frames++;
    audio_frames += spec.SoundBufSize;
 
-   video_cb(surf, width, height, width << 1);
-   audio_batch_cb(interbuf, spec.SoundBufSize);
+   video_cb(surf->pixels + surf->pitch32 * spec.DisplayRect.y, width, height, width << 1);
+   audio_batch_cb(espec->SoundBuf, spec.SoundBufSize);
 }
 
 void retro_get_system_info(struct retro_system_info *info)

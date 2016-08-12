@@ -40,7 +40,7 @@ extern char retro_base_directory[4096];
 
 uint64_t MDFN_GetSettingUI(const char *name)
 {
-   if (!strcmp("psx.spu.resamp_quality", name)) /* make configurable */
+   if (!strcmp("ss.scsp.resamp_quality", name)) /* make configurable */
       return 4;
    if (!strcmp("ss.region_default", name))
    {
