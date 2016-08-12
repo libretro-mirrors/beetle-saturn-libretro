@@ -91,8 +91,8 @@ int64 MDFN_GetSettingI(const char *name)
 
 double MDFN_GetSettingF(const char *name)
 {
-   if (!strcmp("psx.input.mouse_sensitivity", name))
-      return 1.00; /* TODO - make configurable */
+   if (!strcmp("ss.input.mouse_sensitivity", name))
+      return 0.50; /* TODO - make configurable */
 
    fprintf(stderr, "unhandled setting F: %s\n", name);
    return 0;

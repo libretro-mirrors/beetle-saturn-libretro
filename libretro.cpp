@@ -748,7 +748,7 @@ void SS_Reset(bool powering_up)
 }
 
 static EmulateSpecStruct* espec;
-static bool AllowMidSync;
+static bool AllowMidSync = false;
 static int32 cur_clock_div;
 static sscpu_timestamp_t MidSync(const sscpu_timestamp_t timestamp)
 {
@@ -785,8 +785,11 @@ static void Emulate(EmulateSpecStruct* espec_arg)
  AllowMidSync = MDFN_GetSettingB("ss.midsync");
  MDFNGameInfo->mouse_sensitivity = MDFN_GetSettingF("ss.input.mouse_sensitivity");
 
+ printf("Emulate 0.\n");
  cur_clock_div = SMPC_StartFrame(espec);
+ printf("Emulate 1.\n");
  SMPC_UpdateInput();
+ printf("Emulate 2.\n");
  VDP2::StartFrame(espec, cur_clock_div == 61);
  SOUND_StartFrame(espec->SoundRate / espec->soundmultiplier, MDFN_GetSettingUI("ss.scsp.resamp_quality"));
  espec->SoundBufSize = 0;
@@ -1836,10 +1839,9 @@ static bool overscan;
 static double last_sound_rate;
 
 
-#define RETRO_DEVICE_PS1PAD       RETRO_DEVICE_SUBCLASS(RETRO_DEVICE_JOYPAD, 0)
-#define RETRO_DEVICE_DUALANALOG   RETRO_DEVICE_SUBCLASS(RETRO_DEVICE_ANALOG, 0)
-#define RETRO_DEVICE_DUALSHOCK    RETRO_DEVICE_SUBCLASS(RETRO_DEVICE_ANALOG, 1)
-#define RETRO_DEVICE_FLIGHTSTICK  RETRO_DEVICE_SUBCLASS(RETRO_DEVICE_ANALOG, 2)
+#define RETRO_DEVICE_SS_PAD       RETRO_DEVICE_SUBCLASS(RETRO_DEVICE_JOYPAD, 0)
+#define RETRO_DEVICE_SS_3D_PAD    RETRO_DEVICE_SUBCLASS(RETRO_DEVICE_ANALOG, 0)
+#define RETRO_DEVICE_SS_MOUSE     RETRO_DEVICE_SUBCLASS(RETRO_DEVICE_MOUSE,  0)
 
 #ifdef NEED_DEINTERLACER
 static bool PrevInterlaced;
@@ -2823,32 +2825,30 @@ void retro_set_controller_port_device(unsigned in_port, unsigned device)
    switch (device)
    {
       case RETRO_DEVICE_JOYPAD:
-      case RETRO_DEVICE_PS1PAD:
+      case RETRO_DEVICE_SS_PAD:
          log_cb(RETRO_LOG_INFO, "[%s]: Selected controller type standard gamepad.\n", MEDNAFEN_CORE_NAME);
          SMPC_SetInput(in_port, "gamepad", (uint8*)&buf.u8[in_port]);
          break;
-      case RETRO_DEVICE_DUALANALOG:
-         log_cb(RETRO_LOG_INFO, "[%s]: Selected controller type Dual Analog.\n", MEDNAFEN_CORE_NAME);
-         SMPC_SetInput(in_port, "dualanalog", (uint8*)&buf.u8[in_port]);
+      case RETRO_DEVICE_SS_3D_PAD:
+         log_cb(RETRO_LOG_INFO, "[%s]: Selected controller type 3D Pad.\n", MEDNAFEN_CORE_NAME);
+         SMPC_SetInput(in_port, "3dpad", (uint8*)&buf.u8[in_port]);
          break;
-      case RETRO_DEVICE_DUALSHOCK:
-         log_cb(RETRO_LOG_INFO, "[%s]: Selected controller type DualShock.\n", MEDNAFEN_CORE_NAME);
-         SMPC_SetInput(in_port, "dualshock", (uint8*)&buf.u8[in_port]);
-         break;
-      case RETRO_DEVICE_FLIGHTSTICK:
-         log_cb(RETRO_LOG_INFO, "[%s]: Selected controller type FlightStick.\n", MEDNAFEN_CORE_NAME);
-         SMPC_SetInput(in_port, "analogjoy", (uint8*)&buf.u8[in_port]);
+      case RETRO_DEVICE_SS_MOUSE:
+         log_cb(RETRO_LOG_INFO, "[%s]: Selected controller type Mouse.\n", MEDNAFEN_CORE_NAME);
+         SMPC_SetInput(in_port, "mouse", (uint8*)&buf.u8[in_port]);
          break;
       default:
          log_cb(RETRO_LOG_WARN, "[%s]: Unsupported controller device %u, falling back to gamepad.\n", MEDNAFEN_CORE_NAME,device);
    }
 
+#if 0
    if (rumble.set_rumble_state)
    {
       rumble.set_rumble_state(in_port, RETRO_RUMBLE_STRONG, 0);
       rumble.set_rumble_state(in_port, RETRO_RUMBLE_WEAK, 0);
       buf.u32[in_port][9] = 0;
    }
+#endif
 }
 
 #if defined(HAVE_OPENGL)
@@ -2875,10 +2875,9 @@ void retro_set_environment(retro_environment_t cb)
       { NULL, NULL },
    };
    static const struct retro_controller_description pads[] = {
-      { "PS1 Joypad", RETRO_DEVICE_JOYPAD },
-      { "DualAnalog", RETRO_DEVICE_DUALANALOG },
-      { "DualShock", RETRO_DEVICE_DUALSHOCK },
-      { "FlightStick", RETRO_DEVICE_FLIGHTSTICK },
+      { "Saturn Joypad", RETRO_DEVICE_JOYPAD },
+      { "3D Pad", RETRO_DEVICE_SS_3D_PAD },
+      { "Mouse", RETRO_DEVICE_SS_MOUSE },
    };
 
    static const struct retro_controller_info ports[] = {

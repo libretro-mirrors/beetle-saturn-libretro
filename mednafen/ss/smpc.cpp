@@ -423,11 +423,15 @@ int32 SMPC_StartFrame(EmulateSpecStruct* espec)
 
 void SMPC_UpdateInput(void)
 {
+ printf("SMPC_UpdateInput - GETS HERE -1 ....... \n");
  ResetButtonPhysStatus = (bool)(*MiscInputPtr & 0x1);
+ printf("SMPC_UpdateInput - GETS HERE 0..........\n");
  for(unsigned vp = 0; vp < 12; vp++)
  {
-  VirtualPorts[vp]->UpdateInput(VirtualPortsDPtr[vp]);
+    if (VirtualPorts[vp])
+       VirtualPorts[vp]->UpdateInput(VirtualPortsDPtr[vp]);
  }
+ printf("SMPC_UpdateInput - GETS HERE.........\n");
 }
 
 
