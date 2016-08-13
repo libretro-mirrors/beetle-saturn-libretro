@@ -2374,7 +2374,7 @@ error:
 }
 
 #define MAX_PLAYERS 8
-#define MAX_BUTTONS 16
+#define MAX_BUTTONS 12
 
 union
 {
@@ -2637,6 +2637,7 @@ static void update_input(void)
    {
       for (unsigned i = 0; i < MAX_BUTTONS; i++)
          input_buf[j] |= input_state_cb(j, RETRO_DEVICE_JOYPAD, 0, map[i]) ? (1 << i) : 0;
+      input_buf[j] |= input_state_cb(j, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_L2) ? (1 << 15) : 0;
    }
 
    // Buttons.
