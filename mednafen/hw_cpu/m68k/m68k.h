@@ -442,8 +442,8 @@ static uint8 TAS_Callback(uint8 data)
  //
  //
  //
- void (*DBG_Warning)(const char* format, ...) noexcept MDFN_FORMATSTR(gnu_printf, 1, 2);
- void (*DBG_Verbose)(const char* format, ...) noexcept MDFN_FORMATSTR(gnu_printf, 1, 2);
+ void (*DBG_Warning)(const char* format, ...);
+ void (*DBG_Verbose)(const char* format, ...);
  //
  //
  //
