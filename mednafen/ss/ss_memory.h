@@ -32,7 +32,7 @@
 // "Array" is a bit of a misnomer, but it helps avoid confusion with memset() semantics hopefully.
 static INLINE void MDFN_FastArraySet(uint64* const dst, const uint64 value, const size_t count)
 {
- #if defined(ARCH_X86) && defined(__x86_64__)
+ #if defined(__x86_64__)
  {
   uint32 dummy_output0, dummy_output1;
 
@@ -53,7 +53,7 @@ static INLINE void MDFN_FastArraySet(uint64* const dst, const uint64 value, cons
 
 static INLINE void MDFN_FastArraySet(uint32* const dst, const uint32 value, const size_t count)
 {
- #if defined(ARCH_X86) && !defined(__x86_64__)
+ #if defined(__x86_64__)
  {
   uint32 dummy_output0, dummy_output1;
 
