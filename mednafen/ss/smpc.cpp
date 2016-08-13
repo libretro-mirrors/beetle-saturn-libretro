@@ -448,28 +448,34 @@ void SMPC_Write(const sscpu_timestamp_t timestamp, uint8 A, uint8 V)
  switch(A)
  {
   case 0x00 ... 0x06:
+#ifdef HAVE_DEBUG
 	if(MDFN_UNLIKELY(PendingCommand >= 0))
 	{
 	 SS_DBGTI(SS_DBG_WARNING | SS_DBG_SMPC, "[SMPC] Input register %u port written with 0x%02x while command 0x%02x is executing.", A, V, PendingCommand);
 	}
+#endif
 
 	IREG[A] = V;
 	break;
 
   case 0x0F:
+#ifdef HAVE_DEBUG
 	if(MDFN_UNLIKELY(PendingCommand >= 0))
 	{
 	 SS_DBGTI(SS_DBG_WARNING | SS_DBG_SMPC, "[SMPC] Command port written with 0x%02x while command 0x%02x is still executing.", V, PendingCommand);
 	}
+#endif
 
 	PendingCommand = V;
 	break;
 
   case 0x31:
+#ifdef HAVE_DEBUG
 	if(MDFN_UNLIKELY(SF))
 	{
 	 SS_DBGTI(SS_DBG_WARNING | SS_DBG_SMPC, "[SMPC] SF port written while SF is 1.");
 	}
+#endif
 
 	SF = true;
 	break;
@@ -535,19 +541,23 @@ uint8 SMPC_Read(const sscpu_timestamp_t timestamp, uint8 A)
 	break;
 
   case 0x10 ... 0x2F:
+#ifdef HAVE_DEBUG
 	if(MDFN_UNLIKELY(PendingCommand >= 0))
 	{
 	 //SS_DBG(SS_DBG_WARNING | SS_DBG_SMPC, "[SMPC] Output register %u port read while command 0x%02x is executing.\n", A - 0x10, PendingCommand);
 	}
+#endif
 
 	ret = (OREG - 0x10)[A];
 	break;
 
   case 0x30:
+#ifdef HAVE_DEBUG
 	if(MDFN_UNLIKELY(PendingCommand >= 0))
 	{
 	 //SS_DBG(SS_DBG_WARNING | SS_DBG_SMPC, "[SMPC] SR port read while command 0x%02x is executing.\n", PendingCommand);
 	}
+#endif
 
 	ret = SR;
 	break;
@@ -777,7 +787,9 @@ sscpu_timestamp_t SMPC_Update(sscpu_timestamp_t timestamp)
    {
     OREG[0x1F] = PendingCommand;
 
+#ifdef HAVE_DEBUG
     SS_DBGTI(SS_DBG_SMPC, "[SMPC] Command 0x%02x --- 0x%02x 0x%02x 0x%02x 0x%02x 0x%02x 0x%02x 0x%02x", PendingCommand, IREG[0], IREG[1], IREG[2], IREG[3], IREG[4], IREG[5], IREG[6]);
+#endif
 
     if(PendingCommand == CMD_MSHON)
     {

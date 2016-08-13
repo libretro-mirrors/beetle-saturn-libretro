@@ -266,10 +266,12 @@ INLINE void SS_SCSP::RW(uint32 A, T& DBV)
 	break;
 
     case 0x05:
+#ifdef HAVE_DEBUG
 	if(SRV & 0x8000)
 	{
 	 //SS_DBG(SS_DBG_WARNING | SS_DBG_SCSP, "[SCSP] Unknown bits non-zero in slot %u, register %u\n", slotnum, (A >> 1) & 0xF);
 	}
+#endif
 
 	s->ReleaseRate = SRV & 0x1F;
 	s->DecayLevel = (SRV >> 5) & 0x1F;
@@ -279,10 +281,12 @@ INLINE void SS_SCSP::RW(uint32 A, T& DBV)
 
     case 0x06:
 	SRV &= 0x0FFF;
+#ifdef HAVE_DEBUG
 	if(SRV & 0x0C00)
 	{
 	 //SS_DBG(SS_DBG_WARNING | SS_DBG_SCSP, "[SCSP] Unknown bits non-zero in slot %u, register %u\n", slotnum, (A >> 1) & 0xF);
 	}
+#endif
 
 	s->TotalLevel = SRV & 0xFF;
 	s->SoundDirect = (SRV >> 8) & 0x1;
@@ -296,10 +300,12 @@ INLINE void SS_SCSP::RW(uint32 A, T& DBV)
 	break;
 
     case 0x08:
+#ifdef HAVE_DEBUG
 	if(SRV & 0x8400)
 	{
 	 //SS_DBG(SS_DBG_WARNING | SS_DBG_SCSP, "[SCSP] Unknown bits non-zero in slot %u, register %u\n", slotnum, (A >> 1) & 0xF);
 	}
+#endif
 
 	s->FreqNum = SRV & 0x7FF;
 	s->Octave = (SRV >> 11) & 0xF;
@@ -316,10 +322,12 @@ INLINE void SS_SCSP::RW(uint32 A, T& DBV)
 
     case 0x0A:
 	SRV &= 0x00FF;
+#ifdef HAVE_DEBUG
 	if(SRV & 0x0080)
 	{
 	 //SS_DBG(SS_DBG_WARNING | SS_DBG_SCSP, "[SCSP] Unknown bits non-zero in slot %u, register %u\n", slotnum, (A >> 1) & 0xF);
 	}
+#endif
 	s->ToDSPLevel = SRV & 0x7;
 	s->ToDSPSelect = (SRV >> 3) & 0xF;
 	break;

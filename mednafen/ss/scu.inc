@@ -200,10 +200,12 @@ static uint8 SCU_MSH2VectorFetch(void)
 {
  uint8 ret = IVec;
 
+#ifdef HAVE_DEBUG
  if(MDFN_UNLIKELY(ILevel == 0))
  {
   SS_DBG(SS_DBG_WARNING | SS_DBG_SCU, "[SCU] [MSH2] [BUG] SCU_MSH2VectorFetch() called when ILevel == 0\n");
  }
+#endif
 
  if(MDFN_UNLIKELY(IVec == 0x40 /* || IVec == 0x41 */))	// VB In, apply cheats.
   MDFNMP_ApplyPeriodicCheats();
@@ -401,7 +403,9 @@ static INLINE void SCU_RegRW_DB(uint32 A, uint32* DB)
 
  if(IsWrite)
  {
+#ifdef HAVE_DEBUG
   SS_DBGTI(SS_DBG_SCU_REGW, "[SCU] %zu-byte write to 0x%02x, DB=0x%08x", sizeof(T), A & 0xFC, *DB);
+#endif
 
   switch(A & 0xFC)
   {
@@ -462,10 +466,12 @@ static INLINE void SCU_RegRW_DB(uint32 A, uint32* DB)
 
    case 0xC4:
 	RSEL = (RSEL &~ mask) | (*DB & mask & 0x1);
+#ifdef HAVE_DEBUG
 	if(MDFN_UNLIKELY(!RSEL))
 	{
 	 SS_DBG(SS_DBG_WARNING | SS_DBG_SCU, "[SCU] Write to RSEL, RSEL=0\n");
 	}
+#endif
 	break;
 
    case 0x00:
@@ -922,10 +928,12 @@ static INLINE void ABusRW_DB(uint32 A, uint16* DB, int32* time_thing, int32* dma
    *dma_time_thing -= 16;
   }
 
+#ifdef HAVE_DEBUG
   if(IsWrite)
    SS_DBG(SS_DBG_WARNING | SS_DBG_SCU, "[A-Bus CSD] Unknown %zu-byte write to 0x%08x(DB=0x%04x)\n", sizeof(T), A, *DB);
   else
    SS_DBG(SS_DBG_WARNING | SS_DBG_SCU, "[A-Bus CSD] Unknown %zu-byte read from 0x%08x\n", sizeof(T), A);
+#endif
 
   return;
  }
@@ -969,10 +977,12 @@ static INLINE void ABusRW_DB(uint32 A, uint16* DB, int32* time_thing, int32* dma
    return;
   }
 
+#ifdef HAVE_DEBUG
   if(IsWrite)
    SS_DBG(SS_DBG_WARNING | SS_DBG_SCU, "[A-Bus CS2] Unknown %zu-byte write to 0x%08x(DB=0x%04x)\n", sizeof(T), A, *DB);
   else
    SS_DBG(SS_DBG_WARNING | SS_DBG_SCU, "[A-Bus CS2] Unknown %zu-byte read from 0x%08x\n", sizeof(T), A);
+#endif
 
   return;
  }
@@ -983,10 +993,12 @@ static INLINE void ABusRW_DB(uint32 A, uint16* DB, int32* time_thing, int32* dma
  if(dma_time_thing != NULL)
   *dma_time_thing -= 1;
 
+#ifdef HAVE_DEBUG
  if(IsWrite)
   SS_DBG(SS_DBG_WARNING | SS_DBG_SCU, "[A-Bus] Unknown %zu-byte write to 0x%08x(DB=0x%04x)\n", sizeof(T), A, *DB);
  else
   SS_DBG(SS_DBG_WARNING | SS_DBG_SCU, "[A-Bus] Unknown %zu-byte read from 0x%08x\n", sizeof(T), A);
+#endif
 }
 
 template<typename T>
@@ -1105,10 +1117,12 @@ static INLINE void SCU_FromSH2_BusRW_DB(uint32 A, uint32* DB, int32* SH2DMAHax)
  // return 0;
  //}
 
+#ifdef HAVE_DEBUG
  if(IsWrite)
   SS_DBG(SS_DBG_WARNING | SS_DBG_SCU, "[SH2->SCU BUS] Unknown %zu-byte write to 0x%08x(DB=0x%08x)\n", sizeof(T), A, *DB);
  else
   SS_DBG(SS_DBG_WARNING | SS_DBG_SCU, "[SH2->SCU BUS] Unknown %zu-byte read from 0x%08x\n", sizeof(T), A);
+#endif
 
  if(!SH2DMAHax)
   SH7095_mem_timestamp += IsWrite ? 4 : 7;
@@ -1170,7 +1184,9 @@ static bool StartDMATransfer(DMALevelS* d, const uint32 ra, const uint32 wa, con
  rb = AddressToBus(ra);
  wb = AddressToBus(wa);
 
+#ifdef HAVE_DEBUG
  SS_DBG(SS_DBG_SCU, "[SCU] Starting DMA level %d transfer; ra=0x%08x wa=0x%08x bc=0x%08x - read_inc=%d, write_inc=0x%02x -- indirect=%d %d\n", (int)(d - DMALevel), ra, wa, bc, d->ReadAdd, d->WriteAdd, d->Indirect, d->SF);
+#endif
 
  if(MDFN_UNLIKELY(rb == -1))
  {
@@ -1193,6 +1209,7 @@ static bool StartDMATransfer(DMALevelS* d, const uint32 ra, const uint32 wa, con
  //
  //
  //
+#ifdef HAVE_DEBUG
  if((wa & 0x1) && wb == 1 && d->WriteAdd != 0x1)
  {
   //
@@ -1205,6 +1222,7 @@ static bool StartDMATransfer(DMALevelS* d, const uint32 ra, const uint32 wa, con
  {
   SS_DBG(SS_DBG_WARNING | SS_DBG_SCU, "[SCU] Possibly sketchy DMA of 0x%08x bytes from 0x%08x to A-bus address 0x%08x\n", bc, ra, wa);
  }
+#endif
 
  d->CurReadBase = ra &~ 0x3;
  d->CurReadSub = ra & 0x3;
@@ -1231,7 +1249,9 @@ static bool NextIndirect(DMALevelS* d)
  // count, dest, src
  uint32 tmp[3];
 
+#ifdef HAVE_DEBUG
  SS_DBG(SS_DBG_SCU, "[SCU] DMA level %d reading indirect table entries @ 0x%08x\n", (int)(d - DMALevel), d->CurTableAddr);
+#endif
 
  for(unsigned i = 0; i < 3; i++)
  {
@@ -1270,10 +1290,12 @@ static void RecalcDMAHalt(void)
     for(int sl = level - 1; sl >= 0; sl--)
     {
      DMALevelS* sld = &DMALevel[sl];
+#ifdef HAVE_DEBUG
      if(sld->Active && (sld->WriteBus == 2 || sld->ReadFunc == DMA_ReadCBus))
      {
       SS_DBG(SS_DBG_WARNING | SS_DBG_SCU, "[SCU] Higher priority A-bus<->B-bus DMA(level %d) running while lower-priority A-/B-bus<->C-bus DMA(level %d) is pending.\n", level, sl);
      }
+#endif
     }
    }
 #endif
@@ -1698,8 +1720,10 @@ static NO_INLINE void DMAInstr(void)
    return;
   }
 
+#ifdef HAVE_DEBUG
   if(drw & 0x4)
    SS_DBG(SS_DBG_WARNING | SS_DBG_SCU, "[SCU] DSP DMA from 0x%08x to %s --- Instr=0x%08x, Next_Instr=0x%08x, PC=0x%02x\n", addr, ((drw == 0x4) ? "program RAM" : "unknown"), instr, (unsigned)(DSP.NextInstr >> 32), DSP.PC);
+#endif
 
   // Read from external bus, write to data RAM or program RAM
   do

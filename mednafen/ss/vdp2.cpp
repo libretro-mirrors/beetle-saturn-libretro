@@ -502,7 +502,9 @@ static INLINE void RegsWrite(uint32 A, uint16 V)
 
  RawRegs[A >> 1] = V;
 
+#ifdef HAVE_DEBUG
  SS_DBGTI(SS_DBG_VDP2_REGW, "[VDP2] Register write 0x%03x: 0x%04x", A, V);
+#endif
 
  switch(A)
  {
@@ -535,8 +537,10 @@ static INLINE void RegsWrite(uint32 A, uint16 V)
   case 0x06:
 	VRAMSize = (V >> 15) & 0x1;
 
+#ifdef HAVE_DEBUG
 	if(VRAMSize)
 	 SS_DBGTI(SS_DBG_WARNING | SS_DBG_VDP2, "[VDP2] VRAMSize=%d (unemulated)", VRAMSize);
+#endif
 	break;
 
   case 0x0E:
@@ -709,8 +713,10 @@ static INLINE void RW(uint32 A, uint16* DB)
  {
   if(IsWrite)
   {
+#ifdef HAVE_DEBUG
    if(sizeof(T) == 1)
     SS_DBGTI(SS_DBG_WARNING | SS_DBG_VDP2, "[VDP2] Byte-write to register at 0x%08x(DB=0x%04x)", A, *DB);
+#endif
 
    RegsWrite(A, *DB);
   }

@@ -311,10 +311,12 @@ static INLINE int32 PlotPixel(int32 x, int32 y, uint16 pix, bool transparent, Go
 
 static INLINE void CheckUndefClipping(void)
 {
+#ifdef HAVE_DEBUG
  if(SysClipX < UserClipX1 || SysClipY < UserClipY1 || UserClipX0 > UserClipX1 || UserClipY0 > UserClipY1)
  {
   //SS_DBG(SS_DBG_WARNING, "[VDP1] Illegal clipping windows; Sys=%u:%u -- User=%u:%u - %u:%u\n", SysClipX, SysClipY, UserClipX0, UserClipY0, UserClipX1, UserClipY1);
  }
+#endif
 }
 
 

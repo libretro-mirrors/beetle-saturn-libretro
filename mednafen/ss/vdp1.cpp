@@ -460,10 +460,12 @@ sscpu_timestamp_t Update(sscpu_timestamp_t timestamp)
 
 static void StartDrawing(void)
 {
+#ifdef HAVE_DEBUG
  if(DrawingActive)
  {
   SS_DBGTI(SS_DBG_WARNING | SS_DBG_VDP1, "[VDP1] Drawing interrupted by new drawing start request.");
  }
+#endif
 
  // On draw start, clear CEF.
  EDSR &= ~0x2;
@@ -528,7 +530,9 @@ void SetHBVB(const sscpu_timestamp_t event_timestamp, const bool new_hb_status, 
    {
     if(DrawingActive)
     {
+#ifdef HAVE_DEBUG
      SS_DBGTI(SS_DBG_WARNING | SS_DBG_VDP1, "[VDP1] Drawing aborted by framebuffer swap.");
+#endif
      DrawingActive = false;
     }
 
@@ -676,7 +680,9 @@ static INLINE void WriteReg(const unsigned which, const uint16 value)
  SS_SetEventNT(SS_EVENT_VDP2, VDP2::Update(SH7095_mem_timestamp));
  sscpu_timestamp_t nt = Update(SH7095_mem_timestamp);
 
+#ifdef HAVE_DEBUG
  SS_DBGTI(SS_DBG_VDP1_REGW, "[VDP1] Register write: 0x%02x: 0x%04x", which << 1, value);
+#endif
 
  switch(which)
  {
@@ -773,7 +779,9 @@ void Write8_DB(uint32 A, uint16 DB)
   return;
  }
 
+#ifdef HAVE_DEBUG
  SS_DBGTI(SS_DBG_WARNING | SS_DBG_VDP1, "[VDP1] 8-bit write to 0x%08x(DB=0x%04x)", A, DB);
+#endif
  WriteReg((A - 0x100000) >> 1, DB);
 }
 
