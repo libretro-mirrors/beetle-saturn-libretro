@@ -2798,12 +2798,14 @@ static NO_INLINE void DrawLine(const uint16 out_line, const uint16 vdp2_line, co
   //
   //
   //
+#ifdef HAVE_DEBUG
   if(vdp2_line == 64)
   {
    //printf("%d:%d, %d:%d (%d) --- %d:%d, %d:%d (%d)\n", Window[0].XStart, Window[0].YStart, Window[0].XEnd, Window[0].YEnd, Window[0].LineWinEn, Window[1].XStart, Window[1].YStart, Window[1].XEnd, Window[1].YEnd, Window[1].LineWinEn);
    //printf("SPCTL_Low: %02x, SDCTL: %03x, SpriteCCCond: %01x, CCNum: %01x -- %01x %01x %01x %01x %01x %01x %01x %01x \n", SPCTL_Low, SDCTL, SpriteCCCond, SpriteCCNum, SpriteCCRatio[0], SpriteCCRatio[1], SpriteCCRatio[2], SpriteCCRatio[3], SpriteCCRatio[4], SpriteCCRatio[5], SpriteCCRatio[6], SpriteCCRatio[7]);
    //printf("WinControl[WINLAYER_CC]=%02x\n", WinControl[WINLAYER_CC]);
   }
+#endif
 
   //
   // Process sprite data before NBG0-3 and RBG0-1, but defer applying the window until after NBG and RBG are handled(so the sprite window
@@ -3232,10 +3234,14 @@ void VDP2REND_StartFrame(EmulateSpecStruct* espec_arg, const bool clock28m, cons
 void VDP2REND_EndFrame(void)
 {
  while(MDFN_UNLIKELY(DrawCounter.load(std::memory_order_acquire) != 0))
+#if 0
  {
   //fprintf(stderr, "SLEEEEP\n");
   //retro_sleep(1);
  }
+#else
+ ;
+#endif
 
  if(OutLineCounter < VisibleLines)
  {
