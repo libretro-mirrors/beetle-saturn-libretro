@@ -405,9 +405,11 @@ sscpu_timestamp_t SH7095::DMA_Update(sscpu_timestamp_t et)
 {
  if(MDFN_UNLIKELY(et < dma_lastts))
  {
+#ifdef HAVE_DEBUG
   // et < dma_lastts may happen...look into it.
   if(et < dma_lastts)
    SS_DBG(SS_DBG_WARNING | SS_DBG_SH2, "[%s] DMA_Update called with et(%u) < dma_lastts(%u).\n", cpu_name, et, dma_lastts);
+#endif
  }
  else if(MDFN_UNLIKELY(ExtHalt))
  {
@@ -659,11 +661,13 @@ void SH7095::SetFTI(bool state)
 
  if((prev ^ state) & (prev ^ (FRT.TCR >> 7)))
  {
+#ifdef HAVE_DEBUG
   SS_DBGTI(SS_DBG_SH2, "[%s] FTI input capture triggered.", cpu_name);
   if((FRT.FTCSR & 0x80) || (FRT.FTCSRM & 0x80))
   {
    SS_DBG(SS_DBG_WARNING | SS_DBG_SH2, "[%s] FTI Input capture interrupt while software not ready? FTCSR=0x%02x, FTCSRM=0x%02x\n", cpu_name, FRT.FTCSR, FRT.FTCSRM);
   }
+#endif
 
   FRT.FICR = FRT.FRC;
   FRT.FTCSR |= 0x80;
@@ -924,12 +928,15 @@ NO_INLINE void SH7095::OnChipRegWrite(uint32 A, uint32 V)
 	 const unsigned ch = (A >> 4) & 1;
 
 	 DMACH[ch].CHCR = (V & ~2) | (DMACH[ch].CHCR & (V | DMACH[ch].CHCRM) & 2);
+
+#ifdef HAVE_DEBUG
 	 SS_DBG(SS_DBG_SH2, "[%s] DMA %d CHCR Write: CHCR=0x%04x SAR=0x%08x DAR=0x%08x TCR=0x%04x\n", cpu_name, ch, DMACH[ch].CHCR, DMACH[ch].SAR, DMACH[ch].DAR, DMACH[ch].TCR);
 
 	 if((DMACH[ch].CHCR & 0x1) && (DMACH[ch].CHCR & 0x3E8) != 0x200)
 	 {
 	  SS_DBG(SS_DBG_WARNING | SS_DBG_SH2, "[%s] Unhandled CHCR on DMA channel %u: 0x%08x\n", cpu_name, ch, DMACH[ch].CHCR);
 	 }
+#endif
 	}
 	DMA_StartSG();
 	RecalcPendingIntPEX();
@@ -1140,10 +1147,12 @@ NO_INLINE void SH7095::OnChipRegWrite(uint32 A, uint32 V)
 	if(WDT.WTCSR & 0x20)
 	 SBYCR &= 0x7F;
 
+#ifdef HAVE_DEBUG
 	if(SBYCR != 0)
 	{
 	 SS_DBG(SS_DBG_WARNING | SS_DBG_SH2, "[%s] SBYCR set to non-zero value: 0x%02x\n", cpu_name, V);
 	}
+#endif
 	break;
 
    case 0x92 ... 0x9E:
@@ -1183,10 +1192,12 @@ NO_INLINE void SH7095::OnChipRegWrite(uint32 A, uint32 V)
    case 0xE0:
    case 0xE1:
 	ICR = (ICR &~ mask) | ((V << shift) & mask & 0x0101);
+#ifdef HAVE_DEBUG
 	if(ICR & 0x0100)
 	{
 	 SS_DBG(SS_DBG_WARNING | SS_DBG_SH2, "[%s] NMIE=1\n", cpu_name);
 	}
+#endif
 	RecalcPendingIntPEX();
 	break;
 
