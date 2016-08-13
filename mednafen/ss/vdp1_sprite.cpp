@@ -31,7 +31,7 @@ namespace VDP1
 static int32 (*LineFuncTab[2][3][0x20][8 + 1])(void) =
 {
  #define LINEFN_BC(die, bpp8, b, c)	\
-   VDP1::DrawLine<true, die, bpp8, c == 0x8, b & 0x10, (b & 0x10) && (b & 0x08), b & 0x04, b & 0x02, b & 0x01, true, c & 0x4, (!bpp8) && (c & 0x2), c & 0x1>
+	DrawLine<true, die, bpp8, c == 0x8, b & 0x10, (b & 0x10) && (b & 0x08), b & 0x04, b & 0x02, b & 0x01, true, c & 0x4, (!bpp8) && (c & 0x2), c & 0x1>
 
  #define LINEFN_B(die, bpp8, b)									\
 	{										\
