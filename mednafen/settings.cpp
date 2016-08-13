@@ -106,22 +106,6 @@ bool MDFN_GetSettingB(const char *name)
    /* LIBRETRO */
    if (!strcmp("libretro.cd_load_into_ram", name))
       return 0;
-   if (!strcmp("psx.input.port1.memcard", name))
-      return 1;
-   if (!strcmp("psx.input.port2.memcard", name))
-      return 1;
-   if (!strcmp("psx.input.port3.memcard", name))
-      return 1;
-   if (!strcmp("psx.input.port4.memcard", name))
-      return 1;
-   if (!strcmp("psx.input.port5.memcard", name))
-      return 1;
-   if (!strcmp("psx.input.port6.memcard", name))
-      return 1;
-   if (!strcmp("psx.input.port7.memcard", name))
-      return 1;
-   if (!strcmp("psx.input.port8.memcard", name))
-      return 1;
    if (!strcmp("psx.input.pport1.multitap", name)) /* make configurable */
       return setting_psx_multitap_port_1;
    if (!strcmp("psx.input.pport2.multitap", name)) /* make configurable */
@@ -156,7 +140,7 @@ std::string MDFN_GetSettingS(const char *name)
       return std::string("sega_101.bin");
    if (!strcmp("ss.bios_na_eu", name))
       return std::string("mpr-17933.bin");
-   if (!strcmp("psx.region_default", name)) /* make configurable */
+   if (!strcmp("ss.region_default", name)) /* make configurable */
       return "na";
    /* FILESYS */
    if (!strcmp("filesys.path_firmware", name))
