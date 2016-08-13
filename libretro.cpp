@@ -2617,6 +2617,45 @@ static void update_input(void)
        input_buf[j] = 0;
    }
 
+#if 0
+
+#if 0
+   /* Street Fighter Zero 3 */
+   static unsigned map[] = {
+      RETRO_DEVICE_ID_JOYPAD_L,
+      RETRO_DEVICE_ID_JOYPAD_X,
+      RETRO_DEVICE_ID_JOYPAD_Y,
+      RETRO_DEVICE_ID_JOYPAD_R2,
+      RETRO_DEVICE_ID_JOYPAD_UP,
+      RETRO_DEVICE_ID_JOYPAD_DOWN,
+      RETRO_DEVICE_ID_JOYPAD_LEFT,
+      RETRO_DEVICE_ID_JOYPAD_RIGHT,
+      RETRO_DEVICE_ID_JOYPAD_A,
+      RETRO_DEVICE_ID_JOYPAD_R,
+      RETRO_DEVICE_ID_JOYPAD_B,
+      RETRO_DEVICE_ID_JOYPAD_START,
+   };
+   static unsigned l2_map = RETRO_DEVICE_ID_JOYPAD_L2;
+#endif
+
+   /* Tomb Raider */
+   static unsigned map[] = {
+      RETRO_DEVICE_ID_JOYPAD_R2,        /* strafe right */
+      RETRO_DEVICE_ID_JOYPAD_L,         /* view         */
+      RETRO_DEVICE_ID_JOYPAD_L2,        /* strafe left  */
+      RETRO_DEVICE_ID_JOYPAD_A,         /* roll         */
+      RETRO_DEVICE_ID_JOYPAD_UP,
+      RETRO_DEVICE_ID_JOYPAD_DOWN,
+      RETRO_DEVICE_ID_JOYPAD_LEFT,
+      RETRO_DEVICE_ID_JOYPAD_RIGHT,
+      RETRO_DEVICE_ID_JOYPAD_B,         /* use */
+      RETRO_DEVICE_ID_JOYPAD_X,         /* draw weapon  */
+      RETRO_DEVICE_ID_JOYPAD_Y,         /* jump */
+      RETRO_DEVICE_ID_JOYPAD_START,
+   };
+   static unsigned l2_map = RETRO_DEVICE_ID_JOYPAD_R;
+#else
+   /* Generic */
    static unsigned map[] = {
       RETRO_DEVICE_ID_JOYPAD_R,
       RETRO_DEVICE_ID_JOYPAD_X,
@@ -2631,12 +2670,14 @@ static void update_input(void)
       RETRO_DEVICE_ID_JOYPAD_B,
       RETRO_DEVICE_ID_JOYPAD_START,
    };
+   static unsigned l2_map = RETRO_DEVICE_ID_JOYPAD_L2;
+#endif
 
    for (unsigned j = 0; j < players; j++)
    {
       for (unsigned i = 0; i < MAX_BUTTONS; i++)
          input_buf[j] |= input_state_cb(j, RETRO_DEVICE_JOYPAD, 0, map[i]) ? (1 << i) : 0;
-      input_buf[j] |= input_state_cb(j, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_L2) ? (1 << 15) : 0;
+      input_buf[j] |= input_state_cb(j, RETRO_DEVICE_JOYPAD, 0, l2_map) ? (1 << 15) : 0;
    }
 
    // Buttons.
