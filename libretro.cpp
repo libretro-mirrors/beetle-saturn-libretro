@@ -2120,8 +2120,6 @@ static void check_variables(bool startup)
 {
    struct retro_variable var = {0};
 
-   extern void PSXDitherApply(bool);
-
    if (startup)
    {
    }
