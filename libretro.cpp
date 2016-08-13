@@ -644,15 +644,14 @@ void ForceEventUpdates(const sscpu_timestamp_t timestamp)
 
 static INLINE bool EventHandler(const sscpu_timestamp_t timestamp)
 {
- event_list_entry *e;
+ event_list_entry *e = NULL;
 
  while(timestamp >= (e = events[SS_EVENT__SYNFIRST].next)->event_time)	// If Running = 0, EventHandler() may be called even if there isn't an event per-se, so while() instead of do { ... } while
  {
   const sscpu_timestamp_t etime = e->event_time;
-  sscpu_timestamp_t nt;
+  sscpu_timestamp_t          nt = e->event_handler(e->event_time);	// timestamp
 
-  nt = e->event_handler(e->event_time);	// timestamp
-
+#if 0
 //#if SS_EVENT_SYSTEM_CHECKS
   if(MDFN_UNLIKELY(nt <= etime))
   {
@@ -660,6 +659,7 @@ static INLINE bool EventHandler(const sscpu_timestamp_t timestamp)
    assert(nt > etime);
   }
 //#endif
+#endif
 
   SS_SetEventNT(e->which, nt);
  }
