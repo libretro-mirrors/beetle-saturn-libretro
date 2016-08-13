@@ -2126,7 +2126,7 @@ static void check_variables(bool startup)
    {
    }
 
-   var.key = "beetle_psx_cdimagecache";
+   var.key = "beetle_saturn_cdimagecache";
 
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
@@ -2141,28 +2141,28 @@ static void check_variables(bool startup)
       }
    }
 
-   var.key = "beetle_psx_initial_scanline";
+   var.key = "beetle_saturn_initial_scanline";
 
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
       setting_initial_scanline = atoi(var.value);
    }
 
-   var.key = "beetle_psx_last_scanline";
+   var.key = "beetle_saturn_last_scanline";
 
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
       setting_last_scanline = atoi(var.value);
    }
 
-   var.key = "beetle_psx_initial_scanline_pal";
+   var.key = "beetle_saturn_initial_scanline_pal";
 
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
       setting_initial_scanline_pal = atoi(var.value);
    }
 
-   var.key = "beetle_psx_last_scanline_pal";
+   var.key = "beetle_saturn_last_scanline_pal";
 
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
@@ -2861,11 +2861,11 @@ void retro_set_environment(retro_environment_t cb)
    environ_cb = cb;
 
    static const struct retro_variable vars[] = {
-      { "beetle_psx_cdimagecache", "CD Image Cache (restart); disabled|enabled" },
-      { "beetle_psx_initial_scanline", "Initial scanline; 0|1|2|3|4|5|6|7|8|9|10|10|11|12|13|14|15|16|17|18|19|20|21|22|23|24|25|26|27|28|29|30|31|32|33|34|35|36|37|38|39|40" },
-      { "beetle_psx_initial_scanline_pal", "Initial scanline PAL; 0|1|2|3|4|5|6|7|8|9|10|10|11|12|13|14|15|16|17|18|19|20|21|22|23|24|25|26|27|28|29|30|31|32|33|34|35|36|37|38|39|40" },
-      { "beetle_psx_last_scanline", "Last scanline; 239|238|237|236|235|234|232|231|230|229|228|227|226|225|224|223|222|221|220|219|218|217|216|215|214|213|212|211|210" },
-      { "beetle_psx_last_scanline_pal", "Last scanline PAL; 287|286|285|284|283|283|282|281|280|279|278|277|276|275|274|273|272|271|270|269|268|267|266|265|264|263|262|261|260" },
+      { "beetle_saturn_cdimagecache", "CD Image Cache (restart); disabled|enabled" },
+      { "beetle_saturn_initial_scanline", "Initial scanline; 0|1|2|3|4|5|6|7|8|9|10|10|11|12|13|14|15|16|17|18|19|20|21|22|23|24|25|26|27|28|29|30|31|32|33|34|35|36|37|38|39|40" },
+      { "beetle_saturn_initial_scanline_pal", "Initial scanline PAL; 0|1|2|3|4|5|6|7|8|9|10|10|11|12|13|14|15|16|17|18|19|20|21|22|23|24|25|26|27|28|29|30|31|32|33|34|35|36|37|38|39|40" },
+      { "beetle_saturn_last_scanline", "Last scanline; 239|238|237|236|235|234|232|231|230|229|228|227|226|225|224|223|222|221|220|219|218|217|216|215|214|213|212|211|210" },
+      { "beetle_saturn_last_scanline_pal", "Last scanline PAL; 287|286|285|284|283|283|282|281|280|279|278|277|276|275|274|273|272|271|270|269|268|267|266|265|264|263|262|261|260" },
       { NULL, NULL },
    };
    static const struct retro_controller_description pads[] = {
@@ -3000,7 +3000,7 @@ const char *MDFN_MakeFName(MakeFName_Type type, int id1, const char *cd1)
          snprintf(fullpath, sizeof(fullpath), "%s%c%s.%s",
                retro_save_directory,
                retro_slash,
-               (!shared_memorycards) ? retro_cd_base_name : "mednafen_psx_libretro_shared",
+               (!shared_memorycards) ? retro_cd_base_name : "mednafen_saturn_libretro_shared",
                cd1);
          break;
       case MDFNMKF_FIRMWARE:
