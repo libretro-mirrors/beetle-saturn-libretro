@@ -2569,6 +2569,7 @@ bool retro_load_game(const struct retro_game_info *info)
       SMPC_SetInput(i, "gamepad", (uint8*)&input_buf[i]);
    boot = false;
 
+   cdifs = &CDInterfaces;
    CDB_SetDisc(false, (*cdifs)[0]);
 
    frame_count = 0;
