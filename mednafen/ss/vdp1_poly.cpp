@@ -29,7 +29,7 @@ namespace VDP1
 static int32 (*LineFuncTab[2][3][0x20][8 + 1])(void) =
 {
  #define LINEFN_BC(die, bpp8, b, c)	\
-	DrawLine<true, die, bpp8, c == 0x8, b & 0x10, (b & 0x10) && (b & 0x08), b & 0x04, false/*b & 0x02*/, b & 0x01, false, c & 0x4, c & 0x2, c & 0x1>
+   VDP1::DrawLine<true, die, bpp8, c == 0x8, b & 0x10, (b & 0x10) && (b & 0x08), b & 0x04, false/*b & 0x02*/, b & 0x01, false, c & 0x4, c & 0x2, c & 0x1>
 
  #define LINEFN_B(die, bpp8, b)									\
 	{										\
@@ -132,8 +132,7 @@ int32 CMD_Polygon(const uint16* cmd_data)
 {
  if(cmd_data[0x2] & 0x4) // gouraud
   return CMD_PolygonG_T<true>(cmd_data);
- else
-  return CMD_PolygonG_T<false>(cmd_data);
+ return CMD_PolygonG_T<false>(cmd_data);
 }
 
 
