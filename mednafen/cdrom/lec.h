@@ -21,15 +21,6 @@
 #define __LEC_H__
 
 #include <stdint.h>
-#include <boolean.h>
-
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-#ifndef TRUE
-#define TRUE 1
-#endif
 
 /* Encodes a MODE 0 sector.
  * 'adr' is the current physical sector address
@@ -68,12 +59,6 @@ void lec_encode_mode2_form2_sector(uint32_t adr, uint8_t *sector);
 /* Scrambles and byte swaps an encoded sector.
  * 'sector' must be 2352 byte wide.
  */
-void lec_scramble(uint8_t *sector);
-
-void lec_tables_init(void);
-
-#ifdef __cplusplus
-}
-#endif
+void lec_scramble(int8_t *sector);
 
 #endif

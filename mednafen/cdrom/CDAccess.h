@@ -2,12 +2,8 @@
 #define __MDFN_CDROMFILE_H
 
 #include <stdio.h>
-#include <stdint.h>
-
-#include <boolean.h>
 
 #include "CDUtility.h"
-#include "misc.h"
 
 class CDAccess
 {
@@ -16,17 +12,21 @@ class CDAccess
  CDAccess();
  virtual ~CDAccess();
 
- virtual bool Read_Raw_Sector(uint8_t *buf, int32_t lba) = 0;
+ virtual void Read_Raw_Sector(uint8_t *buf, int32_t lba) = 0;
 
- virtual bool Read_TOC(TOC *toc) = 0;
+ // Returns false if the read wouldn't be "fast"(i.e. reading from a disk),
+ // or if the read can't be done in a thread-safe re-entrant manner.
+ //
+ // Writes 96 bytes into pwbuf, and returns 'true' otherwise.
+ virtual bool Fast_Read_Raw_PW_TSRE(uint8_t* pwbuf, int32_t lba) const noexcept = 0;
 
- virtual void Eject(bool eject_status) = 0;		// Eject a disc if it's physical, otherwise NOP.  Returns true on success(or NOP), false on error
+ virtual void Read_TOC(TOC *toc) = 0;
 
  private:
  CDAccess(const CDAccess&);	// No copy constructor.
  CDAccess& operator=(const CDAccess&); // No assignment operator.
 };
 
-CDAccess *cdaccess_open_image(bool *success, const char *path, bool image_memcache);
+CDAccess* CDAccess_Open(const std::string& path, bool image_memcache);
 
 #endif

@@ -4,6 +4,7 @@
 #include <algorithm>
 #include <string>
 #include <vector>
+#include "../libretro.h"
 
 #include "video.h"
 #include "state.h"
@@ -467,5 +468,7 @@ typedef struct
 } MDFNGI;
 
 int StateAction(StateMem *sm, int load, int data_only);
+
+extern retro_log_printf_t log_cb;
 
 #endif

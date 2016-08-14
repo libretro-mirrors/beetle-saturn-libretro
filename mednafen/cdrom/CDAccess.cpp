@@ -15,16 +15,7 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-
-#include <sys/stat.h>
-#ifdef _WIN32
-#include <direct.h>
-#else
-#include <unistd.h>
-#endif
-
 #include "../mednafen.h"
-
 #include "CDAccess.h"
 #include "CDAccess_Image.h"
 #include "CDAccess_CCD.h"
@@ -39,9 +30,15 @@ CDAccess::~CDAccess()
 
 }
 
-CDAccess *cdaccess_open_image(bool *success, const char *path, bool image_memcache)
+CDAccess* CDAccess_Open(const std::string& path, bool image_memcache)
 {
-   if(strlen(path) >= 4 && !strcasecmp(path + strlen(path) - 4, ".ccd"))
-      return new CDAccess_CCD(success, path, image_memcache);
-   return new CDAccess_Image(success, path, image_memcache);
+ CDAccess *ret = NULL;
+
+ if(path.size() >= 4 && !strcasecmp(path.c_str() + path.size() - 4, ".ccd"))
+  ret = new CDAccess_CCD(path, image_memcache);
+ else
+  ret = new CDAccess_Image(path, image_memcache);
+
+ return ret;
 }
+

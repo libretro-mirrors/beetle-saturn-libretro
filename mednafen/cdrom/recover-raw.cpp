@@ -19,28 +19,24 @@
  *  or direct your browser at http://www.gnu.org.
  */
 
-#include <stdint.h>
-#include <string.h>
-#include "recover-raw.h"
-#include "l-ec.h"
-#include "edc_crc32.h"
-#include "galois.h"
+#include <boolean.h>
+#include "dvdisaster.h"
 
 static GaloisTables *gt = NULL;		/* for L-EC Reed-Solomon */
 static ReedSolomonTables *rt = NULL;
 
 bool Init_LEC_Correct(void)
 {
-   gt = CreateGaloisTables(0x11d);
-   rt = CreateReedSolomonTables(gt, 0, 1, 10);
+ gt = CreateGaloisTables(0x11d);
+ rt = CreateReedSolomonTables(gt, 0, 1, 10);
 
-   return(1);
+ return(1);
 }
 
 void Kill_LEC_Correct(void)
 {
-   FreeGaloisTables(gt);
-   FreeReedSolomonTables(rt);
+ FreeGaloisTables(gt);
+ FreeReedSolomonTables(rt);
 }
 
 /***
@@ -49,29 +45,31 @@ void Kill_LEC_Correct(void)
 
 /*
  * Test raw sector against its 32bit CRC.
- * Returns TRUE if frame is good.
+ * Returns true if frame is good.
  */
 
 int CheckEDC(const unsigned char *cd_frame, bool xa_mode)
 { 
-   unsigned int expected_crc, real_crc;
-   unsigned int crc_base = xa_mode ? 2072 : 2064;
+ unsigned int expected_crc, real_crc;
+ unsigned int crc_base = xa_mode ? 2072 : 2064;
 
-   expected_crc = cd_frame[crc_base + 0] << 0;
-   expected_crc |= cd_frame[crc_base + 1] << 8;
-   expected_crc |= cd_frame[crc_base + 2] << 16;
-   expected_crc |= cd_frame[crc_base + 3] << 24;
+ expected_crc = cd_frame[crc_base + 0] << 0;
+ expected_crc |= cd_frame[crc_base + 1] << 8;
+ expected_crc |= cd_frame[crc_base + 2] << 16;
+ expected_crc |= cd_frame[crc_base + 3] << 24;
 
-   if(xa_mode) 
-      real_crc = EDCCrc32(cd_frame+16, 2056);
-   else
-      real_crc = EDCCrc32(cd_frame, 2064);
+ if(xa_mode) 
+  real_crc = EDCCrc32(cd_frame+16, 2056);
+ else
+  real_crc = EDCCrc32(cd_frame, 2064);
 
-   if(expected_crc == real_crc)
-      return(1);
-
-   //printf("Bad EDC CRC:  Calculated:  %08x,  Recorded:  %08x\n", real_crc, expected_crc);
-   return(0);
+ if(expected_crc == real_crc)
+  return(1);
+ else
+ {
+  //printf("Bad EDC CRC:  Calculated:  %08x,  Recorded:  %08x\n", real_crc, expected_crc);
+  return(0);
+ }
 }
 
 /***
@@ -104,34 +102,31 @@ static int simple_lec(unsigned char *frame)
    /* Perform Q-Parity error correction */
 
    for(q=0; q<N_Q_VECTORS; q++)
-   {
-      int err;
+   {  int err;
 
       /* We have no erasure information for Q vectors */
 
-      GetQVector(frame, q_vector, q);
-      err = DecodePQ(rt, q_vector, Q_PADDING, ignore, 0);
+     GetQVector(frame, q_vector, q);
+     err = DecodePQ(rt, q_vector, Q_PADDING, ignore, 0);
 
-      /* See what we've got */
+     /* See what we've got */
 
-      if(err < 0)  /* Uncorrectable. Mark bytes are erasure. */
-      {  q_failures++;
-         FillQVector(byte_state, 1, q);
-      }
-      else         /* Correctable */ 
-      {
-         if(err == 1 || err == 2) /* Store back corrected vector */ 
-         {
-            SetQVector(frame, q_vector, q);
-            q_corrected++;
-         }
-      }
+     if(err < 0)  /* Uncorrectable. Mark bytes are erasure. */
+     {  q_failures++;
+        FillQVector(byte_state, 1, q);
+     }
+     else         /* Correctable */ 
+     {  if(err == 1 || err == 2) /* Store back corrected vector */ 
+	{  SetQVector(frame, q_vector, q);
+	   q_corrected++;
+	}
+     }
    }
 
    /* Perform P-Parity error correction */
+
    for(p=0; p<N_P_VECTORS; p++)
-   {
-      int err,i;
+   {  int err,i;
 
       /* Try error correction without erasure information */
 
@@ -139,41 +134,41 @@ static int simple_lec(unsigned char *frame)
       err = DecodePQ(rt, p_vector, P_PADDING, ignore, 0);
 
       /* If unsuccessful, try again using erasures.
-         Erasure information is uncertain, so try this last. */
+	 Erasure information is uncertain, so try this last. */
 
       if(err < 0 || err > 2)
-      {
-         GetPVector(byte_state, p_state, p);
-         erasure_count = 0;
+      {  GetPVector(byte_state, p_state, p);
+	 erasure_count = 0;
 
-         for(i=0; i<P_VECTOR_SIZE; i++)
-            if(p_state[i])
-               erasures[erasure_count++] = i;
+	 for(i=0; i<P_VECTOR_SIZE; i++)
+	   if(p_state[i])
+	     erasures[erasure_count++] = i;
 
-         if(erasure_count > 0 && erasure_count <= 2)
-         {
-            GetPVector(frame, p_vector, p);
-            err = DecodePQ(rt, p_vector, P_PADDING, erasures, erasure_count);
-         }
+	 if(erasure_count > 0 && erasure_count <= 2)
+	 {  GetPVector(frame, p_vector, p);
+	    err = DecodePQ(rt, p_vector, P_PADDING, erasures, erasure_count);
+	 }
       }
 
       /* See what we've got */
 
       if(err < 0)  /* Uncorrectable. */
-         p_failures++;
+      {  p_failures++;
+      }
       else         /* Correctable. */ 
-      {
-         if(err == 1 || err == 2) /* Store back corrected vector */ 
-         {  SetPVector(frame, p_vector, p);
-            p_corrected++;
-         }
+      {  if(err == 1 || err == 2) /* Store back corrected vector */ 
+	 {  SetPVector(frame, p_vector, p);
+	    p_corrected++;
+	 }
       }
    }
 
    /* Sum up */
 
    if(q_failures || p_failures || q_corrected || p_corrected)
-      return 1;
+   {
+     return 1;
+   }
 
    return 0;
 }
@@ -183,25 +178,36 @@ static int simple_lec(unsigned char *frame)
  ***/
 
 int ValidateRawSector(unsigned char *frame, bool xaMode)
-{
-   int lec_did_sth = false;
+{  
+ int lec_did_sth = false;
 
-   // Silence GCC warning
-   (void)lec_did_sth;
+  /* Do simple L-EC.
+     It seems that drives stop their internal L-EC as soon as the
+     EDC is okay, so we may see uncorrected errors in the parity bytes.
+     Since we are also interested in the user data only and doing the
+     L-EC is expensive, we skip our L-EC as well when the EDC is fine. */
 
-   /* Do simple L-EC.
-      It seems that drives stop their internal L-EC as soon as the
-      EDC is okay, so we may see uncorrected errors in the parity bytes.
-      Since we are also interested in the user data only and doing the
-      L-EC is expensive, we skip our L-EC as well when the EDC is fine. */
+  if(!CheckEDC(frame, xaMode))
+  {
+   unsigned char header[4];
 
-   if(!CheckEDC(frame, xaMode))
-      lec_did_sth = simple_lec(frame);
-   /* Test internal sector checksum again */
+   if(xaMode)
+   {
+    memcpy(header, frame + 12, 4);
+    memset(frame + 12, 0, 4);
+   }
 
+   lec_did_sth = simple_lec(frame);
+
+   if(xaMode)
+    memcpy(frame + 12, header, 4);
+  }
+
+  /* Test internal sector checksum again */
+  if(!CheckEDC(frame, xaMode))
    /* EDC failure in RAW sector */
-   if(!CheckEDC(frame, xaMode))
-      return false;
+   return false;
 
-   return true;
+  return true;
 }
+

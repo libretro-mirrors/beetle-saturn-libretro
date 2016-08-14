@@ -1,6 +1,7 @@
 #ifndef __MDFN_SIMPLEFIFO_H
 #define __MDFN_SIMPLEFIFO_H
 
+#include <vector>
 #include <assert.h>
 
 #include "../math_ops.h"
@@ -11,24 +12,53 @@ class SimpleFIFO
  public:
 
  // Constructor
- SimpleFIFO(uint32 the_size)
+ SimpleFIFO(uint32 the_size) // Size should be a power of 2!
  {
-    /* Size should be a power of 2! */
-    assert(the_size && !(the_size & (the_size - 1)));
-
-    data = (T*)malloc(the_size * sizeof(T));
-    size = the_size;
-    read_pos = 0;
-    write_pos = 0;
-    in_count = 0;
+  data.resize(round_up_pow2(the_size));
+  size = the_size;
+  read_pos = 0;
+  write_pos = 0;
+  in_count = 0;
  }
 
  // Destructor
  INLINE ~SimpleFIFO()
  {
-    if (data)
-       free(data);
+
  }
+
+ INLINE void SaveStatePostLoad(void)
+ {
+  read_pos %= data.size();
+  write_pos %= data.size();
+  in_count %= (data.size() + 1);
+ }
+
+#if 0
+ INLINE int StateAction(StateMem *sm, int load, int data_only, const char* sname)
+ {
+  SFORMAT StateRegs[] =
+  {
+   std::vector<T> data;
+   uint32 size;
+
+   SFVAR(read_pos),
+   SFVAR(write_pos),
+   SFVAR(in_count),
+   SFEND;
+  }
+  int ret = MDFNSS_StateAction(sm, load, data_only, sname);
+
+  if(load)
+  {
+   read_pos %= data.size();
+   write_pos %= data.size();
+   in_count %= (data.size() + 1);
+  }
+
+  return(ret);
+ }
+#endif
 
  INLINE uint32 CanRead(void)
  {
@@ -50,7 +80,7 @@ class SimpleFIFO
 
   if(!peek)
   {
-   read_pos = (read_pos + 1) & (size - 1);
+   read_pos = (read_pos + 1) & (data.size() - 1);
    in_count--;
   }
 
@@ -72,7 +102,7 @@ class SimpleFIFO
   {
    data[write_pos] = *happy_data;
 
-   write_pos = (write_pos + 1) & (size - 1);
+   write_pos = (write_pos + 1) & (data.size() - 1);
    in_count++;
    happy_data++;
    happy_count--;
@@ -98,14 +128,8 @@ class SimpleFIFO
   in_count = 0;
  }
 
- INLINE void SaveStatePostLoad(void)
- {
-    read_pos  %= size;
-    write_pos %= size;
-    in_count  %= (size + 1);
- }
-
- T* data;
+ //private:
+ std::vector<T> data;
  uint32 size;
  uint32 read_pos; // Read position
  uint32 write_pos; // Write position

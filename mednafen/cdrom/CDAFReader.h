@@ -1,8 +1,8 @@
 /******************************************************************************/
 /* Mednafen - Multi-system Emulator                                           */
 /******************************************************************************/
-/* CDAccess_CCD.h:
-**  Copyright (C) 2013-2016 Mednafen Team
+/* CDAFReader.h:
+**  Copyright (C) 2010-2016 Mednafen Team
 **
 ** This program is free software; you can redistribute it and/or
 ** modify it under the terms of the GNU General Public License
@@ -19,34 +19,44 @@
 ** 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 */
 
-#include <mednafen/FileStream.h>
-#include <mednafen/MemoryStream.h>
+#ifndef __MDFN_CDAFREADER_H
+#define __MDFN_CDAFREADER_H
 
-#include "CDAccess.h"
+#include <mednafen/Stream.h>
 
-class CDAccess_CCD : public CDAccess
+class CDAFReader
 {
  public:
+ CDAFReader();
+ virtual ~CDAFReader();
 
- CDAccess_CCD(const std::string& path, bool image_memcache);
- virtual ~CDAccess_CCD();
+ virtual uint64_t FrameCount(void) = 0;
+ INLINE uint64_t Read(uint64_t frame_offset, int16 *buffer, uint64_t frames)
+ {
+  uint64_t ret;
 
- virtual void Read_Raw_Sector(uint8 *buf, int32 lba);
+  if(LastReadPos != frame_offset)
+  {
+   //puts("SEEK");
+   if(!Seek_(frame_offset))
+    return(0);
+   LastReadPos = frame_offset;
+  }
 
- virtual bool Fast_Read_Raw_PW_TSRE(uint8* pwbuf, int32 lba) const noexcept;
-
- virtual void Read_TOC(TOC *toc);
+  ret = Read_(buffer, frames);
+  LastReadPos += ret;
+  return(ret);
+ }
 
  private:
+ virtual uint64_t Read_(int16 *buffer, uint64_t frames) = 0;
+ virtual bool Seek_(uint64_t frame_offset) = 0;
 
- bool Load(const std::string& path, bool image_memcache);
- void Cleanup(void);
-
- bool CheckSubQSanity(void);
-
- Stream *img_stream;
- uint8_t *sub_data;
-
- size_t img_numsectors;
- TOC tocd;
+ uint64_t LastReadPos;
 };
+
+// AR_Open(), and CDAFReader, will NOT take "ownership" of the Stream object(IE it won't ever delete it).  Though it does assume it has exclusive access
+// to it for as long as the CDAFReader object exists.
+CDAFReader *CDAFR_Open(Stream *fp);
+
+#endif

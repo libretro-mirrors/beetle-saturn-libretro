@@ -1,8 +1,8 @@
 /******************************************************************************/
 /* Mednafen - Multi-system Emulator                                           */
 /******************************************************************************/
-/* CDAccess_CCD.h:
-**  Copyright (C) 2013-2016 Mednafen Team
+/* CDAFReader_MPC.h:
+**  Copyright (C) 2015-2016 Mednafen Team
 **
 ** This program is free software; you can redistribute it and/or
 ** modify it under the terms of the GNU General Public License
@@ -19,34 +19,9 @@
 ** 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 */
 
-#include <mednafen/FileStream.h>
-#include <mednafen/MemoryStream.h>
+#ifndef __MDFN_CDAFREADER_MPC_H
+#define __MDFN_CDAFREADER_MPC_H
 
-#include "CDAccess.h"
+CDAFReader* CDAFR_MPC_Open(Stream* fp);
 
-class CDAccess_CCD : public CDAccess
-{
- public:
-
- CDAccess_CCD(const std::string& path, bool image_memcache);
- virtual ~CDAccess_CCD();
-
- virtual void Read_Raw_Sector(uint8 *buf, int32 lba);
-
- virtual bool Fast_Read_Raw_PW_TSRE(uint8* pwbuf, int32 lba) const noexcept;
-
- virtual void Read_TOC(TOC *toc);
-
- private:
-
- bool Load(const std::string& path, bool image_memcache);
- void Cleanup(void);
-
- bool CheckSubQSanity(void);
-
- Stream *img_stream;
- uint8_t *sub_data;
-
- size_t img_numsectors;
- TOC tocd;
-};
+#endif

@@ -1371,7 +1371,6 @@ static bool Load(MDFNFILE* fp)
    unsigned i;
    if(MDFN_GetSettingS("ss.dbg_exe_cdpath") != "")
    {
-      bool success;
       RMD_Drive dr;
 
       dr.Name = std::string("Virtual CD Drive");
@@ -1387,8 +1386,7 @@ static bool Load(MDFNFILE* fp)
 
       static std::vector<CDIF *> CDInterfaces;
       CDInterfaces.clear();
-      CDInterfaces.push_back(CDIF_Open(&success, MDFN_GetSettingS("ss.dbg_exe_cdpath").c_str(), false,
-               false));
+      CDInterfaces.push_back(CDIF_Open(MDFN_GetSettingS("ss.dbg_exe_cdpath").c_str(), false));
       cdifs = &CDInterfaces;
    }
 
@@ -2250,14 +2248,14 @@ static MDFNGI *MDFNI_LoadCD(const char *devicename)
          for(unsigned i = 0; i < file_list.size(); i++)
          {
             bool success = true;
-            CDIF *image  = CDIF_Open(&success, file_list[i].c_str(), false, old_cdimagecache);
+            CDIF *image  = CDIF_Open(file_list[i].c_str(), false);
             CDInterfaces.push_back(image);
          }
       }
       else
       {
          bool success = true;
-         CDIF *image  = CDIF_Open(&success, devicename, false, old_cdimagecache);
+         CDIF *image  = CDIF_Open(devicename, false);
          log_cb(RETRO_LOG_INFO, "Pushing CD image onto stack: %s.\n", devicename);
          CDInterfaces.push_back(image);
       }
@@ -2272,7 +2270,6 @@ static MDFNGI *MDFNI_LoadCD(const char *devicename)
    for(unsigned i = 0; i < CDInterfaces.size(); i++)
    {
       TOC toc;
-      TOC_Clear(&toc);
 
       CDInterfaces[i]->ReadTOC(&toc);
 
@@ -2296,9 +2293,8 @@ static MDFNGI *MDFNI_LoadCD(const char *devicename)
 
       for(unsigned i = 0; i < CDInterfaces.size(); i++)
       {
-         CD_TOC toc;
+         TOC toc;
 
-         TOC_Clear(&toc);
          CDInterfaces[i]->ReadTOC(&toc);
 
          layout_md5.update_u32_as_lsb(toc.first_track);
