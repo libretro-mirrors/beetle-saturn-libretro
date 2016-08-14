@@ -2910,6 +2910,7 @@ void retro_set_environment(retro_environment_t cb)
       { "Saturn Joypad", RETRO_DEVICE_JOYPAD },
       { "3D Pad", RETRO_DEVICE_SS_3D_PAD },
       { "Mouse", RETRO_DEVICE_SS_MOUSE },
+      { NULL, 0 },
    };
 
    static const struct retro_controller_info ports[] = {
@@ -2925,7 +2926,7 @@ void retro_set_environment(retro_environment_t cb)
    };
 
    cb(RETRO_ENVIRONMENT_SET_VARIABLES, (void*)vars);
-   environ_cb(RETRO_ENVIRONMENT_SET_CONTROLLER_INFO, (void*)ports);
+   cb(RETRO_ENVIRONMENT_SET_CONTROLLER_INFO, (void*)ports);
 }
 
 void retro_set_audio_sample(retro_audio_sample_t cb)
