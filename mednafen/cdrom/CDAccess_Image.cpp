@@ -356,6 +356,7 @@ bool CDAccess_Image::LoadSBI(const std::string& sbi_path)
 
       memcpy(SubQReplaceMap[aba].data(), tmpq, 12);
    }
+
    log_cb(RETRO_LOG_INFO, "Loaded Q subchannel replacements for %zu sectors.\n", SubQReplaceMap.size());
    return true;
 }
@@ -501,7 +502,7 @@ bool CDAccess_Image::ImageOpen(const std::string& path, bool image_memcache)
             }
 
             if(TmpTrack.DIFormat == DI_FORMAT_AUDIO)
-               TmpTrack.RawAudioMSBFirst = true; // Silly cdrdao...
+               TmpTrack.RawAudioMSBFirst = true; /* Silly cdrdao... */
 
             if(!strcasecmp(args[1].c_str(), "RW"))
             {
@@ -820,7 +821,7 @@ bool CDAccess_Image::ImageOpen(const std::string& path, bool image_memcache)
          else if(cmdbuf == "CDTEXTFILE" || cmdbuf == "CATALOG" || cmdbuf == "ISRC" ||
                cmdbuf == "TITLE" || cmdbuf == "PERFORMER" || cmdbuf == "SONGWRITER")
          {
-            log_cb(RETRO_LOG_INFO, "Unsupported CUE sheet directive: \"%s\".\n", cmdbuf.c_str());	/* FIXME, generic logger passed by pointer to constructor */
+            log_cb(RETRO_LOG_WARN, "Unsupported CUE sheet directive: \"%s\".\n", cmdbuf.c_str());	/* FIXME, generic logger passed by pointer to constructor */
          }
          else
          {
@@ -1308,12 +1309,13 @@ int32_t CDAccess_Image::MakeSubPQ(int32_t lba, uint8_t *SubPWBuf) const
    if(!SubQReplaceMap.empty())
    {
       //printf("%d\n", lba);
-      auto it = SubQReplaceMap.find(LBA_to_ABA(lba));
+
+      std::map<uint32_t, stl_array<uint8_t, 12> >::const_iterator it = SubQReplaceMap.find(LBA_to_ABA(lba));
 
       if(it != SubQReplaceMap.end())
       {
          //printf("Replace: %d\n", lba);
-         memcpy(buf, it->second.data(), 12);
+         memcpy(buf, (void*)it->second.data(), 12);
       }
    }
 
