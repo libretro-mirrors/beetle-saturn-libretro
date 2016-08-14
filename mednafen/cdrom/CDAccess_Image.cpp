@@ -1181,7 +1181,7 @@ void CDAccess_Image::Read_Raw_Sector(uint8_t *buf, int32_t lba)
    } // end if audible part of audio track read.
 }
 
-bool CDAccess_Image::Fast_Read_Raw_PW_TSRE(uint8_t* pwbuf, int32_t lba) const noexcept
+bool CDAccess_Image::Fast_Read_Raw_PW_TSRE(uint8_t* pwbuf, int32_t lba)
 {
    int32_t track;
 

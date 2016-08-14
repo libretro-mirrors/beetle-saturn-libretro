@@ -420,7 +420,7 @@ void CDAccess_CCD::Read_Raw_Sector(uint8_t *buf, int32_t lba)
    subpw_interleave(&sub_data[lba * 96], buf + 2352);
 }
 
-bool CDAccess_CCD::Fast_Read_Raw_PW_TSRE(uint8_t* pwbuf, int32_t lba) const noexcept
+bool CDAccess_CCD::Fast_Read_Raw_PW_TSRE(uint8_t* pwbuf, int32_t lba)
 {
    if(lba < 0)
    {

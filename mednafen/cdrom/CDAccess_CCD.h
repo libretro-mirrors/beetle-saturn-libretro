@@ -33,7 +33,7 @@ class CDAccess_CCD : public CDAccess
 
  virtual void Read_Raw_Sector(uint8 *buf, int32 lba);
 
- virtual bool Fast_Read_Raw_PW_TSRE(uint8* pwbuf, int32 lba) const noexcept;
+ virtual bool Fast_Read_Raw_PW_TSRE(uint8* pwbuf, int32 lba);
 
  virtual void Read_TOC(TOC *toc);
 
