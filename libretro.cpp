@@ -760,7 +760,7 @@ static sscpu_timestamp_t MidSync(const sscpu_timestamp_t timestamp)
   //
   //printf("MidSync: %d\n", VDP2::PeekLine());
   {
-   espec->SoundBufSize += SOUND_FlushOutput(espec->SoundBuf + (espec->SoundBufSize * 2), espec->SoundBufMaxSize - espec->SoundBufSize, false);
+   espec->SoundBufSize += SOUND_FlushOutput(NULL, espec->SoundBufMaxSize - espec->SoundBufSize, false);
    espec->MasterCycles = timestamp * cur_clock_div;
   }
   //printf("%d\n", espec->SoundBufSize);
@@ -828,7 +828,7 @@ static void Emulate(EmulateSpecStruct* espec_arg)
  //
  //
  espec->MasterCycles = end_ts * cur_clock_div;
- espec->SoundBufSize += SOUND_FlushOutput(espec->SoundBuf + (espec->SoundBufSize * 2), espec->SoundBufMaxSize - espec->SoundBufSize, espec->NeedSoundReverse);
+ espec->SoundBufSize += SOUND_FlushOutput(NULL, espec->SoundBufMaxSize - espec->SoundBufSize, espec->NeedSoundReverse);
  espec->NeedSoundReverse = false;
  //
  //
@@ -2819,7 +2819,10 @@ void retro_run(void)
    audio_frames += spec.SoundBufSize;
 
    video_cb(surf->pixels, width, height, 704 * sizeof(uint32_t));
-   audio_batch_cb(espec->SoundBuf, spec.SoundBufSize);
+
+   int16_t *interbuf = (int16_t*)&IBuffer;
+
+   audio_batch_cb(interbuf, spec.SoundBufSize);
 }
 
 void retro_get_system_info(struct retro_system_info *info)

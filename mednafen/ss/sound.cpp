@@ -49,10 +49,8 @@ static int32 next_scsp_time;
 static uint32 clock_ratio;
 static sscpu_timestamp_t lastts;
 
-static int16 IBuffer[1024][2];
+int16_t IBuffer[1024][2];
 static uint32 IBufferCount;
-static int last_rate;
-static uint32 last_quality;
 
 static INLINE void SCSP_SoundIntChanged(unsigned level)
 {
@@ -88,9 +86,6 @@ void SOUND_Init(void)
 {
  memset(IBuffer, 0, sizeof(IBuffer));
  IBufferCount = 0;
-
- last_rate = -1;
- last_quality = ~0U;
 
  run_until_time = 0;
  next_scsp_time = 0;
@@ -227,18 +222,12 @@ sscpu_timestamp_t SOUND_Update(sscpu_timestamp_t timestamp)
 
 void SOUND_StartFrame(double rate, uint32 quality)
 {
- if((int)rate != last_rate || quality != last_quality)
- {
-  last_rate = (int)rate;
-  last_quality = quality;
- }
 }
 
 int32 SOUND_FlushOutput(int16* SoundBuf, const int32 SoundBufMaxSize, const bool reverse)
 {
   int32 ret = IBufferCount;
 
-  memcpy(SoundBuf, IBuffer, IBufferCount * 2 * sizeof(int16));
   IBufferCount = 0;
 
   return(ret);
