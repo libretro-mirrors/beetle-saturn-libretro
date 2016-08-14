@@ -174,12 +174,12 @@ void MemoryStream::seek(int64 offset, int whence)
  position = new_position;
 }
 
-int64 MemoryStream::tell(void)
+uint64_t MemoryStream::tell(void)
 {
  return position;
 }
 
-int64 MemoryStream::size(void)
+uint64_t MemoryStream::size(void)
 {
  return data_buffer_size;
 }
@@ -189,6 +189,9 @@ void MemoryStream::close(void)
 
 }
 
+void MemoryStream::truncate(uint64_t length)
+{
+}
 
 int MemoryStream::get_line(std::string &str)
 {
@@ -207,3 +210,6 @@ int MemoryStream::get_line(std::string &str)
  return(-1);
 }
 
+void MemoryStream::flush(void)
+{
+}
