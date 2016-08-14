@@ -220,11 +220,7 @@ sscpu_timestamp_t SOUND_Update(sscpu_timestamp_t timestamp)
  return timestamp + 128;	// FIXME
 }
 
-void SOUND_StartFrame(double rate, uint32 quality)
-{
-}
-
-int32 SOUND_FlushOutput(int16* SoundBuf, const int32 SoundBufMaxSize, const bool reverse)
+int32 SOUND_FlushOutput(void)
 {
   int32 ret = IBufferCount;
 

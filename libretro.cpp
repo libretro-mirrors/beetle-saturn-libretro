@@ -754,23 +754,23 @@ static sscpu_timestamp_t MidSync(const sscpu_timestamp_t timestamp)
 {
  if(AllowMidSync)
  {
-  //
-  // Don't call SOUND_Update() here, it's not necessary and will subtly alter emulation behavior from the perspective of the emulated program
-  // (which is not a problem in and of itself, but it's preferable to keep settings from altering emulation behavior when they don't need to).
-  //
-  //printf("MidSync: %d\n", VDP2::PeekLine());
-  {
-   espec->SoundBufSize += SOUND_FlushOutput(NULL, espec->SoundBufMaxSize - espec->SoundBufSize, false);
-   espec->MasterCycles = timestamp * cur_clock_div;
-  }
-  //printf("%d\n", espec->SoundBufSize);
-  //
-  //
-  //MDFN_MidSync(espec);
-  //
-  //
-  SMPC_UpdateInput();
-  AllowMidSync = false;
+    //
+    // Don't call SOUND_Update() here, it's not necessary and will subtly alter emulation behavior from the perspective of the emulated program
+    // (which is not a problem in and of itself, but it's preferable to keep settings from altering emulation behavior when they don't need to).
+    //
+    //printf("MidSync: %d\n", VDP2::PeekLine());
+    {
+       espec->SoundBufSize += SOUND_FlushOutput();
+       espec->MasterCycles = timestamp * cur_clock_div;
+    }
+    //printf("%d\n", espec->SoundBufSize);
+    //
+    //
+    //MDFN_MidSync(espec);
+    //
+    //
+    SMPC_UpdateInput();
+    AllowMidSync = false;
  }
 
  return SS_EVENT_DISABLED_TS;
@@ -787,7 +787,6 @@ static void Emulate(EmulateSpecStruct* espec_arg)
  cur_clock_div = SMPC_StartFrame(espec);
  SMPC_UpdateInput();
  VDP2::StartFrame(espec, cur_clock_div == 61);
- SOUND_StartFrame(espec->SoundRate / espec->soundmultiplier, MDFN_GetSettingUI("ss.scsp.resamp_quality"));
  espec->SoundBufSize = 0;
  espec->MasterCycles = 0;
  espec->soundmultiplier = 1;
@@ -828,7 +827,7 @@ static void Emulate(EmulateSpecStruct* espec_arg)
  //
  //
  espec->MasterCycles = end_ts * cur_clock_div;
- espec->SoundBufSize += SOUND_FlushOutput(NULL, espec->SoundBufMaxSize - espec->SoundBufSize, espec->NeedSoundReverse);
+ espec->SoundBufSize += SOUND_FlushOutput();
  espec->NeedSoundReverse = false;
  //
  //
