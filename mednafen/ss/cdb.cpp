@@ -395,7 +395,7 @@ static void ResetBuffers(void)
 
 static void Filter_ResetCond(const unsigned fnum)
 {
- auto& f = Filters[fnum];
+ FilterS& f = Filters[fnum];
 
  f.Mode = 0;
 
@@ -950,7 +950,7 @@ static void SWReset(void)
 
  for(unsigned i = 0; i < 0x18; i++)
  {
-  auto& f = Filters[i];
+  FilterS& f = Filters[i];
 
   f.TrueConn = i;
   f.FalseConn = 0xFF;
@@ -1102,7 +1102,7 @@ static uint8 MakeBaseStatus(const bool rejected = false, const uint8 hb = 0)
 
 static bool TestFilterCond(const unsigned fnum, const uint8* data)
 {
- auto& f = Filters[fnum];
+ FilterS& f = Filters[fnum];
 
  if(f.Mode & FilterS::MODE_SEL_FADR)
  {
@@ -1190,7 +1190,7 @@ static void TranslateTOC(void)
 
  for(unsigned i = 1; i < 100; i++)
  {
-  const auto& t = toc.tracks[i];
+  const TOC_Track& t = toc.tracks[i];
 
   if(t.valid)
   {
@@ -1211,7 +1211,7 @@ static void TranslateTOC(void)
 
  // POINT=A0
  {
-  const auto& t = toc.tracks[toc.first_track];
+  const TOC_Track& t = toc.tracks[toc.first_track];
 
   td[0] = (t.control << 4) | t.adr;
   td[1] = toc.first_track;
@@ -1223,7 +1223,7 @@ static void TranslateTOC(void)
 
  // POINT=A1
  {
-  const auto& t = toc.tracks[toc.last_track];
+  const TOC_Track& t = toc.tracks[toc.last_track];
 
   td[0] = (t.control << 4) | t.adr;
   td[1] = toc.last_track;
@@ -1235,7 +1235,7 @@ static void TranslateTOC(void)
 
  // Lead-out
  {
-  const auto& t = toc.tracks[100];
+  const TOC_Track& t = toc.tracks[100];
   const uint32 fad = t.lba + 150;
 
   td[0] = (t.control << 4) | t.adr;
@@ -2292,7 +2292,7 @@ sscpu_timestamp_t CDB_Update(sscpu_timestamp_t timestamp)
       CDStatusResults(true);
      else
      {
-      const auto& f = Filters[fnum];
+      const FilterS& f = Filters[fnum];
 
       BasicResults((MakeBaseStatus() << 8) | f.Channel,
 		   (f.SubModeMask << 8) | f.CInfoMask,
@@ -2379,7 +2379,7 @@ sscpu_timestamp_t CDB_Update(sscpu_timestamp_t timestamp)
       CDStatusResults(true);
      else
      {
-      const auto& f = Filters[fnum];
+      const FilterS& f = Filters[fnum];
 
       BasicResults((MakeBaseStatus() << 8),
 		   (f.TrueConn << 8) | f.FalseConn,
