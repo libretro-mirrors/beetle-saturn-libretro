@@ -84,7 +84,7 @@ static uint16 VRAM[262144];
 
 static uint16 CRAM[2048];
 
-static struct
+static struct RotParam
 {
  // Signed values are stored sign-extended to the full 32 bits.
  int32 Xst, Yst, Zst;	// 1.12.10
@@ -112,7 +112,7 @@ static void FetchRotParams(const bool field)
 
  for(unsigned i = 0; i < 2; i++)
  {
-  auto& rp = RotParams[i];
+  RotParam &rp = RotParams[i];
 
   rp.Xst = sign_x_to_s32(23, ne16_rbo_be<uint32>(VRAM, ((a + 0x00) & 0x3FFFF) << 1) >> 6);
   rp.Yst = sign_x_to_s32(23, ne16_rbo_be<uint32>(VRAM, ((a + 0x02) & 0x3FFFF) << 1) >> 6);
@@ -421,7 +421,7 @@ static INLINE int32 AddHCounter(const sscpu_timestamp_t event_timestamp, int32 c
 
      for(unsigned i = 0; i < 2; i++)
      {
-      auto const& rp = RotParams[i];
+      RotParam const& rp = RotParams[i];
       auto& r = lib->rv[i];
 
       r.Xsp = ((int64)rp.RotMatrix[0] * ((int32)rp.XstAccum - (rp.Px * 1024)) +

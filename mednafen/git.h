@@ -10,7 +10,7 @@
 #include "state.h"
 #include "settings-common.h"
 
-#if 0
+#if 1
 template<typename T> void showtype(T foo);
 #endif
 

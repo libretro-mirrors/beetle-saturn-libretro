@@ -29,14 +29,14 @@ struct CartInfo
 
  // A >> 20
 
- struct
+ struct A
  {
   void (*Read16)(uint32 A, uint16* DB);
   void (*Write8)(uint32 A, uint16* DB);
   void (*Write16)(uint32 A, uint16* DB);  
  } CS0_RW[0x20];
 
- struct
+ struct B
  {
   void (*Read16)(uint32 A, uint16* DB);
   void (*Write8)(uint32 A, uint16* DB);

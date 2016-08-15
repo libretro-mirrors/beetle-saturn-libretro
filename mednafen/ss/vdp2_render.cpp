@@ -1857,7 +1857,7 @@ static void SetupRotVars(const T* rs, const unsigned rbg_w)
 
  for(unsigned i = 0; i < 2; i++)
  {
-  auto& r = LB.rotv[i];
+  RotVars & r = LB.rotv[i];
 
   r.Xsp = rs[i].Xsp;
   r.Ysp = rs[i].Ysp;
@@ -1980,8 +1980,8 @@ static void T_DrawRBG(const bool rn, uint64* bgbuf, const unsigned w, const uint
  for(unsigned i = 0; MDFN_LIKELY(i < w); i++)
  {
   const unsigned ab = LB.rotabsel[i];
-  auto& r = LB.rotv[ab];
-  auto& tf = r.tf;
+  RotVars &r = LB.rotv[ab];
+  TileFetcher<true> & tf = r.tf;
   uint32 Xp = r.Xp;
   int32 kx = r.kx;
   int32 ky = r.ky;

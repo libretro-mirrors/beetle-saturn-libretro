@@ -176,9 +176,9 @@ void CART_Init(const int cart_type)
 
   for(uint32 A = 0x02000000; A < 0x04000000; A += (1U << 20))
   {
-   auto& cs0rw = Cart.CS0_RW[(A - 0x02000000) >> 20];
+     CartInfo::A &cs0rw = Cart.CS0_RW[(A - 0x02000000) >> 20];
 
-   cs0rw.Read16 = ROM_Read;
+     cs0rw.Read16 = ROM_Read;
   }
  }
  else if(cart_type == CART_BACKUP_MEM)
@@ -192,7 +192,7 @@ void CART_Init(const int cart_type)
 
   for(uint32 A = 0x04000000; A < 0x05000000; A += (1U << 20))
   {
-   auto& cs1rw = Cart.CS1_RW[(A - 0x04000000) >> 20];
+     CartInfo::B &cs1rw = Cart.CS1_RW[(A - 0x04000000) >> 20];
 
    cs1rw.Read16 = ExtBackupRAM_RW_DB<uint16, false>;
    cs1rw.Write8 = ExtBackupRAM_RW_DB<uint8, true>;
@@ -217,7 +217,8 @@ void CART_Init(const int cart_type)
 
   for(uint32 A = 0x02400000; A < 0x02800000; A += (1U << 20))
   {
-   auto& cs0rw = Cart.CS0_RW[(A - 0x02000000) >> 20];
+     CartInfo::A& cs0rw = Cart.CS0_RW[(A - 0x02000000) >> 20];
+
 
    cs0rw.Read16 = ExtRAM_RW_DB<uint16, false>;
    cs0rw.Write8 = ExtRAM_RW_DB<uint8, true>;
@@ -226,7 +227,7 @@ void CART_Init(const int cart_type)
 
   for(uint32 A = 0x04FFFFFE; A < 0x05000000; A += (1U << 20))
   {
-   auto& cs1rw = Cart.CS1_RW[(A - 0x04000000) >> 20];
+     CartInfo::B& cs1rw = Cart.CS1_RW[(A - 0x04000000) >> 20];
 
    cs1rw.Read16 = CartID_Read_DB;
   }
@@ -235,7 +236,7 @@ void CART_Init(const int cart_type)
  {
   for(uint32 A = 0x02100000; A < 0x02100002; A += (1U << 20))
   {
-   auto& cs0rw = Cart.CS0_RW[(A - 0x02000000) >> 20];
+     CartInfo::A& cs0rw = Cart.CS0_RW[(A - 0x02000000) >> 20];
 
    cs0rw.Read16 = Debug_RW_DB<uint16, false>;
    cs0rw.Write8 = Debug_RW_DB<uint8, true>;

@@ -229,7 +229,8 @@ INLINE void SS_SCSP::RW(uint32 A, T& DBV)
 
   if(IsWrite)
   {
-   auto* s = &Slots[slotnum];
+     SS_SCSP::Slot *s = &Slots[slotnum];
+
    uint16& SRV = SlotRegs[slotnum][(A >> 1) & 0xF];
 
    switch((A >> 1) & 0xF)
@@ -509,6 +510,7 @@ INLINE void SS_SCSP::RW(uint32 A, T& DBV)
 	if(IsWrite)
 	{
 	 auto* t = &Timers[((A >> 1) & 0x1F) - 0x0C];
+    
 	 uint16 tmp = (t->Control << 8);
 	 tmp = (tmp &~ mask) | ((DBV << shift) & mask);
 	 t->Control = (tmp >> 8) & 0x7;
@@ -1235,6 +1237,7 @@ INLINE void SS_SCSP::RunSample(int16* outlr)
  for(unsigned i = 0; i < 3; i++)
  {
   auto* t = &Timers[i];
+
   bool CCB = (GlobalCounter >> (4 + t->Control)) & 1;
   bool DoClock = (t->Control == 0) || (!t->PrevClockIn && CCB);
   t->PrevClockIn = CCB;
@@ -1276,7 +1279,8 @@ INLINE void SS_SCSP::RunSample(int16* outlr)
  for(unsigned slot = 0; slot < 32; slot++)
  {
   uint32 mdata = 0;
-  auto* s = &Slots[slot];
+  SS_SCSP::Slot *s = &Slots[slot];
+  
   unsigned key_eg_scale;
 
   if(s->KRS == 0xF)
