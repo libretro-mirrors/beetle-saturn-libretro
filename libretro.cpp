@@ -157,7 +157,9 @@ int32 SH7095_mem_timestamp;
 uint32 SH7095_BusLock;
 
 #include "mednafen/ss/scu.inc"
+#ifdef HAVE_DEBUG
 #include "mednafen/ss/debug.inc"
+#endif
 
 static sha256_digest BIOS_SHA256;	// SHA-256 hash of the currently-loaded BIOS; used for save state sanity checks.
 static std::vector<CDIF*> *cdifs = NULL;
@@ -884,7 +886,9 @@ static MDFN_COLD void Cleanup(void)
 {
  CART_Kill();
 
+#ifdef HAVE_DEBUG
  DBG_Kill();
+#endif
  VDP1::Kill();
  VDP2::Kill();
  SOUND_Kill();
@@ -1253,10 +1257,10 @@ static bool InitCommon(const unsigned cart_type, const unsigned smpc_area)
 
    InitEvents();
 
+#ifdef HAVE_DEBUG
    DBG_Init();
-   //
-   //
-   //
+#endif
+
    try { LoadRTC();       } catch(MDFN_Error& e) { if(e.GetErrno() != ENOENT) throw; }
    try { LoadBackupRAM(); } catch(MDFN_Error& e) { if(e.GetErrno() != ENOENT) throw; }
    try { LoadCartNV();    } catch(MDFN_Error& e) { if(e.GetErrno() != ENOENT) throw; }
