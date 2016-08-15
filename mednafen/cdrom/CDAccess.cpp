@@ -19,6 +19,9 @@
 #include "CDAccess.h"
 #include "CDAccess_Image.h"
 #include "CDAccess_CCD.h"
+#ifdef HAVE_PBP
+#include "CDAccess_PBP.h"
+#endif
 
 CDAccess::CDAccess()
 {
@@ -32,13 +35,17 @@ CDAccess::~CDAccess()
 
 CDAccess* CDAccess_Open(const std::string& path, bool image_memcache)
 {
- CDAccess *ret = NULL;
+   CDAccess *ret = NULL;
 
- if(path.size() >= 4 && !strcasecmp(path.c_str() + path.size() - 4, ".ccd"))
-  ret = new CDAccess_CCD(path, image_memcache);
- else
-  ret = new CDAccess_Image(path, image_memcache);
+   if(path.size() >= 4 && !strcasecmp(path.c_str() + path.size() - 4, ".ccd"))
+      ret = new CDAccess_CCD(path, image_memcache);
+#ifdef HAVE_PBP
+   else if(path.size() >= 4 && !strcasecmp(path.c_str() + path.size() - 4, ".pbp"))
+      ret = new CDAccess_PBP(path, image_memcache);
+#endif
+   else
+      ret = new CDAccess_Image(path, image_memcache);
 
- return ret;
+   return ret;
 }
 

@@ -30,12 +30,14 @@
 
 #include "../mednafen.h"
 
-#include <sys/types.h>
+#include <stdint.h>
 
 #include <string.h>
 #include <errno.h>
 #include <time.h>
 #include <memory>
+
+#include <retro_stat.h>
 
 #include "../general.h"
 #include "../mednafen-endian.h"
@@ -1020,7 +1022,7 @@ CDAccess_Image::~CDAccess_Image()
    Cleanup();
 }
 
-void CDAccess_Image::Read_Raw_Sector(uint8_t *buf, int32_t lba)
+bool CDAccess_Image::Read_Raw_Sector(uint8_t *buf, int32_t lba)
 {
    uint8_t SimuQ[0xC];
    int32_t track;
@@ -1053,7 +1055,7 @@ void CDAccess_Image::Read_Raw_Sector(uint8_t *buf, int32_t lba)
       }
 
       synth_leadout_sector_lba(data_synth_mode, toc, lba, buf);
-      return;
+      return true;
    }
    //
    //
@@ -1180,6 +1182,8 @@ void CDAccess_Image::Read_Raw_Sector(uint8_t *buf, int32_t lba)
             ct->fp->read(buf + 2352, 96);
       }
    } // end if audible part of audio track read.
+
+   return true;
 }
 
 bool CDAccess_Image::Fast_Read_Raw_PW_TSRE(uint8_t* pwbuf, int32_t lba)
@@ -1325,9 +1329,10 @@ int32_t CDAccess_Image::MakeSubPQ(int32_t lba, uint8_t *SubPWBuf) const
    return track;
 }
 
-void CDAccess_Image::Read_TOC(TOC *rtoc)
+bool CDAccess_Image::Read_TOC(TOC *rtoc)
 {
    *rtoc = toc;
+   return true;
 }
 
 void CDAccess_Image::GenerateTOC(void)
