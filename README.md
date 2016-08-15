@@ -10,7 +10,7 @@ The Saturn BIOS must be placed there, $sysdir/{sega_101,mpr-17933}.bin for Japan
 
 ## Loading ISOs
 
-Beetle differs from other PS1 emulators in that it needs a cue-sheets that points to an image file, usually an .iso/.bin file.
+Beetle Saturn needs a cue-sheet that points to an image file, usually an .iso/.bin file.
 If you have e.g. <tt>foo.iso</tt>, you should create a foo.cue, and fill this in:
 
     FILE "foo.iso" BINARY
