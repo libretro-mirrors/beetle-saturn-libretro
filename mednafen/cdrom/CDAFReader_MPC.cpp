@@ -20,13 +20,10 @@
 */
 
 #include <mednafen/mednafen.h>
-#include <math.h>
 #include "CDAFReader.h"
 #include "CDAFReader_MPC.h"
 
-#ifdef HAVE_MPC
 #include <mednafen/mpcdec/mpcdec.h>
-#endif
 
 class CDAFReader_MPC : public CDAFReader
 {
@@ -164,11 +161,7 @@ uint64_t CDAFReader_MPC::Read_(int16 *buffer, uint64_t frames)
 
       for(int x = 0; x < tmplen; x++)
       {
-#ifdef MPC_FIXED_POINT
-         int32 samp = MPCBuffer[MPCBufferOffs + x] >> MPC_FIXED_POINT_FRACTPART;
-#else
-         int32 samp = (int32)(MPCBuffer[MPCBufferOffs + x] * 32768);
-#endif
+         int32_t samp = MPCBuffer[MPCBufferOffs + x] >> MPC_FIXED_POINT_FRACTPART;
          if(samp < -32768)
             samp = -32768;
 
