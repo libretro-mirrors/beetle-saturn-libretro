@@ -77,7 +77,7 @@ ifeq ($(NEED_CD), 1)
 endif
 
 ifeq ($(NEED_TREMOR), 1)
-   FLAGS += -DNEED_TREMOR
+   FLAGS += -DNEED_TREMOR -DHAVE_TREMOR
 endif
 
 ifneq ($(HAVE_GRIFFIN), 1)
