@@ -598,7 +598,14 @@ INLINE void SS_SCSP::RW(uint32 A, T& DBV)
 	 DBV = 0;
 	break;
 
-   case 0x18 ... 0x1F:
+    case 0x18:
+   case 0x19:
+   case 0x1A:
+   case 0x1B:
+   case 0x1C:
+   case 0x1D:
+   case 0x1E:
+   case 0x1F:
 	if(IsWrite)
 	{
 	}

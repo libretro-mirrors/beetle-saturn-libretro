@@ -30,7 +30,7 @@
 
 #define MEDNAFEN_CORE_NAME_MODULE "ss"
 #define MEDNAFEN_CORE_NAME "Mednafen Saturn"
-#define MEDNAFEN_CORE_VERSION "v0.9.38.7"
+#define MEDNAFEN_CORE_VERSION "v0.9.39.1"
 #define MEDNAFEN_CORE_EXTENSIONS "pce|cue|ccd"
 #define MEDNAFEN_CORE_TIMING_FPS 59.82
 #define MEDNAFEN_CORE_GEOMETRY_BASE_W 302
@@ -122,7 +122,9 @@ void MDFN_BackupSavFile(const uint8 max_backup_count, const char* sav_ext)
 
 static sscpu_timestamp_t MidSync(const sscpu_timestamp_t timestamp);
 
+#ifdef MDFN_SS_DEV_BUILD
 uint32 ss_dbg_mask;
+#endif
 static const uint8 BRAM_Init_Data[0x10] = { 0x42, 0x61, 0x63, 0x6b, 0x55, 0x70, 0x52, 0x61, 0x6d, 0x20, 0x46, 0x6f, 0x72, 0x6d, 0x61, 0x74 };
 
 static void SaveBackupRAM(void);
@@ -140,6 +142,8 @@ static MDFN_COLD void BackupCartNV(void);
 
 static uint8 SCU_MSH2VectorFetch(void);
 static uint8 SCU_SSH2VectorFetch(void);
+
+static void CheckEventsByMemTS(void);
 
 SH7095 CPU[2]{ {"SH2-M", SS_EVENT_SH2_M_DMA, SCU_MSH2VectorFetch}, {"SH2-S", SS_EVENT_SH2_S_DMA, SCU_SSH2VectorFetch}};
 static uint16 BIOSROM[524288 / sizeof(uint16)];
@@ -274,9 +278,13 @@ static INLINE void BusRW(uint32 A, T& V, const bool BurstHax, int32* SH2DMAHax)
   {
    const uint32 SMPC_A = (A & 0x7F) >> 1;
 
-   //if(!SH2DMAHax)
+    if(!SH2DMAHax)
    // SH7095_mem_timestamp += 2;
+   {
    //
+    // SH7095_mem_timestamp += 2;
+    CheckEventsByMemTS();
+   }
 
    if(IsWrite)
    {
@@ -500,22 +508,22 @@ void SS_SetPhysMemMap(uint32 Astart, uint32 Aend, uint16* ptr, uint32 length, bo
 #include "mednafen/ss/sh7095.inc"
 
 static bool Running;
+event_list_entry events[SS_EVENT__COUNT];
 
-struct event_list_entry
-{
- uint32 which;
- sscpu_timestamp_t event_time;
- event_list_entry *prev;
- event_list_entry *next;
- sscpu_timestamp_t (*event_handler)(const sscpu_timestamp_t timestamp);
-};
-
-static event_list_entry events[SS_EVENT__COUNT];
 static sscpu_timestamp_t next_event_ts;
 
 template<unsigned c>
 static sscpu_timestamp_t SH_DMA_EventHandler(sscpu_timestamp_t et)
 {
+ if(et < SH7095_mem_timestamp)
+ {
+  //printf("SH-2 DMA %d reschedule %d->%d\n", c, et, SH7095_mem_timestamp);
+  return SH7095_mem_timestamp;
+ }
+
+ if(MDFN_UNLIKELY(SH7095_BusLock))
+  return et + 8;
+
  return CPU[c].DMA_Update(et);
 }
 
@@ -527,8 +535,6 @@ static MDFN_COLD void InitEvents(void)
 {
  for(unsigned i = 0; i < SS_EVENT__COUNT; i++)
  {
-  events[i].which = i;
-
   if(i == SS_EVENT__SYNFIRST)
    events[i].event_time = 0;
   else if(i == SS_EVENT__SYNLAST)
@@ -575,11 +581,8 @@ static void RebaseTS(const sscpu_timestamp_t timestamp)
  next_event_ts = events[SS_EVENT__SYNFIRST].next->event_time;
 }
 
-void SS_SetEventNT(const int type, const sscpu_timestamp_t next_timestamp)
+void SS_SetEventNT(event_list_entry* e, const sscpu_timestamp_t next_timestamp)
 {
- assert(MDFN_LIKELY(type > SS_EVENT__SYNFIRST && type < SS_EVENT__SYNLAST));
- event_list_entry *e = &events[type];
-
  if(next_timestamp < e->event_time)
  {
   event_list_entry *fe = e;
@@ -587,8 +590,7 @@ void SS_SetEventNT(const int type, const sscpu_timestamp_t next_timestamp)
   do
   {
    fe = fe->prev;
-  }
-  while(next_timestamp < fe->event_time);
+  } while(next_timestamp < fe->event_time);
 
   // Remove this event from the list, temporarily of course.
   e->prev->next = e->next;
@@ -638,7 +640,7 @@ void ForceEventUpdates(const sscpu_timestamp_t timestamp)
  for(unsigned evnum = SS_EVENT__SYNFIRST + 1; evnum < SS_EVENT__SYNLAST; evnum++)
  {
   if(events[evnum].event_time != SS_EVENT_DISABLED_TS)
-   SS_SetEventNT(evnum, events[evnum].event_handler(timestamp));
+   SS_SetEventNT(&events[evnum], events[evnum].event_handler(timestamp));
  }
 
  next_event_ts = (Running ? events[SS_EVENT__SYNFIRST].next->event_time : 0);
@@ -650,24 +652,39 @@ static INLINE bool EventHandler(const sscpu_timestamp_t timestamp)
 
  while(timestamp >= (e = events[SS_EVENT__SYNFIRST].next)->event_time)	// If Running = 0, EventHandler() may be called even if there isn't an event per-se, so while() instead of do { ... } while
  {
+#ifdef MDFN_SS_DEV_BUILD
   const sscpu_timestamp_t etime = e->event_time;
-  sscpu_timestamp_t          nt = e->event_handler(e->event_time);	// timestamp
+#endif
+  sscpu_timestamp_t nt = e->event_handler(e->event_time);
 
-#if 0
-//#if SS_EVENT_SYSTEM_CHECKS
+#ifdef MDFN_SS_DEV_BUILD
   if(MDFN_UNLIKELY(nt <= etime))
   {
    fprintf(stderr, "which=%d event_time=%d nt=%d timestamp=%d\n", e->which, etime, nt, timestamp);
    assert(nt > etime);
   }
-//#endif
 #endif
 
-  SS_SetEventNT(e->which, nt);
+  SS_SetEventNT(e, nt);
  }
 
  return(Running);
 }
+
+static void CheckEventsByMemTS_Sub(void)
+{
+ EventHandler(SH7095_mem_timestamp);
+}
+
+static void CheckEventsByMemTS(void)
+{
+ if(MDFN_UNLIKELY(SH7095_mem_timestamp >= next_event_ts))
+ {
+  //puts("Woot");
+  CheckEventsByMemTS_Sub();
+ }
+}
+
 
 void SS_RequestMLExit(void)
 {
@@ -676,7 +693,12 @@ void SS_RequestMLExit(void)
 }
 
 #pragma GCC push_options
-#pragma GCC optimize("Os,no-unroll-loops,no-peel-loops,no-crossjumping")
+#if !defined(__clang__) && defined(__GNUC__) && __GNUC__ < 5
+ // gcc 5.3.0 and 6.1.0 produce some braindead code for the big switch() statement at -Os.
+ #pragma GCC optimize("Os,no-unroll-loops,no-peel-loops,no-crossjumping")
+#else
+ #pragma GCC optimize("O2,no-unroll-loops,no-peel-loops,no-crossjumping")
+#endif
 template<bool DebugMode>
 static int32 NO_INLINE RunLoop(EmulateSpecStruct* espec)
 {
@@ -717,6 +739,8 @@ static int32 NO_INLINE RunLoop(EmulateSpecStruct* espec)
  return eff_ts;
 }
 #pragma GCC pop_options
+
+// Must not be called within an event or read/write handler.
 
 void SS_Reset(bool powering_up)
 {
@@ -813,10 +837,10 @@ static void Emulate(EmulateSpecStruct* espec_arg)
 
  CDB_ResetTS();
  SOUND_ResetTS();
- VDP1::ResetTS();
- VDP2::ResetTS();
+ VDP1::AdjustTS(-end_ts);
+ VDP2::AdjustTS(-end_ts);
  SMPC_ResetTS();
- SCU_ResetTS();
+ SCU_AdjustTS(-end_ts);
 
  if(!(SH7095_mem_timestamp & 0x40000000))	// or maybe >= 0 instead?
   SH7095_mem_timestamp -= end_ts;
@@ -1119,7 +1143,9 @@ static bool InitCommon(const unsigned cart_type, const unsigned smpc_area)
 {
 
    unsigned i;
+#ifdef MDFN_SS_DEV_BUILD
    ss_dbg_mask = MDFN_GetSettingUI("ss.dbg_mask");
+#endif
 
    {
       log_cb(RETRO_LOG_INFO, "[Mednafen]: Region: 0x%01x.\n", smpc_area);
@@ -1301,10 +1327,12 @@ static bool InitCommon(const unsigned cart_type, const unsigned smpc_area)
    return true;
 }
 
+#ifdef MDFN_SS_DEV_BUILD
 static bool TestMagic(MDFNFILE* fp)
 {
  return false;
 }
+#endif
 
 static bool Load(MDFNFILE* fp)
 {
@@ -1373,6 +1401,7 @@ static bool Load(MDFNFILE* fp)
    cdifs = NULL;
 
    unsigned i;
+#ifdef MDFN_SS_DEV_BUILD
    if(MDFN_GetSettingS("ss.dbg_exe_cdpath") != "")
    {
       RMD_Drive dr;
@@ -1393,6 +1422,7 @@ static bool Load(MDFNFILE* fp)
       CDInterfaces.push_back(CDIF_Open(MDFN_GetSettingS("ss.dbg_exe_cdpath").c_str(), false));
       cdifs = &CDInterfaces;
    }
+#endif
 
    if (!InitCommon(CART_MDFN_DEBUG, MDFN_GetSettingUI("ss.region_default")))
       return false;
@@ -1566,7 +1596,7 @@ static MDFN_COLD bool LoadCD(std::vector<CDIF *>* CDInterfaces)
 
 static MDFN_COLD void CloseGame(void)
 {
-#if 0
+#ifdef MDFN_SS_DEV_BUILD
  VDP1::MakeDump("/tmp/vdp1_dump.h");
  VDP2::MakeDump("/tmp/vdp2_dump.h");
 #endif
@@ -1779,8 +1809,10 @@ static MDFNSetting SSSettings[] =
 
  { "ss.midsync", MDFNSF_NOFLAGS, "Enable mid-frame synchronization.", "Mid-frame synchronization can reduce input latency, but it will increase CPU requirements.", MDFNST_BOOL, "0" },
 
+#ifdef MDFN_SS_DEV_BUILD
  { "ss.dbg_mask", MDFNSF_NOFLAGS, "Debug printf mask.", NULL, MDFNST_UINT, "0x00001", "0x00000", "0xFFFFF" },
  { "ss.dbg_exe_cdpath", MDFNSF_SUPPRESS_DOC, "CD image to use with homebrew executable loading.", NULL, MDFNST_STRING, "" },
+#endif
 
  { NULL },
 };

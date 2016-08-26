@@ -91,13 +91,15 @@ static struct DMALevelS
  uint8 WriteAdd;
 
  bool Enable;
- bool Active;
+ int Active; /* -1, 0, 1 */
  bool GoGoGadget;
 
  bool Indirect;
  bool ReadUpdate;
  bool WriteUpdate;
  uint8 SF;
+
+ sscpu_timestamp_t FinishTime;
 
  //
  //
@@ -120,8 +122,8 @@ static struct DMALevelS
  bool FinalTransfer;
 } DMALevel[3];
 
-static sscpu_timestamp_t SCU_DMA_lastts;
-static int32 SCU_DMA_CycleCounter;
+static sscpu_timestamp_t SCU_DMA_TimeCounter;
+static sscpu_timestamp_t SCU_DMA_RunUntil;
 static int32 SCU_DMA_ReadOverhead;	// range -whatever to 0.
 
 static void RecalcDMAHalt(void);
@@ -177,6 +179,8 @@ static INLINE void RecalcMasterIntOut(void)
    ILevel = olev;
    IVec = ovec;
    IClearMask = 1U << bpos;
+
+   //SS_DBGTI(SS_DBG_ERROR, "[SCU] Interrupt level=0x%02x, vector=0x%02x --- IPending=0x%04x", ILevel, IVec, IPending);
   }
  }
 
@@ -199,6 +203,8 @@ static bool HB_FromVDP2, VB_FromVDP2;
 static uint8 SCU_MSH2VectorFetch(void)
 {
  uint8 ret = IVec;
+
+ //SS_DBGTI(SS_DBG_ERROR, "[SCU]   Interrupt cleared.");
 
 #ifdef HAVE_DEBUG
  if(MDFN_UNLIKELY(ILevel == 0))
@@ -331,7 +337,8 @@ int32 SCU_SetHBVB(int32 pclocks, bool new_HB_FromVDP2, bool new_VB_FromVDP2)
 
 static void SCU_Init(void)
 {
- SCU_DMA_lastts = 0;
+ SCU_DMA_TimeCounter = 0;
+ SCU_DMA_RunUntil = 0;
  IAsserted = 0;
  HB_FromVDP2 = false;
  VB_FromVDP2 = false;
@@ -364,7 +371,6 @@ void SCU_Reset(bool powering_up)
   d.WriteUpdate = false;
   d.SF = 0;
  }
- SCU_DMA_CycleCounter = 0;
  SCU_DMA_ReadOverhead = 0;
 
  RecalcDMAHalt();
@@ -374,16 +380,28 @@ void SCU_Reset(bool powering_up)
  RecalcMasterIntOut();
 }
 
-static void SCU_ResetTS(void)
+static void SCU_AdjustTS(const int32 delta)
 {
- SCU_DMA_lastts = 0;
+ SCU_DMA_TimeCounter += delta;
+ SCU_DMA_RunUntil += delta;
+ for(auto& d : DMALevel)
+ {
+  if(d.Active < 0)
+   d.FinishTime += delta;
+ }
  //
  //
  //
  if(DSP.T0_Until > 0x10000000)
   DSP.T0_Until = 0x10000000;
 
- DSP.LastTS = 0;
+  DSP.LastTS += delta;
+ if(DSP.LastTS < 0)
+ {
+  // TODO: Fix properly.
+  //printf("%d\n", DSP.LastTS);
+  DSP.LastTS = 0;
+ }
 }
 
 //
@@ -417,7 +435,7 @@ static INLINE void SCU_RegRW_DB(uint32 A, uint32* DB)
 	{
 	 VDP2::Update(SH7095_mem_timestamp);
 	 Timer0_Compare = (Timer0_Compare &~ mask) | (*DB & mask & 0x3FF);
-	 SS_SetEventNT(SS_EVENT_VDP2, VDP2::Update(SH7095_mem_timestamp));
+    SS_SetEventNT(&events[SS_EVENT_VDP2], VDP2::Update(SH7095_mem_timestamp));
 	}
 	break;
 
@@ -425,7 +443,7 @@ static INLINE void SCU_RegRW_DB(uint32 A, uint32* DB)
 	{
 	 VDP2::Update(SH7095_mem_timestamp);
 	 Timer1_Reload = (Timer1_Reload &~ mask) | (*DB & mask & 0x1FF);
-	 SS_SetEventNT(SS_EVENT_VDP2, VDP2::Update(SH7095_mem_timestamp));
+    SS_SetEventNT(&events[SS_EVENT_VDP2], VDP2::Update(SH7095_mem_timestamp));
 	}
 	break;
 
@@ -442,7 +460,7 @@ static INLINE void SCU_RegRW_DB(uint32 A, uint32* DB)
 	  Timer0_Counter = 0;
 	 }
 
-	 SS_SetEventNT(SS_EVENT_VDP2, VDP2::Update(SH7095_mem_timestamp));
+    SS_SetEventNT(&events[SS_EVENT_VDP2], VDP2::Update(SH7095_mem_timestamp));
 	}
 	break;
 
@@ -537,7 +555,7 @@ static INLINE void SCU_RegRW_DB(uint32 A, uint32* DB)
 	  d.GoGoGadget = true;
 	  CheckDMAStart(&d);
 
-	  SS_SetEventNT(SS_EVENT_SCU_DMA, SCU_UpdateDMA(SH7095_mem_timestamp));
+     SS_SetEventNT(&events[SS_EVENT_SCU_DMA], SCU_UpdateDMA(SH7095_mem_timestamp));
 	 }
 	}
 	break;
@@ -616,7 +634,7 @@ static INLINE void SCU_RegRW_DB(uint32 A, uint32* DB)
 	if(*DB & (1U << 15))	// PC load
 	 DSP.PC = *DB;
 
-	SS_SetEventNT(SS_EVENT_SCU_DSP, (DSP.IsRunning() ? SH7095_mem_timestamp + (DSP_UpdateTimingGran / 2) : SS_EVENT_DISABLED_TS));
+   SS_SetEventNT(&events[SS_EVENT_SCU_DSP], (DSP.IsRunning() ? SH7095_mem_timestamp + (DSP_UpdateTimingGran / 2) : SS_EVENT_DISABLED_TS));
 	break;
 
    case 0x84:
@@ -706,7 +724,7 @@ static INLINE void SCU_RegRW_DB(uint32 A, uint32* DB)
 	break;
 
    case 0x80:
-	SS_SetEventNT(SS_EVENT_SCU_DSP, SCU_UpdateDSP(SH7095_mem_timestamp));	// TODO: Remove?
+   SS_SetEventNT(&events[SS_EVENT_SCU_DSP], SCU_UpdateDSP(SH7095_mem_timestamp));	// TODO: Remove?
 	{
 	 uint32 tmp;
 
@@ -748,7 +766,7 @@ static INLINE void BBusRW_DB(uint32 A, uint16* DB, int32* time_thing, int32* dma
  if(A >= 0x05C00000 && A <= 0x05D7FFFF)
  {
   if(sh2_dma_time_thing != NULL)
-   *sh2_dma_time_thing -= IsWrite ? (SH32 ? 0 : 5) : 10;
+   *sh2_dma_time_thing -= IsWrite ? (SH32 ? 0 : 6) : 10;
 
   if(dma_time_thing != NULL)
   {
@@ -758,9 +776,11 @@ static INLINE void BBusRW_DB(uint32 A, uint16* DB, int32* time_thing, int32* dma
   if(time_thing != NULL)
   {
    if(IsWrite)
-    *time_thing += SH32 ? 0 : 10;
+    *time_thing += SH32 ? 0 : 11;
    else
     *time_thing += 14;
+
+    CheckEventsByMemTS();
   }
 
   if(IsWrite)
@@ -797,14 +817,26 @@ static INLINE void BBusRW_DB(uint32 A, uint16* DB, int32* time_thing, int32* dma
     *time_thing += SH32 ? 0 : 5;
    else
     *time_thing += 20;
+
+    CheckEventsByMemTS();
   }
 
   if(IsWrite)
   {
+    uint32 expenalty;
+
    if(sizeof(T) == 1)
-    VDP2::Write8_DB(A, *DB);
+    expenalty = VDP2::Write8_DB(A, *DB);
    else
-    VDP2::Write16_DB(A, *DB);
+    expenalty = VDP2::Write16_DB(A, *DB);
+
+   if(dma_time_thing != NULL)
+   {
+    //if(expenalty)
+    // printf("%u\n", expenalty);
+
+    *dma_time_thing -= expenalty;
+   }
   }
   else
   {
@@ -830,7 +862,7 @@ static INLINE void BBusRW_DB(uint32 A, uint16* DB, int32* time_thing, int32* dma
   if(time_thing != NULL)
   {
    if(IsWrite)
-    *time_thing += SH32 ? 14 : 18;
+    *time_thing += SH32 ? 13 : 19;
    else
     *time_thing += 24;
   }
@@ -1102,7 +1134,10 @@ static INLINE void SCU_FromSH2_BusRW_DB(uint32 A, uint32* DB, int32* SH2DMAHax)
  if(A >= 0x05FE0000 && A <= 0x05FEFFFF)
  {
   if(!SH2DMAHax)
+  {
    SH7095_mem_timestamp += IsWrite ? 4 : 8;
+   CheckEventsByMemTS();
+  }
   else
    *SH2DMAHax -= IsWrite ? 4 : 8;
 
@@ -1277,7 +1312,7 @@ static void RecalcDMAHalt(void)
  {
   DMALevelS* d = &DMALevel[level];
 
-  if(d->Active)
+  if(d->Active > 0)
   {
    if(d->WriteBus == 2 || d->ReadFunc == DMA_ReadCBus)
     Halted = true;
@@ -1391,7 +1426,7 @@ static INLINE uint32 DMA_Read(DMALevelS* d)
   d->CurReadSub -= 4; //&= 0x3;
   d->CurReadBase += (d->ReadAdd ? 4 : 0);
   //
-  SCU_DMA_CycleCounter += SCU_DMA_ReadOverhead;
+  SCU_DMA_TimeCounter -= SCU_DMA_ReadOverhead;
   SCU_DMA_ReadOverhead = 0;
   uint32 tmp = d->ReadFunc(d->CurReadBase);
   d->Buffer <<= 32;
@@ -1429,15 +1464,15 @@ static INLINE void DMA_Write(DMALevelS* d, uint32 DB)
   ne16_wbo_be<T>(WorkRAMH, A & 0xFFFFF, DB >> (((A & 3) ^ (4 - sizeof(T))) << 3));
  }
 
- SCU_DMA_CycleCounter += WriteOverhead;
+ SCU_DMA_TimeCounter -= WriteOverhead;
  SCU_DMA_ReadOverhead = std::min<int32>(0, SCU_DMA_ReadOverhead - WriteOverhead);
  d->CurByteCount -= sizeof(T);
 }
 
 template<unsigned WriteBus>
-static bool NO_INLINE DMA_Loop(const unsigned level, DMALevelS* d)
+static bool NO_INLINE DMA_Loop(DMALevelS* d)
 {
- while(MDFN_LIKELY(d->Active && SCU_DMA_CycleCounter > 0))
+  while(MDFN_LIKELY(d->Active > 0 && SCU_DMA_TimeCounter < SCU_DMA_RunUntil))
  {
   switch(d->WATable->write_size)
   {
@@ -1452,7 +1487,7 @@ static bool NO_INLINE DMA_Loop(const unsigned level, DMALevelS* d)
 
   if(MDFN_UNLIKELY(!d->CurByteCount))
   {
-   SCU_DMA_CycleCounter += SCU_DMA_ReadOverhead;
+   SCU_DMA_TimeCounter -= SCU_DMA_ReadOverhead;
    SCU_DMA_ReadOverhead = 0;
    return true;
   }
@@ -1464,12 +1499,11 @@ static bool NO_INLINE DMA_Loop(const unsigned level, DMALevelS* d)
 //
 // TODO: Check start read/write address updating when wrapping to next bus or beyond end of SDRAM.
 //
-static NO_INLINE void UpdateDMAInner(unsigned level)
+static NO_INLINE void UpdateDMAInner(DMALevelS* d)
 {
- static bool (*const LoopFuncs[3])(const unsigned, DMALevelS*) = { DMA_Loop<0>, DMA_Loop<1>, DMA_Loop<2> };
- DMALevelS* d = &DMALevel[level];
+ static bool (*const LoopFuncs[3])(DMALevelS*) = { DMA_Loop<0>, DMA_Loop<1>, DMA_Loop<2> };
 
- if(MDFN_UNLIKELY(LoopFuncs[d->WriteBus](level, d)))
+ if(MDFN_UNLIKELY(LoopFuncs[d->WriteBus](d)))
  {
   if(d->TableReadFunc && !d->FinalTransfer)
   {
@@ -1477,8 +1511,6 @@ static NO_INLINE void UpdateDMAInner(unsigned level)
   }
   else
   {
-   static const unsigned itab[3] = { SCU_INT_L0DMA, SCU_INT_L1DMA, SCU_INT_L2DMA };
-
    if(d->ReadUpdate && !d->TableReadFunc)
       d->StartReadAddr = (d->CurReadBase + d->CurReadSub) & 0x07FFFFFF;
 
@@ -1490,33 +1522,53 @@ static NO_INLINE void UpdateDMAInner(unsigned level)
      d->StartWriteAddr = d->CurWriteAddr & 0x07FFFFFF;
    }
 
-   //printf("FIN: %08x %08x %u\n", d->CurReadBase, d->CurReadSub, d->ReadUpdate);
-   d->Active = false;
-   RecalcDMAHalt();
-   SCU_SetInt(itab[level], true);
-   SCU_SetInt(itab[level], false);
-   CheckDMAStart(d);
+   d->FinishTime = SCU_DMA_TimeCounter;
+   d->Active = -1;
   }
  }
 }
 
+static void SCU_DoDMAEnd(const unsigned level)
+{
+ static const unsigned itab[3] = { SCU_INT_L0DMA, SCU_INT_L1DMA, SCU_INT_L2DMA };
+ //printf("FIN: %08x %08x %u\n", d->CurReadBase, d->CurReadSub, d->ReadUpdate);
+ DMALevel[level].Active = false;
+ RecalcDMAHalt();
+ SCU_SetInt(itab[level], true);
+ SCU_SetInt(itab[level], false);
+ CheckDMAStart(&DMALevel[level]);    
+}
+
 sscpu_timestamp_t SCU_UpdateDMA(sscpu_timestamp_t timestamp)
 {
- SCU_DMA_CycleCounter += timestamp - SCU_DMA_lastts;
- if(SCU_DMA_CycleCounter > DMA_UpdateTimingGran)
-  SCU_DMA_CycleCounter = DMA_UpdateTimingGran;
+   if(timestamp < SH7095_mem_timestamp)
+   return SH7095_mem_timestamp;
 
- SCU_DMA_lastts = timestamp;
+  SCU_DMA_TimeCounter = std::max<int32>(std::min<int32>(SCU_DMA_RunUntil, timestamp), SCU_DMA_TimeCounter);
+ SCU_DMA_RunUntil = timestamp + DMA_UpdateTimingGran;
+
  for(int level = 2; level >= 0; level--)
  {
-  while(DMALevel[level].Active && SCU_DMA_CycleCounter > 0)
-   UpdateDMAInner(level);
+    DMALevelS* d = &DMALevel[level];
+
+    while(d->Active && SCU_DMA_TimeCounter < SCU_DMA_RunUntil)
+    {
+       UpdateDMAInner(d);
+
+       if(MDFN_UNLIKELY(d->Active < 0))
+       {
+          if(MDFN_UNLIKELY(timestamp >= d->FinishTime))
+          SCU_DoDMAEnd(level);
+          else
+          return d->FinishTime;
+       }
+    }
  }
 
  //
  //
  //
- return timestamp + DMA_UpdateTimingGran;
+ return SCU_DMA_RunUntil;
 }
 
 //
@@ -1532,15 +1584,32 @@ static INLINE void CheckForceDMAFinish(void)
  {
   if(DMALevel[level].Active)
   {
-   SS_DBG(SS_DBG_WARNING | SS_DBG_SCU, "[SCU] Forcing hacky early DMA level %d completion.\n", level);
+     if(!DMALevel[level].Active)
+     continue;
 
-   SCU_DMA_CycleCounter = 0x7FFFFFFF;
-   UpdateDMAInner(level);
-   break;
+#ifdef HAVE_DEBUG
+   SS_DBG(SS_DBG_WARNING | SS_DBG_SCU, "[SCU] Forcing hacky early DMA level %d completion.\n", level);
+#endif
+
+
+   if(DMALevel[level].Active > 0)
+  {
+   const sscpu_timestamp_t rus = SCU_DMA_RunUntil;
+   //
+   SCU_DMA_RunUntil = 0x7FFFFFFF;
+   UpdateDMAInner(&DMALevel[level]);
+   //
+   SCU_DMA_RunUntil = rus;
+  }
+
+  if(DMALevel[level].Active < 0)
+  SCU_DoDMAEnd(level);
+
+  break;
   }
  }
 
- SCU_DMA_CycleCounter = 0;
+ SCU_DMA_TimeCounter = SCU_DMA_RunUntil;
 }
 
 //

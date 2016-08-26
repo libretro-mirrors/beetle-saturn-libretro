@@ -333,7 +333,7 @@ static void SlaveOn(void)
  SlaveSH2On = true;
  CPU[1].AdjustTS(SH7095_mem_timestamp, true);
  CPU[1].Reset(true);
- SS_SetEventNT(SS_EVENT_SH2_S_DMA, SH7095_mem_timestamp + 1);
+ SS_SetEventNT(&events[SS_EVENT_SH2_S_DMA], SH7095_mem_timestamp + 1);
 }
 
 static void SlaveOff(void)
@@ -341,7 +341,7 @@ static void SlaveOff(void)
  SlaveSH2On = false;
  CPU[1].Reset(true);
  CPU[1].AdjustTS(0x7FFFFFFF, true);
- SS_SetEventNT(SS_EVENT_SH2_S_DMA, SS_EVENT_DISABLED_TS);
+ SS_SetEventNT(&events[SS_EVENT_SH2_S_DMA], SS_EVENT_DISABLED_TS);
 }
 
 static void TurnSoundCPUOn(void)
@@ -443,11 +443,17 @@ void SMPC_Write(const sscpu_timestamp_t timestamp, uint8 A, uint8 V)
  //
  // Call VDP2::Update() to prevent out-of-temporal-order calls to SMPC_Update() from here and the event system.
  //
- SS_SetEventNT(SS_EVENT_VDP2, VDP2::Update(timestamp));	// TODO: conditionalize so we don't consume so much CPU time if a game writes continuously to SMPC ports
+ SS_SetEventNT(&events[SS_EVENT_VDP2], VDP2::Update(timestamp));	// TODO: conditionalize so we don't consume so much CPU time if a game writes continuously to SMPC ports
  sscpu_timestamp_t nt = SMPC_Update(timestamp);
  switch(A)
  {
-  case 0x00 ... 0x06:
+  case 0x00:
+  case 0x01:
+  case 0x02:
+  case 0x03:
+  case 0x04:
+  case 0x05:
+  case 0x06:
 #ifdef HAVE_DEBUG
 	if(MDFN_UNLIKELY(PendingCommand >= 0))
 	{
@@ -525,7 +531,7 @@ void SMPC_Write(const sscpu_timestamp_t timestamp, uint8 A, uint8 V)
  if(PendingCommand >= 0)
   nt = timestamp + 1;
 
- SS_SetEventNT(SS_EVENT_SMPC, nt);
+ SS_SetEventNT(&events[SS_EVENT_SMPC], nt);
 }
 
 uint8 SMPC_Read(const sscpu_timestamp_t timestamp, uint8 A)
@@ -540,7 +546,10 @@ uint8 SMPC_Read(const sscpu_timestamp_t timestamp, uint8 A)
 	SS_DBG(SS_DBG_WARNING | SS_DBG_SMPC, "[SMPC] Unknown read from 0x%02x\n", A);
 	break;
 
-  case 0x10 ... 0x2F:
+    case 0x10: case 0x11: case 0x12: case 0x13: case 0x14: case 0x15: case 0x16: case 0x17:
+  case 0x18: case 0x19: case 0x1A: case 0x1B: case 0x1C: case 0x1D: case 0x1E: case 0x1F:
+  case 0x20: case 0x21: case 0x22: case 0x23: case 0x24: case 0x25: case 0x26: case 0x27:
+  case 0x28: case 0x29: case 0x2A: case 0x2B: case 0x2C: case 0x2D: case 0x2E: case 0x2F:
 #ifdef HAVE_DEBUG
 	if(MDFN_UNLIKELY(PendingCommand >= 0))
 	{
@@ -563,10 +572,8 @@ uint8 SMPC_Read(const sscpu_timestamp_t timestamp, uint8 A)
 	break;
  
   case 0x31:
-	// FIXME: Open bus isn't quite right.
 	ret &= ~0x01;
 	ret |= SF;
-	//ret = SF;
 	break;
 
   case 0x3A:
@@ -579,7 +586,6 @@ uint8 SMPC_Read(const sscpu_timestamp_t timestamp, uint8 A)
 
  }
 
- BusBuffer = ret;
  return ret;
 }
 
@@ -954,7 +960,7 @@ sscpu_timestamp_t SMPC_Update(sscpu_timestamp_t timestamp)
 	SS_DBGTI(SS_DBG_SMPC, "[SMPC] abortjr timeopt");
 	goto AbortJR;
        }
-       SS_SetEventNT(SS_EVENT_MIDSYNC, timestamp + 1);
+       SS_SetEventNT(&events[SS_EVENT_MIDSYNC], timestamp + 1);
       }
 
       JRS.StartTime = JRS.TimeCounter >> 32;
@@ -1154,7 +1160,7 @@ void SMPC_SetVB(sscpu_timestamp_t event_timestamp, bool vb_status)
   if(vb_status)	// Going into vblank
    PendingVB = true;
 
-  SS_SetEventNT(SS_EVENT_SMPC, event_timestamp + 1);
+  SS_SetEventNT(&events[SS_EVENT_SMPC], event_timestamp + 1);
  }
 
  vb = vb_status;

@@ -726,7 +726,7 @@ static void DBG_Init(void)
  }
 
  DBG.CPUHook = NULL;
- DBG.CPUHookContinuous = NULL;
+ DBG.CPUHookContinuous = false;
  DBG.FoundBPoint = false;
 
  MDFNDBG_AddRegGroup(&DBG_RegGroup_CPU);
@@ -790,7 +790,10 @@ static DebuggerInfoStruct DBGInfo
  NULL,
 };
 #else
-static INLINE bool DBG_NeedCPUHooks(void) { return false; } 
+template<unsigned which>
+static INLINE void DBG_CPUHandler(const sscpu_timestamp_t timestamp) { }
+static INLINE void DBG_AddBranchTrace(unsigned which, uint32 to, int exception, unsigned vecnum = 0) { }
+static INLINE bool DBG_NeedCPUHooks(void) { return false; }
 static INLINE void DBG_Init(void) { }
 static INLINE void DBG_Kill(void) { }
 #endif

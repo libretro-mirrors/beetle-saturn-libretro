@@ -72,9 +72,7 @@ enum
 
 static uint16 BGON;
 static uint8 VCPRegs[4][8];
-#if 0
 static uint32 VRAMPenalty[4];
-#endif
 
 static uint32 RPTA;
 static uint8 RPRCTL[2];
@@ -206,11 +204,6 @@ static int SurfInterlaceField;
 //
 
 
-#if 0
-// If outside of vblank:
-//  BGON & 0x10, check RDBS
-//  BGON & 0x20, monopolizes B banks.
-//  ((BGON & 0xF) != 0), check how many 0xE accesses:
 //  (No 0)  8 accesses, No split: 0 added cycles
 //  (No 4)  4 accesses, No split: 1 added cycles
 //  (No 6)  2 accesses, No split: 2 added cycles
@@ -225,6 +218,19 @@ static INLINE void RecalcVRAMPenalty(void)
   const unsigned VRAM_Mode = (RAMCTL_Raw >> 8) & 0x3;
   const unsigned RDBS_Mode = (RAMCTL_Raw & 0xFF);
   const size_t sh = ((HRes & 0x6) ? 0 : 4);
+  uint8 vcp_type_penalty[0x10];
+
+  for(unsigned vcp_type = 0; vcp_type < 0x10; vcp_type++)
+  {
+     bool penalty;
+
+     if((vcp_type < 0x8) || vcp_type == 0xC || vcp_type == 0xD)
+        penalty = (bool)(BGON & (1U << (vcp_type & 0x3)));
+     else
+        penalty = false;
+
+     vcp_type_penalty[vcp_type] = penalty;
+  }
 
   for(unsigned bank = 0; bank < 4; bank++)
   {
@@ -243,15 +249,15 @@ static INLINE void RecalcVRAMPenalty(void)
      tmp = 8;
     else if(BGON & 0x0F)
     {
-     tmp += (VCPRegs[esb][0] != VCP_CPU);
-     tmp += (VCPRegs[esb][1] != VCP_CPU);
-     tmp += (VCPRegs[esb][2] != VCP_CPU);
-     tmp += (VCPRegs[esb][3] != VCP_CPU);
+       tmp += vcp_type_penalty[VCPRegs[esb][0]];
+       tmp += vcp_type_penalty[VCPRegs[esb][1]];
+       tmp += vcp_type_penalty[VCPRegs[esb][2]];
+       tmp += vcp_type_penalty[VCPRegs[esb][3]];
 
-     tmp += (VCPRegs[esb][sh + 0] != VCP_CPU);
-     tmp += (VCPRegs[esb][sh + 1] != VCP_CPU);
-     tmp += (VCPRegs[esb][sh + 2] != VCP_CPU);
-     tmp += (VCPRegs[esb][sh + 3] != VCP_CPU);
+       tmp += vcp_type_penalty[VCPRegs[esb][sh + 0]];
+       tmp += vcp_type_penalty[VCPRegs[esb][sh + 1]];
+       tmp += vcp_type_penalty[VCPRegs[esb][sh + 2]];
+       tmp += vcp_type_penalty[VCPRegs[esb][sh + 3]];
     }
    }
 
@@ -261,7 +267,6 @@ static INLINE void RecalcVRAMPenalty(void)
   }
  }
 }
-#endif
 
 enum
 {
@@ -360,7 +365,7 @@ static INLINE void IncVCounter(const sscpu_timestamp_t event_timestamp)
    InternalVB = !DisplayOn;
   else if(VPhase == VPHASE_BOTTOM_BORDER)
   {
-   SS_SetEventNT(SS_EVENT_MIDSYNC, event_timestamp + 1);
+   SS_SetEventNT(&events[SS_EVENT_MIDSYNC], event_timestamp + 1);
    InternalVB = true;
    Out_VB = true;
   }
@@ -380,9 +385,7 @@ static INLINE void IncVCounter(const sscpu_timestamp_t event_timestamp)
   }
  }
 
-#if 0
  RecalcVRAMPenalty();
-#endif
 
  SMPC_SetVB(event_timestamp, Out_VB);
 }
@@ -390,6 +393,11 @@ static INLINE void IncVCounter(const sscpu_timestamp_t event_timestamp)
 static INLINE int32 AddHCounter(const sscpu_timestamp_t event_timestamp, int32 count)
 {
  HCounter += count;
+
+#if 0
+ if(HCounter > HTimings[HRes & 1][HPhase])
+    printf("VDP2 oops: %d %d\n", HCounter, HTimings[HRes & 1][HPhase]);
+#endif
 
  while(HCounter >= HTimings[HRes & 1][HPhase])
  {
@@ -523,7 +531,7 @@ static INLINE void RegsWrite(uint32 A, uint16 V)
 	//
 	InternalVB |= !DisplayOn;
 	//
-	SS_SetEventNT(SS_EVENT_VDP2, Update(SH7095_mem_timestamp));
+   SS_SetEventNT(&events[SS_EVENT_VDP2], Update(SH7095_mem_timestamp));
 	break;
 
   case 0x02:
@@ -603,13 +611,13 @@ static INLINE uint16 RegsRead(uint32 A)
   case 0x02:
 	if(!ExLatchEnable)
 	{
-	 SS_SetEventNT(SS_EVENT_VDP2, Update(SH7095_mem_timestamp));
+    SS_SetEventNT(&events[SS_EVENT_VDP2], Update(SH7095_mem_timestamp));
  	 LatchHV();
 	}
 	return (ExLatchEnable << 9) | (ExSyncEnable << 8) | (DispAreaSelect << 1) | (ExBGEnable << 0);
 
   case 0x04:
-	SS_SetEventNT(SS_EVENT_VDP2, Update(SH7095_mem_timestamp));
+   SS_SetEventNT(&events[SS_EVENT_VDP2], Update(SH7095_mem_timestamp));
 	{
 	 // TODO: EXSYFG
 	 uint16 ret = (HVIsExLatched << 9) | (InternalVB << 3) | ((HPhase > HPHASE_ACTIVE) << 2) | (Odd << 1) | (PAL << 0);
@@ -634,7 +642,7 @@ static INLINE uint16 RegsRead(uint32 A)
 }
 
 template<typename T, bool IsWrite>
-static INLINE void RW(uint32 A, uint16* DB)
+static INLINE uint32 RW(uint32 A, uint16* DB)
 {
  static_assert(IsWrite || sizeof(T) == 2, "Wrong type for read.");
 
@@ -656,7 +664,7 @@ static INLINE void RW(uint32 A, uint16* DB)
   else
    *DB = VRAM[vri];
 
-  return;
+  return VRAMPenalty[vri >> 16];
  }
 
  //
@@ -703,7 +711,7 @@ static INLINE void RW(uint32 A, uint16* DB)
    }
   }
 
-  return;
+  return 0;
  }
 
  //
@@ -723,7 +731,7 @@ static INLINE void RW(uint32 A, uint16* DB)
   else
    *DB = RegsRead(A);
 
-  return;
+  return 0;
  }
 
  if(IsWrite)
@@ -735,6 +743,8 @@ static INLINE void RW(uint32 A, uint16* DB)
   //SS_DBGTI(SS_DBG_WARNING | SS_DBG_VDP2, "[VDP2] Unknown %zu-byte read from 0x%08x", sizeof(T), A);
   *DB = 0;
  }
+
+ return 0;
 }
 
 uint16 Read16_DB(uint32 A)
@@ -747,18 +757,18 @@ uint16 Read16_DB(uint32 A)
 }
 
 
-void Write8_DB(uint32 A, uint16 DB)
+uint32 Write8_DB(uint32 A, uint16 DB)
 {
  VDP2REND_Write8_DB(A, DB);
 
- RW<uint8, true>(A, &DB);
+ return RW<uint8, true>(A, &DB);
 }
 
-void Write16_DB(uint32 A, uint16 DB)
+uint32 Write16_DB(uint32 A, uint16 DB)
 {
  VDP2REND_Write16_DB(A, DB);
 
- RW<uint16, true>(A, &DB);
+ return RW<uint16, true>(A, &DB);
 }
 
 
@@ -766,9 +776,9 @@ void Write16_DB(uint32 A, uint16 DB)
 //
 //
 
-void ResetTS(void)
+void AdjustTS(const int32 delta)
 {
- lastts = 0;
+ lastts += delta;
 }
 
 
@@ -836,9 +846,7 @@ void Reset(bool powering_up)
   memset(CRAM, 0, sizeof(CRAM));
  }
  //
-#if 0
  RecalcVRAMPenalty();
-#endif
  //
  //
  VDP2REND_Reset(powering_up);

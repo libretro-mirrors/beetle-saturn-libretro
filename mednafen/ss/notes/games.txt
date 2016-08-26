@@ -1,3 +1,14 @@
+Independence Day
+
+Astal - Loses track of CD or audio buffers or something, music playback goes crackly, sometimes gets stuck then game freezes up entirely afterward.
+
+Batman Forever - Corrupt batmobile graphic during intro(timing issue maybe?).
+
+Ultimate Mortal Kombat 3 - Major issues and no sound after defeating first opponent.
+
+Panzer Dragon II - Quasi-illegal window settings.
+Panzer Dragon Saga - Quasi-illegal window settings.
+
 All-Star Baseball 97 - VDP1 glitchy issues
 
 Space Jam
@@ -125,7 +136,7 @@ Arcade's Greatest Hits - Locks up near Digital Eclipse video.
 
 Baku Baku - 600091A, Timer0 triggers an IRQ when the software isn't ready?
 
-Father Christmas
+Father Christmas - icache or CPU timing related probably
 
 Doom - Sound effect positioning seems off.
 

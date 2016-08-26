@@ -481,7 +481,7 @@ sscpu_timestamp_t SH7095::DMA_Update(sscpu_timestamp_t et)
 void SH7095::DMA_StartSG(void)
 {
  DMA_SGCounter = DMA_ClockCounter - 128;
- SS_SetEventNT(event_id_dma, SH7095_mem_timestamp + 32);	// fixed + 32, don't evaluate DMA_SGCounter here.
+ SS_SetEventNT(&events[event_id_dma], SH7095_mem_timestamp + 32);	// fixed + 32, don't evaluate DMA_SGCounter here.
 
  DMA_CheckEnterBurstHack();
 }
@@ -631,7 +631,9 @@ void SH7095::FRT_WDT_Update(void)
    }
    else if(MDFN_UNLIKELY(WDT.WTCSR & 0x40))	// Watchdog timer mode
    {
+#ifdef HAVE_DEBUG
     SS_DBG(SS_DBG_WARNING | SS_DBG_SH2, "[%s] WDT overflow in WDT mode!\n", cpu_name);
+ #endif
     WDT.RSTCSR |= 0x80;
     WDT.RSTCSRM |= 0x80;
 
@@ -930,7 +932,7 @@ NO_INLINE void SH7095::OnChipRegWrite(uint32 A, uint32 V)
 	 DMACH[ch].CHCR = (V & ~2) | (DMACH[ch].CHCR & (V | DMACH[ch].CHCRM) & 2);
 
 #ifdef HAVE_DEBUG
-	 SS_DBG(SS_DBG_SH2, "[%s] DMA %d CHCR Write: CHCR=0x%04x SAR=0x%08x DAR=0x%08x TCR=0x%04x\n", cpu_name, ch, DMACH[ch].CHCR, DMACH[ch].SAR, DMACH[ch].DAR, DMACH[ch].TCR);
+    SS_DBGTI(SS_DBG_SH2, "[%s] DMA %d CHCR Write: CHCR=0x%04x SAR=0x%08x DAR=0x%08x TCR=0x%04x", cpu_name, ch, DMACH[ch].CHCR, DMACH[ch].SAR, DMACH[ch].DAR, DMACH[ch].TCR);
 
 	 if((DMACH[ch].CHCR & 0x1) && (DMACH[ch].CHCR & 0x3E8) != 0x200)
 	 {
@@ -1155,7 +1157,10 @@ NO_INLINE void SH7095::OnChipRegWrite(uint32 A, uint32 V)
 #endif
 	break;
 
-   case 0x92 ... 0x9E:
+   case 0x92: case 0x93: case 0x94: case 0x95:
+   case 0x96: case 0x97: case 0x98: case 0x99:
+   case 0x9A: case 0x9B: case 0x9C: case 0x9D:
+   case 0x9E:
 	SetCCR(V);
 	break;
 
@@ -1480,7 +1485,10 @@ INLINE T SH7095::OnChipRegRead(uint32 A)
 	ret = SBYCR;
 	break;
 
-   case 0x92 ... 0x9E:
+   case 0x92: case 0x93: case 0x94: case 0x95:
+   case 0x96: case 0x97: case 0x98: case 0x99:
+   case 0x9A: case 0x9B: case 0x9C: case 0x9D:
+   case 0x9E:
 	ret = CCR | (CCR << 8);
 	break;
    //
@@ -1511,7 +1519,7 @@ INLINE T SH7095::OnChipRegRead(uint32 A)
 	ret = VCRD >> shift;
 	break;
 
-   case 0x6A ... 0x6F:
+   case 0x6A: case 0x6B: case 0x6C: case 0x6D: case 0x6E: case 0x6F:
 	ret = 0xFFFF >> shift;
 	break;
 
@@ -1530,7 +1538,10 @@ INLINE T SH7095::OnChipRegRead(uint32 A)
 	ret = VCRWDT >> shift;
 	break;
 
-   case 0xE6 ... 0xFF:
+   case 0xE6: case 0xE7:
+   case 0xE8: case 0xE9: case 0xEA: case 0xEB: case 0xEC: case 0xED: case 0xEE: case 0xEF:
+   case 0xF0: case 0xF1: case 0xF2: case 0xF3: case 0xF4: case 0xF5: case 0xF6: case 0xF7:
+   case 0xF8: case 0xF9: case 0xFA: case 0xFB: case 0xFC: case 0xFD: case 0xFE: case 0xFF:
 	ret = 0xFFFF >> shift;
 	break;
   }
@@ -1598,9 +1609,10 @@ static INLINE uint32 cmov_eq_thing(const uint32 reg_compval, const uint32 mem_co
 {
  #if 1
  asm(	"cmpl %1, %2\n\t"
-	"cmove %3,%0\n\t"
-	: "+r"(var)
-	: "r"(reg_compval), "g"(mem_compval), "r"(repl_var));
+ 	"cmove %3,%0\n\t"
+ 	: "+r"(var)
+	: "r"(reg_compval), "g"(mem_compval), "r"(repl_var)
+	: "cc");
  #else
  if(reg_compval == mem_compval) var = repl_var;
  #endif
@@ -2239,7 +2251,7 @@ INLINE void SH7095::Branch(uint32 target)
  {
   if(MDFN_UNLIKELY(PC & 1))
   {
-   DoIDIF<which, DebugMode, true, true, true>();
+   DoIDIF<which, (bool)DebugMode, true, true, true>();
    SetPEX(PEX_CPUADDR);	// Pending for the instruction after the delay slot instruction.
   }
   else
@@ -2249,7 +2261,7 @@ INLINE void SH7095::Branch(uint32 target)
     IBuffer = MRFPI[PC >> 29](PC &~ 2);
 #endif
 
-   DoIDIF<which, DebugMode, true, false, false>();
+   DoIDIF<which, (bool)DebugMode, true, false, false>();
   }
  }
  else
@@ -2257,7 +2269,7 @@ INLINE void SH7095::Branch(uint32 target)
   if(MDFN_UNLIKELY(PC & 1))
   {
    SetPEX(PEX_CPUADDR);
-   DoIDIF<which, DebugMode, false, false, true>();
+   DoIDIF<which, (bool)DebugMode, false, false, true>();
   }
   else
   {
@@ -2266,9 +2278,9 @@ INLINE void SH7095::Branch(uint32 target)
     IBuffer = MRFPI[PC >> 29](PC &~ 2);
 #endif
 
-   DoIDIF<which, DebugMode, false, false, false>();
+    DoIDIF<which, (bool)DebugMode, false, false, false>();
    PC += 2;
-   DoIDIF<which, DebugMode, false, false, false>();
+   DoIDIF<which, (bool)DebugMode, false, false, false>();
   }
  }
 }
@@ -2340,13 +2352,20 @@ uint32 NO_INLINE SH7095::Exception(const unsigned exnum, const unsigned vecnum)
 template<unsigned which, bool DebugMode>
 INLINE void SH7095::Step(void)
 {
+ //
+ // Ideally, we would place SPEPRecover: after the FRT event check, but doing
+ // so causes gcc(multiple versions) to produce inconceivably awful code under certain conditions
+ // (such as disabling all the SS_DBG stuff at compile-time) because it thinks it's an important loop
+ // or something?(even with all our branch hinting!)
+ //
+ SPEPRecover:;
+
  if(MDFN_UNLIKELY(timestamp >= FRT_WDT_NextTS))
  {
   FRT_WDT_Update();
   FRT_WDT_Recalc_NET();
  }
 
- SPEPRecover:;
  const uint32 instr = (uint16)Pipe_ID;
  const unsigned instr_nyb1 = (instr >> 4) & 0xF;
  const unsigned instr_nyb2 = (instr >> 8) & 0xF;
@@ -4202,7 +4221,8 @@ INLINE uint32 SH7095::GetRegister(const unsigned id, char* const special, const 
 	ret = PC;
 	break;
 
-  case GSREG_R0 ... GSREG_R15:
+  case GSREG_R0: case GSREG_R1: case GSREG_R2: case GSREG_R3: case GSREG_R4: case GSREG_R5: case GSREG_R6: case GSREG_R7:
+  case GSREG_R8: case GSREG_R9: case GSREG_R10: case GSREG_R11: case GSREG_R12: case GSREG_R13: case GSREG_R14: case GSREG_R15:
 	ret = R[id - GSREG_R0];
 	break;
 
@@ -4446,7 +4466,8 @@ void SH7095::SetRegister(const unsigned id, const uint32 value)
 	PC = value;
 	break;
 
-  case GSREG_R0 ... GSREG_R15:
+  case GSREG_R0: case GSREG_R1: case GSREG_R2: case GSREG_R3: case GSREG_R4: case GSREG_R5: case GSREG_R6: case GSREG_R7:
+  case GSREG_R8: case GSREG_R9: case GSREG_R10: case GSREG_R11: case GSREG_R12: case GSREG_R13: case GSREG_R14: case GSREG_R15:
 	R[id - GSREG_R0] = value;
 	break;
 

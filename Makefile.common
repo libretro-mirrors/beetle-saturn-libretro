@@ -86,7 +86,6 @@ ifneq ($(HAVE_GRIFFIN), 1)
 	$(CORE_EMU_DIR)/cdb.cpp \
 	$(CORE_EMU_DIR)/sound.cpp \
 	$(CORE_EMU_DIR)/cart.cpp \
-	$(CORE_EMU_DIR)/ss.cpp \
 	$(CORE_EMU_DIR)/scu_dsp_gen.cpp \
 	$(CORE_EMU_DIR)/scu_dsp_mvi.cpp \
 	$(CORE_EMU_DIR)/scu_dsp_jmp.cpp \

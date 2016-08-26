@@ -19,6 +19,12 @@
 ** 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 */
 
+// TODO: Respect auth type with COMMAND_AUTH_DEVICE.
+
+// TODO: Test INIT 0x00 side effects(and see if it affects CD device connection)
+
+// TODO: edc_lec_check_and_correct
+
 // TODO: Proper seek delays(for "Gungriffon" FMV)
 
 // TODO: Some filesys commands(at least change dir, read file) seem to reset the saved command start and end positions(accessed via 0xFFFFFF to PLAY command) to something
@@ -125,6 +131,203 @@ enum
  COMMAND_AUTH_DEVICE	= 0xE0,
  COMMAND_GET_AUTH	= 0xE1
 };
+
+#ifdef HAVE_DEBUG
+static MDFN_COLD void GetCommandDetails(const uint16* CD, char* s, size_t sl)
+{
+   switch(CD[0] >> 8)
+   {
+      default:
+         snprintf(s, sl, "UNKNOWN: 0x%04x, 0x%04x, 0x%04x, 0x%04x", CD[0], CD[1], CD[2], CD[3]);
+         break;
+
+      case COMMAND_GET_CDSTATUS:
+         snprintf(s, sl, "Get CD Status");
+         break;
+
+      case COMMAND_GET_HWINFO:
+         snprintf(s, sl, "Get Hardware Info");
+         break;
+
+      case COMMAND_GET_TOC:
+         snprintf(s, sl, "Get TOC");
+         break;
+
+      case COMMAND_GET_SESSINFO:
+         snprintf(s, sl, "Get Session Info; Type=0x%02x", CD[0] & 0xFF);
+         break;
+
+      case COMMAND_INIT:
+         snprintf(s, sl, "Initialize; Flags=0x%02x", CD[0] & 0xFF);
+         break;
+
+      case COMMAND_OPEN:
+         snprintf(s, sl, "Open Tray");
+         break;
+
+      case COMMAND_END_DATAXFER:
+         snprintf(s, sl, "End Data Transfer");
+         break;
+
+      case COMMAND_PLAY:
+         snprintf(s, sl, "Play; Start=0x%06x, End=0x%06x, Mode=0x%02x", ((CD[0] & 0xFF) << 16) | CD[1], ((CD[2] & 0xFF) << 16) | CD[3], CD[2] >> 8);
+         break;
+
+      case COMMAND_SEEK:
+         // 0xFFFFFF=pause, 0=stop
+         snprintf(s, sl, "Seek; Target=0x%06x", ((CD[0] & 0xFF) << 16) | CD[1]);
+         break;
+
+      case COMMAND_SCAN:
+         snprintf(s, sl, "Scan; Direction=0x%02x", CD[0] & 0xFF);
+         break;
+
+      case COMMAND_GET_SUBCODE:
+         snprintf(s, sl, "Get Subcode; Type=0x%02x", CD[0] & 0xFF);
+         break;
+
+      case COMMAND_SET_CDDEVCONN:
+         snprintf(s, sl, "Set CD Device Connection; Filter=0x%02x", CD[2] >> 8);
+         break;
+
+      case COMMAND_GET_CDDEVCONN:
+         snprintf(s, sl, "Get CD Device Connection");
+         break;
+
+      case COMMAND_GET_LASTBUFDST:
+         snprintf(s, sl, "Get Last Buffer Destination");
+         break;
+
+      case COMMAND_SET_FILTRANGE:
+         snprintf(s, sl, "Set Filter Range; Filter=0x%02x, FAD=0x%06x, Count=0x%06x", CD[2] >> 8, ((CD[0] & 0xFF) << 16) | CD[1], ((CD[2] & 0xFF) << 16) | CD[3]);
+         break;
+
+      case COMMAND_GET_FILTRANGE:
+         snprintf(s, sl, "Get Filter Range; Filter=0x%02x", CD[2] >> 8);
+         break;
+
+      case COMMAND_SET_FILTSUBHC:
+         snprintf(s, sl, "Set Filter Subheader Conditions; Filter=0x%02x, Channel=0x%02x, Sub Mode: 0x%02x(Mask=0x%02x), Coding Info: 0x%02x(Mask=0x%02x), File: 0x%02x", (CD[2] >> 8), CD[0] & 0xFF, CD[3] >> 8, CD[1] >> 8, CD[3] & 0xFF, CD[1] & 0xFF, CD[2] & 0xFF);
+         break;
+
+      case COMMAND_GET_FILTSUBHC:
+         snprintf(s, sl, "Get Filter Subheader Conditions; Filter=0x%02x", CD[2] >> 8);
+         break;
+
+      case COMMAND_SET_FILTMODE:
+         snprintf(s, sl, "Set Filter Mode; Filter=0x%02x, Mode=0x%02x", (CD[2] >> 8), CD[0] & 0xFF);
+         break;
+
+      case COMMAND_GET_FILTMODE:
+         snprintf(s, sl, "Get Filter Mode; Filter=0x%02x", CD[2] >> 8);
+         break;
+
+      case COMMAND_SET_FILTCONN:
+         snprintf(s, sl, "Set Filter Connection; Filter=0x%02x, Flags=0x%02x, True=0x%02x, False=0x%02x", (CD[2] >> 8), (CD[0] & 0xFF), (CD[1] >> 8), (CD[1] & 0xFF));
+         break;
+
+      case COMMAND_GET_FILTCONN:
+         snprintf(s, sl, "Get Filter Connection; Filter=0x%02x", CD[2] >> 8);
+         break;
+
+      case COMMAND_RESET_SEL:
+         snprintf(s, sl, "Reset Selector; Flags=0x%02x, pn=0x%04x", CD[0] & 0xFF, CD[2] >> 8);
+         break;
+
+      case COMMAND_GET_BUFSIZE:
+         snprintf(s, sl, "Get Buffer Size");
+         break;
+
+      case COMMAND_GET_SECNUM:
+         snprintf(s, sl, "Get Sector Number; Source=0x%02x", CD[2] >> 8);
+         break;
+
+      case COMMAND_CALC_ACTSIZE:
+         snprintf(s, sl, "Calculate Actual Size; Source=0x%02x[0x%04x], Count=0x%02x", CD[2] >> 8, CD[1], CD[3]);
+         break;
+
+      case COMMAND_GET_ACTSIZE:
+         snprintf(s, sl, "Get Actual Size");
+         break;
+
+      case COMMAND_GET_SECINFO:
+         snprintf(s, sl, "Get Sector Info; Source=0x%02x[0x%04x]", CD[2] >> 8, CD[1]);
+         break;
+
+      case COMMAND_EXEC_FADSRCH:
+         snprintf(s, sl, "Execute FAD Search; Source=0x%02x[0x%04x], FAD=0x%06x", CD[2] >> 8, CD[1], ((CD[2] & 0xFF) << 16) | CD[3]);
+         break;
+
+      case COMMAND_GET_FADSRCH:
+         snprintf(s, sl, "Get FAD Search Results");
+         break;
+
+      case COMMAND_SET_SECLEN:
+         snprintf(s, sl, "Set Sector Length; Get: 0x%02x, Put: 0x%02x", (CD[0] & 0xFF), (CD[1] >> 8));
+         break;
+
+      case COMMAND_GET_SECDATA:
+         snprintf(s, sl, "Get Sector Data; Source=0x%02x[0x%04x], Count=0x%04x", CD[2] >> 8, CD[1], CD[3]);
+         break;
+
+      case COMMAND_DEL_SECDATA:
+         snprintf(s, sl, "Delete Sector Data; Source=0x%02x[0x%04x], Count=0x%04x", CD[2] >> 8, CD[1], CD[3]);
+         break;
+
+      case COMMAND_GETDEL_SECDATA:
+         snprintf(s, sl, "Get and Delete Sector Data; Source=0x%02x[0x%04x], Count=0x%04x", CD[2] >> 8, CD[1], CD[3]);
+         break;
+
+      case COMMAND_PUT_SECDATA:
+         snprintf(s, sl, "Put Sector Data; Filter=0x%02x, Count=0x%04x", CD[2] >> 8, CD[3]);
+         break;
+
+      case COMMAND_COPY_SECDATA:
+         snprintf(s, sl, "Copy Sector Data; Source=0x%02x[0x%04x], Dest=0x%02x, Count=0x%04x", CD[2] >> 8, CD[1], CD[0] & 0xFF, CD[3]);
+         break;
+
+      case COMMAND_MOVE_SECDATA:
+         snprintf(s, sl, "Move Sector Data; Source=0x%02x[0x%04x], Dest=0x%02x, Count=0x%04x", CD[2] >> 8, CD[1], CD[0] & 0xFF, CD[3]);
+         break;
+
+      case COMMAND_GET_COPYERR:
+         snprintf(s, sl, "Get Copy Error");
+         break;
+
+      case COMMAND_CHANGE_DIR:
+         snprintf(s, sl, "Change Directory; ID=0x%06x, Filter: 0x%02x", ((CD[2] & 0xFF) << 16) | CD[3], (CD[2] >> 8));
+         break;
+
+      case COMMAND_READ_DIR:
+         snprintf(s, sl, "Read Directory; ID=0x%06x, Filter=0x%02x", ((CD[2] & 0xFF) << 16) | CD[3], (CD[2] >> 8));
+         break;
+
+      case COMMAND_GET_FSSCOPE:
+         snprintf(s, sl, "Get Filesystem Scope");
+         break;
+
+      case COMMAND_GET_FINFO:
+         snprintf(s, sl, "Get File Info; ID=0x%06x", ((CD[2] & 0xFF) << 16) | CD[3]);
+         break;
+
+      case COMMAND_READ_FILE:
+         snprintf(s, sl, "Read File; Offset=0x%06x, ID=0x%06x, Filter=0x%02x\n", ((CD[0] & 0xFF) << 16) | CD[1], ((CD[2] & 0xFF) << 16) | CD[3], CD[2] >> 8);
+         break;
+
+      case COMMAND_ABORT_FILE:
+         snprintf(s, sl, "Abort File");
+         break;
+
+      case COMMAND_AUTH_DEVICE:
+         snprintf(s, sl, "Authenticate Device; Type=0x%04x, Filter=0x%02x", CD[1], CD[2] >> 8);
+         break;
+
+      case COMMAND_GET_AUTH:
+         snprintf(s, sl, "Get Device Authentication Status");
+         break;
+   }
+}
+#endif
 
 enum
 {
@@ -321,7 +524,7 @@ static uint32 CDDABuf_RP, CDDABuf_WP;
 static uint32 CDDABuf_Count;
 
 static uint8 SecPreBuf[2352 + 96];
-static bool SecPreBuf_In;
+static int SecPreBuf_In;
 
 static uint8 TOC_Buffer[(99 + 3) * 4];
 
@@ -1513,7 +1716,7 @@ static void Drive_Run(int64 clocks)
 	break;
 
     case DRIVEPHASE_PLAY:
-	if(SecPreBuf_In)
+	if(SecPreBuf_In > 0)
 	{
 	 if(SubQBuf_Safe[0] & 0x40)
 	 {
@@ -1563,7 +1766,7 @@ static void Drive_Run(int64 clocks)
 	 {
 	  CurPosInfo.status = STATUS_PLAY;
 	 }
-	} // end if(SecPreBuf_In)
+	} // end if(SecPreBuf_In > 0)
 
         PeriodicIdleCounter = 17712LL << 32;
 	if(DrivePhase == DRIVEPHASE_PLAY)
@@ -1572,7 +1775,11 @@ static void Drive_Run(int64 clocks)
 	 {
 	  // TODO: More accurate:
 	  CurPosInfo.status = STATUS_PAUSE;
-	  SS_DBG(SS_DBG_CDB, "[CDB] SB Overflow\n");
+
+#ifdef HAVE_DEBUG
+     if(SecPreBuf_In > 0)
+	   SS_DBG(SS_DBG_CDB, "[CDB] SB Overflow\n");
+#endif
 	 }
 	 else
 	 {
@@ -1767,9 +1974,15 @@ sscpu_timestamp_t CDB_Update(sscpu_timestamp_t timestamp)
      CTR.CD[i] = CData[i];
 
     CTR.Command = CTR.CD[0] >> 8;
-    SS_DBG(SS_DBG_CDB, "[CDB] Command: 0x%04x 0x%04x 0x%04x 0x%04x --- HIRQ=0x%04x, HIRQ_Mask=0x%04x\n", CTR.CD[0], CTR.CD[1], CTR.CD[2], CTR.CD[3], HIRQ, HIRQ_Mask);
-    //
-    //
+
+#ifdef HAVE_DEBUG
+    if(MDFN_UNLIKELY(ss_dbg_mask & SS_DBG_CDB))
+    {
+     char cdet[128];
+     GetCommandDetails(CTR.CD, cdet, sizeof(cdet));
+     SS_DBG(SS_DBG_CDB, "[CDB] Command: %s --- HIRQ=0x%04x, HIRQ_Mask=0x%04x\n", cdet, HIRQ, HIRQ_Mask);
+    }
+#endif
     CMD_EAT_CLOCKS(84);
 
     //
@@ -1989,15 +2202,15 @@ sscpu_timestamp_t CDB_Update(sscpu_timestamp_t timestamp)
     //
     else if(CTR.Command == COMMAND_SEEK) //		= 0x11,
     {
+     CurPosInfo.status = STATUS_BUSY;
      CDStatusResults();
      //
      //
      const uint32 cmd_sp = ((CTR.CD[0] & 0xFF) << 16) | CTR.CD[1];
 
-     ClearPendingSec();
-
      if(!cmd_sp)	// Stop
      {
+      ClearPendingSec();
       CurPosInfo.is_cdrom = false;	// FIXME? Correct?
       CurPosInfo.status = STATUS_BUSY;
       CurPosInfo.fad = 0xFFFFFF;
@@ -2012,14 +2225,19 @@ sscpu_timestamp_t CDB_Update(sscpu_timestamp_t timestamp)
      else if(cmd_sp == 0xFFFFFF) // Pause
      {
       if(DrivePhase == DRIVEPHASE_STOPPED)	// TODO: Test
+      {
+       ClearPendingSec();
        StartSeek(0x800096);
+      }
 
+      SecPreBuf_In = -abs(SecPreBuf_In);
       PlayEndIRQType = 0;
       CurPlayEnd = 0x800000;
       CurPlayRepeat = 0;
      }
      else
      {
+      ClearPendingSec();
       CurPlayEnd = 0x800000;
       CurPlayRepeat = 0;
       StartSeek(cmd_sp);
@@ -3387,5 +3605,5 @@ void CDB_Write_DBM(uint32 offset, uint16 DB, uint16 mask)
 	break;
  }
 
- SS_SetEventNT(SS_EVENT_CDB, nt);
+ SS_SetEventNT(&events[SS_EVENT_CDB], nt);
 }

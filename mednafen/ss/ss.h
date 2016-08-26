@@ -55,7 +55,12 @@
   SS_DBG_SCSP 	   = 0x10000,
   SS_DBG_SCSP_REGW = 0x20000
  };
+
+#ifdef MDFN_SS_DEV_BUILD
  extern uint32 ss_dbg_mask;
+#else
+ enum { ss_dbg_mask = 0 };
+#endif
 
  static INLINE void SS_DBG_Dummy(const char* format, ...) { }
 
@@ -119,8 +124,18 @@
   SS_EVENT__COUNT,
  };
 
+ struct event_list_entry
+ {
+  sscpu_timestamp_t event_time;
+  event_list_entry *prev;
+  event_list_entry *next;
+  sscpu_timestamp_t (*event_handler)(const sscpu_timestamp_t timestamp);
+ };
+
+ extern event_list_entry events[SS_EVENT__COUNT];
+
  #define SS_EVENT_DISABLED_TS			0x40000000
- void SS_SetEventNT(const int type, const sscpu_timestamp_t next_timestamp);
+ void SS_SetEventNT(event_list_entry* e, const sscpu_timestamp_t next_timestamp);
 
  // Call from init code, or power/reset code, as appropriate.
  // (length is in units of bytes, not 16-bit units)
