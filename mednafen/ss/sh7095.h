@@ -222,7 +222,7 @@ class SH7095 final
  // Interrupt controller registers and related state
  //
  // 
- void INTC_Reset(void);
+ void INTC_Reset(void) MDFN_COLD;
 
  bool NMILevel;
  uint8 IRL;
@@ -270,7 +270,7 @@ class SH7095 final
   uint8 RW_Temp;
  } FRT;
 
- void FRT_Reset(void);
+ void FRT_Reset(void) MDFN_COLD;
 
  void FRT_CheckOCR(void);
  void FRT_ClockFRC(void);
@@ -294,8 +294,8 @@ class SH7095 final
   uint8 RSTCSRM;
  } WDT;
 
- void WDT_Reset(bool from_internal_wdt);	// Reset-reset only, NOT standby reset!
- void WDT_StandbyReset(void);
+ void WDT_Reset(bool from_internal_wdt) MDFN_COLD;	// Reset-reset only, NOT standby reset!
+ void WDT_StandbyReset(void) MDFN_COLD;
 
  //
  // DMA unit registers and related state
@@ -506,7 +506,7 @@ class SH7095 final
  };
 
  uint32 GetRegister(const unsigned id, char* const special, const uint32 special_len);
- void SetRegister(const unsigned id, const uint32 value);
+ void SetRegister(const unsigned id, const uint32 value) MDFN_COLD;
 
  void CheckRWBreakpoints(void (*MRead)(unsigned len, uint32 addr), void (*MWrite)(unsigned len, uint32 addr)) const;
  static void Disassemble(const uint16 instr, const uint32 PC, char* buffer, uint16 (*DisPeek16)(uint32), uint32 (*DisPeek32)(uint32));

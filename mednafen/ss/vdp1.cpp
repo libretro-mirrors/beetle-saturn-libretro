@@ -95,8 +95,12 @@ static bool vb_status, hb_status;
 static sscpu_timestamp_t lastts;
 static int32 CycleCounter;
 
+static bool vbcdpending;
+
 void Init(void)
 {
+ vbcdpending = false;
+
  for(int i = 0; i < 0x40; i++)
  {
   gouraud_lut[i] = std::min<int>(31, std::max<int>(0, i - 16));
@@ -481,8 +485,6 @@ static void StartDrawing(void)
  DrawingActive = true;
  CycleCounter = VDP1_UpdateTimingGran;
 }
-
-static bool vbcdpending = false;
 
 void SetHBVB(const sscpu_timestamp_t event_timestamp, const bool new_hb_status, const bool new_vb_status)
 {

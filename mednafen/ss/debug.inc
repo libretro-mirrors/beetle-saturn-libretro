@@ -233,7 +233,7 @@ static uint32 DBG_MemPeek(uint32 A, unsigned int bsize, bool hl, bool logical)
 }
 
 
-static void DBG_FlushBreakPoints(int type)
+static MDFN_COLD void DBG_FlushBreakPoints(int type)
 {
  if(type == BPOINT_READ)
   DBG.BreakPointsRead.clear();
@@ -243,7 +243,7 @@ static void DBG_FlushBreakPoints(int type)
   DBG.BreakPointsPC.clear();
 }
 
-static void DBG_AddBreakPoint(int type, unsigned int A1, unsigned int A2, bool logical)
+static MDFN_COLD void DBG_AddBreakPoint(int type, unsigned int A1, unsigned int A2, bool logical)
 {
  DBGS::SS_BPOINT tmp;
 
@@ -488,7 +488,7 @@ static void DBG_Disassemble(uint32 &A, uint32 SpecialA, char *TextBuf)
  A += 2;
 }
 
-static void DBG_ToggleSyntax(void)
+static MDFN_COLD void DBG_ToggleSyntax(void)
 {
  // Right, "syntax". ;)
  DBG.ActiveCPU = !DBG.ActiveCPU;
@@ -618,7 +618,7 @@ static uint32 DBG_GetRegister_CPU(const unsigned int id, char* special, const ui
  return CPU[DBG.ActiveCPU].GetRegister(id, special, special_len);
 }
 
-static void DBG_SetRegister_CPU(const unsigned int id, uint32 value)
+static MDFN_COLD void DBG_SetRegister_CPU(const unsigned int id, uint32 value)
 {
  CPU[DBG.ActiveCPU].SetRegister(id, value);
 }

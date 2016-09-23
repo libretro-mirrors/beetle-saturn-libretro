@@ -43,7 +43,7 @@ static bool PAL;
 static int LineVisFirst, LineVisLast;
 static uint32 OutLineCounter;
 static bool Clock28M;
-static const int VisibleLines = 240;
+static unsigned VisibleLines;
 static VDP2Rend_LIB LIB[256];
 static uint16 VRAM[262144];
 static uint16 CRAM[2048];
@@ -3185,6 +3185,7 @@ void VDP2REND_Init(const bool IsPAL, const int sls, const int sle)
  PAL = IsPAL;
  LineVisFirst = sls;
  LineVisLast = sle;
+ VisibleLines = PAL ? 288 : 240;
  //
  UserLayerEnableMask = ~0U;
 
@@ -3198,18 +3199,20 @@ void VDP2REND_Init(const bool IsPAL, const int sls, const int sle)
 
 void VDP2REND_FillVideoParams(MDFNGI* gi)
 {
+ gi->fb_width = 704;
+
  if(PAL)
  {
-  abort();
+   gi->nominal_width = 365;
+   gi->fb_height = 576;
  }
  else
  {
   gi->nominal_width = 302;
-  gi->nominal_height = LineVisLast + 1 - LineVisFirst;
+  gi->fb_height = 480;
  }
 
- gi->fb_width = 704;
- gi->fb_height = 512;
+ gi->nominal_height = LineVisLast + 1 - LineVisFirst;
 
  gi->lcm_width = 10560;
  gi->lcm_height = (LineVisLast + 1 - LineVisFirst) * 2;
@@ -3241,7 +3244,7 @@ void VDP2REND_StartFrame(EmulateSpecStruct* espec_arg, const bool clock28m, cons
   espec->InterlaceOn = false;
 
  espec->DisplayRect.x = 0;
- espec->DisplayRect.y = LineVisFirst;
+ espec->DisplayRect.y = LineVisFirst << espec->InterlaceOn;
  espec->DisplayRect.w = 0;
  espec->DisplayRect.h = (LineVisLast + 1 - LineVisFirst) << espec->InterlaceOn;
 }
@@ -3280,7 +3283,7 @@ void VDP2REND_EndFrame(void)
 
 VDP2Rend_LIB* VDP2REND_GetLIB(unsigned line)
 {
- assert(line < (PAL ? 256 : 240));
+ assert(line < (PAL ? 256 : 240)); // NO: VisibleLines);
 
  return &LIB[line];
 }
@@ -3293,8 +3296,6 @@ void VDP2REND_DrawLine(int vdp2_line, const bool field)
 
   if(espec->InterlaceOn)
    out_line = (out_line << 1) | espec->InterlaceField;
-
-  out_line &= 0x1FF; // Just in case something goes horribly wrong.
 
   DrawCounter.fetch_add(1, std::memory_order_release);
   WWQ(COMMAND_DRAW_LINE, ((uint16)vdp2_line << 16) | out_line, field);

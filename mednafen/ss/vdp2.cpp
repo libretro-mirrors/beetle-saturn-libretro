@@ -183,12 +183,21 @@ enum
  VPHASE__COUNT
 };
 
-static const int32 VTimings[4][VPHASE__COUNT] = // End lines
-{   
- { 0x0E0, 0xE8, 0xED, 0xF0, 0x0FF, 0x107 },
- { 0x0F0, 0xF0, 0xF5, 0xF8, 0x107, 0x107 },
- { 0x0E0, 0xE8, 0xED, 0xF0, 0x0FF, 0x107 },
- { 0x0F0, 0xF0, 0xF5, 0xF8, 0x107, 0x107 },
+static const int32 VTimings[2][4][VPHASE__COUNT] = // End lines
+{
+ { // NTSC:
+  { 0x0E0, 0xE8, 0xED, 0xF0, 0x0FF, 0x107 },
+  { 0x0F0, 0xF0, 0xF5, 0xF8, 0x107, 0x107 },
+  { 0x0E0, 0xE8, 0xED, 0xF0, 0x0FF, 0x107 },
+  { 0x0F0, 0xF0, 0xF5, 0xF8, 0x107, 0x107 },
+ },
+ { // PAL:
+  // btm brdr begin, btm blnk begin, vsync begin, /***/ top blnk begin, top brdr begin, total
+  { 0x0E0, 0x100, 0x103, /***/ 0x103 + 3/*?*/, 0x119, 0x139 },
+  { 0x0F0, 0x108, 0x10B, /***/ 0x10B + 3/*?*/, 0x121, 0x139 },
+  { 0x100, 0x110, 0x113, /***/ 0x113 + 3/*?*/, 0x129, 0x139 },
+  { 0x100, 0x110, 0x113, /***/ 0x113 + 3/*?*/, 0x129, 0x139 },
+ },
 };
 
 static bool Out_VB;	// VB output signal
@@ -298,7 +307,7 @@ static void LatchHV(void)
   unsigned vtmp;
 
   if(VPhase >= VPHASE_VSYNC)
-   vtmp = VCounter + (0x200 - VTimings[VRes][VPHASE__COUNT - 1]);
+     vtmp = VCounter + (0x200 - VTimings[PAL][VRes][VPHASE__COUNT - 1]);
   else
    vtmp = VCounter;
 
@@ -329,12 +338,12 @@ static INLINE void IncVCounter(const sscpu_timestamp_t event_timestamp)
 {
  VCounter = (VCounter + 1) & 0x1FF;
 
- if(VCounter == (VTimings[VRes][VPHASE__COUNT - 1] - 1))
+ if(VCounter == (VTimings[PAL][VRes][VPHASE__COUNT - 1] - 1))
   Out_VB = false;
 
  // - 1, so the CPU loop will  have plenty of time to exit before we reach non-hblank top border area
  // (exit granularity could be large if program is executing from SCSP RAM space, for example).
- if(VCounter == (VTimings[VRes][VPHASE_TOP_BLANKING] - 1))
+ if(VCounter == (VTimings[PAL][VRes][VPHASE_TOP_BLANKING] - 1))
  {
 #if 0
   for(unsigned bank = 0; bank < 4; bank++)
@@ -351,14 +360,14 @@ static INLINE void IncVCounter(const sscpu_timestamp_t event_timestamp)
   //printf("Meow: %d\n", VCounter);
  }
 
- while(VCounter >= VTimings[VRes][VPhase] - ((VPhase == VPHASE_VSYNC - 1) && InterlaceMode))
+ while(VCounter >= VTimings[PAL][VRes][VPhase] - ((VPhase == VPHASE_VSYNC - 1) && InterlaceMode))
  {
   VPhase++;
 
   if(VPhase == VPHASE__COUNT)
   {
    VPhase = 0;
-   VCounter -= VTimings[VRes][VPHASE__COUNT - 1];
+   VCounter -= VTimings[PAL][VRes][VPHASE__COUNT - 1];
   }
 
   if(VPhase == VPHASE_ACTIVE)
@@ -795,6 +804,11 @@ void Init(const bool IsPAL, const int sls, const int sle)
 
 void FillVideoParams(MDFNGI* gi)
 {
+ if(PAL)
+   gi->fps = 65536 * 256 * (1734687500.0 / 61 / 4 / 455 / ((313 + 312.5) / 2.0));
+ else
+   gi->fps = 65536 * 256 * (1746818181.8 / 61 / 4 / 455 / ((263 + 262.5) / 2.0));
+
  VDP2REND_FillVideoParams(gi);
 }
 

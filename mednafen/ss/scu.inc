@@ -1499,7 +1499,7 @@ static bool NO_INLINE DMA_Loop(DMALevelS* d)
 //
 // TODO: Check start read/write address updating when wrapping to next bus or beyond end of SDRAM.
 //
-static NO_INLINE void UpdateDMAInner(DMALevelS* d)
+static INLINE void UpdateDMAInner(DMALevelS* d)
 {
  static bool (*const LoopFuncs[3])(DMALevelS*) = { DMA_Loop<0>, DMA_Loop<1>, DMA_Loop<2> };
 
@@ -1575,10 +1575,8 @@ sscpu_timestamp_t SCU_UpdateDMA(sscpu_timestamp_t timestamp)
 // Check to see if DMA is active, and if so, force the highest-priority DMA
 // to finish early(kind of hacky).
 //
-static INLINE void CheckForceDMAFinish(void)
+static NO_INLINE void ForceDMAFinish(void)
 {
- if(MDFN_LIKELY(!(DMALevel[0].Active | DMALevel[1].Active | DMALevel[2].Active)))
-  return;
 
  for(int level = 2; level >= 0; level--)
  {
@@ -1610,6 +1608,14 @@ static INLINE void CheckForceDMAFinish(void)
  }
 
  SCU_DMA_TimeCounter = SCU_DMA_RunUntil;
+}
+
+static INLINE void CheckForceDMAFinish(void)
+{
+ if(MDFN_LIKELY(!(DMALevel[0].Active | DMALevel[1].Active | DMALevel[2].Active)))
+  return;
+
+  ForceDMAFinish();
 }
 
 //

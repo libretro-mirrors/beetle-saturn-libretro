@@ -30,7 +30,7 @@
 
 #define MEDNAFEN_CORE_NAME_MODULE "ss"
 #define MEDNAFEN_CORE_NAME "Mednafen Saturn"
-#define MEDNAFEN_CORE_VERSION "v0.9.39.1"
+#define MEDNAFEN_CORE_VERSION "v0.9.39.2"
 #define MEDNAFEN_CORE_EXTENSIONS "pce|cue|ccd"
 #define MEDNAFEN_CORE_TIMING_FPS 59.82
 #define MEDNAFEN_CORE_GEOMETRY_BASE_W 302
@@ -521,8 +521,9 @@ static sscpu_timestamp_t SH_DMA_EventHandler(sscpu_timestamp_t et)
   return SH7095_mem_timestamp;
  }
 
+ // Must come after the (et < SH7095_mem_timestamp) check.
  if(MDFN_UNLIKELY(SH7095_BusLock))
-  return et + 8;
+  return et + 1;
 
  return CPU[c].DMA_Update(et);
 }
@@ -921,7 +922,7 @@ static MDFN_COLD void Cleanup(void)
  cdifs = NULL;
 }
 
-static bool IsSaturnDisc(const uint8* sa32k)
+static MDFN_COLD bool IsSaturnDisc(const uint8* sa32k)
 {
  if(sha256(&sa32k[0x100], 0xD00) != "96b8ea48819cfa589f24c40aa149c224c420dccf38b730f00156efe25c9bbc8f"_sha256)
   return false;
@@ -934,7 +935,7 @@ static bool IsSaturnDisc(const uint8* sa32k)
  return true;
 }
 
-static void CalcGameID(uint8* id_out16, uint8* fd_id_out16, char* sgid)
+static INLINE void CalcGameID(uint8* id_out16, uint8* fd_id_out16, char* sgid)
 {
    md5_context mctx;
    uint8_t buf[2048];
@@ -1024,7 +1025,7 @@ static const struct
 };
 
 
-static bool DetectRegion(unsigned* const region)
+static INLINE bool DetectRegion(unsigned* const region)
 {
  uint8_t *buf = new uint8[2048 * 16];
  uint64 possible_regions = 0;
@@ -1066,7 +1067,7 @@ static bool DetectRegion(unsigned* const region)
  return false;
 }
 
-static bool DetectRegionByFN(const std::string& fn, unsigned* const region)
+static MDFN_COLD bool DetectRegionByFN(const std::string& fn, unsigned* const region)
 {
  std::string ss = fn;
  size_t cp_pos;
@@ -1205,6 +1206,12 @@ static bool InitCommon(const unsigned cart_type, const unsigned smpc_area)
    int sls = MDFN_GetSettingI(PAL ? "ss.slstartp" : "ss.slstart");
    int sle = MDFN_GetSettingI(PAL ? "ss.slendp" : "ss.slend");
 
+   if(PAL)
+   {
+      sls += 16;
+      sle += 16;
+   }
+
    if(sls > sle)
       std::swap(sls, sle);
 
@@ -1334,7 +1341,7 @@ static bool TestMagic(MDFNFILE* fp)
 }
 #endif
 
-static bool Load(MDFNFILE* fp)
+static MDFN_COLD bool Load(MDFNFILE* fp)
 {
 #if 0
    // cat regiondb.inc | sort | uniq --all-repeated=separate -w 102 
@@ -1804,8 +1811,8 @@ static MDFNSetting SSSettings[] =
  { "ss.slstart", MDFNSF_NOFLAGS, "First displayed scanline in NTSC mode.", NULL, MDFNST_INT, "0", "0", "239" },
  { "ss.slend", MDFNSF_NOFLAGS, "Last displayed scanline in NTSC mode.", NULL, MDFNST_INT, "239", "0", "239" },
 
- { "ss.slstartp", MDFNSF_NOFLAGS, "First displayed scanline in PAL mode.", NULL, MDFNST_INT, "0", "0", "255" },
- { "ss.slendp", MDFNSF_NOFLAGS, "Last displayed scanline in PAL mode.", NULL, MDFNST_INT, "255", "0", "255" },
+ { "ss.slstartp", MDFNSF_NOFLAGS, "First displayed scanline in PAL mode.", NULL, MDFNST_INT, "0", "-16", "271" },
+ { "ss.slendp", MDFNSF_NOFLAGS, "Last displayed scanline in PAL mode.", NULL, MDFNST_INT, "255", "-16", "271" },
 
  { "ss.midsync", MDFNSF_NOFLAGS, "Enable mid-frame synchronization.", "Mid-frame synchronization can reduce input latency, but it will increase CPU requirements.", MDFNST_BOOL, "0" },
 
