@@ -33,7 +33,7 @@
 #define MEDNAFEN_CORE_VERSION "v0.9.39.2"
 #define MEDNAFEN_CORE_EXTENSIONS "pce|cue|ccd"
 #define MEDNAFEN_CORE_TIMING_FPS 59.82
-#define MEDNAFEN_CORE_GEOMETRY_BASE_W 302
+#define MEDNAFEN_CORE_GEOMETRY_BASE_W 320
 #define MEDNAFEN_CORE_GEOMETRY_BASE_H 240
 #define MEDNAFEN_CORE_GEOMETRY_MAX_W 704
 #define MEDNAFEN_CORE_GEOMETRY_MAX_H 512
@@ -1852,7 +1852,7 @@ MDFNGI EmulatedSS =
  240,	// lcm_height
  NULL,  // Dummy
 
- 302,   // Nominal width
+ 320,   // Nominal width
  240,   // Nominal height
 
  0,   // Framebuffer width
