@@ -66,7 +66,16 @@
  TODO: Make sure RecalcPendingIntPEX() is called in all places it needs to be called(which is arguably too many...).
 */
 
+// Shouldn't enable instruction cache emulation until we resolve timestamp vs mem_timestamp issues
+// in regards to bus contention and time sharing, or else emulated dual-CPU programs will run slower
+// than they should and probably glitch out(and also until 5GHz desktop CPUs are the norm ;)).
 //#define SH7095_EMULATE_ICACHE
+
+#ifdef MSB_FIRST
+ #define NE32ASU8_IDX_ADJ(T, idx) (idx)
+#else
+ #define NE32ASU8_IDX_ADJ(T, idx) ( ((idx) & ~(sizeof(T) - 1)) ^ (4 - (sizeof(T))) )
+#endif
 
 SH7095::SH7095(const char* const name_arg, const unsigned event_id_dma_arg, uint8 (*exivecfn_arg)(void)) : event_id_dma(event_id_dma_arg), cpu_name(name_arg), ExIVecFetch(exivecfn_arg)
 {
@@ -1607,14 +1616,17 @@ static const int8 LRU_Replace_Tab[0x40] =
 
 static INLINE uint32 cmov_eq_thing(const uint32 reg_compval, const uint32 mem_compval, uint32 var, const uint32 repl_var)
 {
- #if 1
+ #ifdef ARCH_X86
  asm(	"cmpl %1, %2\n\t"
  	"cmove %3,%0\n\t"
  	: "+r"(var)
 	: "r"(reg_compval), "g"(mem_compval), "r"(repl_var)
 	: "cc");
  #else
- if(reg_compval == mem_compval) var = repl_var;
+    #ifdef __GNUC__
+       #warning "Conditional move inline assembly not being used."
+       #endif
+       var = ((reg_compval == mem_compval) ? repl_var : var);
  #endif
 
  return var;
@@ -1691,23 +1703,17 @@ INLINE T SH7095::MemReadRT(uint32 A)
 	  //
 	  //printf("Cache load line: %08x\n", A);
 	  cent->Tag[way_match] = ATM;
-	  for(unsigned i = 0; i < 16; i += 4)
-	  {
-	   unsigned di = (A + 4 + i) & 0xC;
-	   const uint32 read_address = (A &~ 0xF) + di;
-	   uint32 tmp;
-
-	   if(i == 0)
-	    tmp = ExtBusRead<uint32, false>(read_address);
-	   else
-	    tmp = ExtBusRead<uint32, true>(read_address);
-
-	   MDFN_ennsb<uint32, true>(&cent->Data[way_match][di], tmp);
-	  }
+     {
+        unsigned di = (A + 4 + 0) & 0xC; MDFN_ennsb<uint32, true>(&cent->Data[way_match][di], ExtBusRead<uint32, false>((A &~ 0xF) + di));
+     }
+     for(unsigned i = 4; i < 16; i += 4)
+     {
+        unsigned di = (A + 4 + i) & 0xC; MDFN_ennsb<uint32, true>(&cent->Data[way_match][di], ExtBusRead<uint32,  true>((A &~ 0xF) + di));
+     }
 	  timestamp = SH7095_mem_timestamp;
 	 }
 	 cent->LRU = (cent->LRU & LRU_Update_Tab[way_match].AND) | LRU_Update_Tab[way_match].OR;
-  	 return MDFN_densb<T, true>(&cent->Data[way_match][(A & 0x0F & ~(sizeof(T) - 1)) ^ (4 - (sizeof(T)))]);
+    return MDFN_densb<T, true>(&cent->Data[way_match][NE32ASU8_IDX_ADJ(T, A & 0x0F)]);
 	}
 	// Fall-through, no break here
   case 1:
@@ -1753,7 +1759,7 @@ INLINE T SH7095::MemReadRT(uint32 A)
 	 const unsigned way = (A >> 10) & 0x3;
 	 const unsigned ena = (A >> 4) & 0x3F;
 
-	 return MDFN_densb<T, true>(&Cache[ena].Data[way][(A & 0x0F & ~(sizeof(T) - 1)) ^ (4 - (sizeof(T)))]);
+    return MDFN_densb<T, true>(&Cache[ena].Data[way][NE32ASU8_IDX_ADJ(T, A & 0x0F)]);
 	}
 
   case 7:
@@ -1787,7 +1793,7 @@ INLINE void SH7095::Write_UpdateCache(uint32 A, T V)
  if(MDFN_LIKELY(way_match >= 0)) // Cache hit!
  {
   cent->LRU = (cent->LRU & LRU_Update_Tab[way_match].AND) | LRU_Update_Tab[way_match].OR;
-  MDFN_ennsb<T, true>(&cent->Data[way_match][(A & 0x0F & ~(sizeof(T) - 1)) ^ (4 - (sizeof(T)))], V);	// Ignore CCR OD bit here.
+  MDFN_ennsb<T, true>(&cent->Data[way_match][NE32ASU8_IDX_ADJ(T, A & 0x0F)], V);	// Ignore CCR OD bit here.
  }
 }
 
@@ -1851,7 +1857,7 @@ INLINE void SH7095::MemWriteRT(uint32 A, T V)
 	 const unsigned way = (A >> 10) & 0x3;
 	 const unsigned ena = (A >> 4) & 0x3F;
 
-	 MDFN_ennsb<T, true>(&Cache[ena].Data[way][(A & 0x0F & ~(sizeof(T) - 1)) ^ (4 - (sizeof(T)))], V);
+    MDFN_ennsb<T, true>(&Cache[ena].Data[way][NE32ASU8_IDX_ADJ(T, A & 0x0F)], V);
 	}
 	return;
 

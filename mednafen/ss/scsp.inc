@@ -1479,6 +1479,80 @@ INLINE void SS_SCSP::RunSample(int16* outlr)
  out_accum[0] = (out_accum[0] * MasterVolume) >> 8;
  out_accum[1] = (out_accum[1] * MasterVolume) >> 8;
 
- outlr[0] = std::min<int32>(32767, std::max<int32>(-32768, out_accum[0]));
- outlr[1] = std::min<int32>(32767, std::max<int32>(-32768, out_accum[1]));
+  out_accum[0] = std::min<int32>(32767, std::max<int32>(-32768, out_accum[0]));
+ out_accum[1] = std::min<int32>(32767, std::max<int32>(-32768, out_accum[1]));
+
+ if(DAC18bit)
+ {
+  // Doesn't seem to improve precision.  Remember
+  // to extend the outlr[] types if this SCSP emulator is used
+  // in a system that actually has an 18-bit DAC.
+  out_accum[0] = (uint32)out_accum[0] << 2;
+  out_accum[1] = (uint32)out_accum[1] << 2;
+ }
+
+ outlr[0] = out_accum[0];
+ outlr[1] = out_accum[1];
+}
+
+uint32 SS_SCSP::GetRegister(const unsigned id, char* const special, const uint32 special_len)
+{
+ uint32 ret = 0xDEADBEEF;
+
+ switch(id)
+ {
+  case GSREG_MVOL:
+	ret = MVOL;
+	break;
+
+  case GSREG_DAC18B:
+	ret = DAC18bit;
+	break;
+
+  case GSREG_MEM4MB:
+	ret = Mem4Mb;
+	break;
+
+  case GSREG_RBP:
+	ret = RBP;
+	break;
+
+  case GSREG_RBL:
+	ret = RBL;
+	break;
+
+  case GSREG_MSLC:
+	ret = SlotMonitorWhich;
+	break;
+ }
+
+ return ret;
+ }
+
+void SS_SCSP::SetRegister(const unsigned id, const uint32 value)
+{
+ switch(id)
+ {
+  //case GSREG_MVOL: MVOL = value & 0xF; // TODO cache
+
+  case GSREG_DAC18B:
+	DAC18bit = value & 1;
+	break;
+
+  case GSREG_MEM4MB:
+	Mem4Mb = value & 1;
+	break;
+
+  case GSREG_RBP:
+	RBP = value & 0x7F;
+	break;
+
+  case GSREG_RBL:
+	RBL = value & 0x3;
+	break;
+
+  case GSREG_MSLC:
+	SlotMonitorWhich = value & 0x1F;
+	break;
+ }
 }

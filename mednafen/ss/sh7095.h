@@ -196,7 +196,7 @@ class SH7095 final
   // in the upper bit of the Tag variables.
   uint32 Tag[4];
   uint8 LRU;
-  uint8 Data[4][16];
+  alignas(uint32) uint8 Data[4][16];
  } Cache[64];
 
  uint8 CCR;

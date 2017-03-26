@@ -497,7 +497,9 @@ enum
  DRIVEPHASE_SEEK,
  DRIVEPHASE_SCAN,
 
- DRIVEPHASE_EJECTED,
+ DRIVEPHASE_EJECTED0,
+ DRIVEPHASE_EJECTED1,
+ DRIVEPHASE_EJECTED_WAITING,
  DRIVEPHASE_STARTUP,
 
  DRIVEPHASE_RESETTING
@@ -1227,7 +1229,7 @@ void CDB_SetDisc(bool tray_open, CDIF *cdif)
   if(DrivePhase != DRIVEPHASE_RESETTING)
   {
    AuthDiscType = 0x00;
-   DrivePhase = DRIVEPHASE_EJECTED;
+   DrivePhase = DRIVEPHASE_EJECTED0;
    DriveCounter = (int64)1000 << 32;
   }
  }
@@ -1578,7 +1580,7 @@ static void Drive_Run(int64 clocks)
   {
    switch(DrivePhase)
    {
-    case DRIVEPHASE_EJECTED:
+    case DRIVEPHASE_EJECTED0:
 	memset(TOC_Buffer, 0xFF, sizeof(TOC_Buffer));	// TODO: confirm 0xFF(or 0x00?)
 
 	// TODO: Check DrivePhase and these vars in command processing.
@@ -1593,13 +1595,28 @@ static void Drive_Run(int64 clocks)
 	CurPosInfo.ctrl_adr = 0xFF;
 	CurPosInfo.idx = 0xFF;
 	CurPosInfo.tno = 0xFF;
+   TriggerIRQ(HIRQ_DCHG);
+
+   DrivePhase = DRIVEPHASE_EJECTED1;
+   DriveCounter = (int64)4000 << 32;
+   break;
+
+    case DRIVEPHASE_EJECTED1:
+   TriggerIRQ(HIRQ_EFLS);
+   DrivePhase = DRIVEPHASE_EJECTED_WAITING;
+   DriveCounter = (int64)1 << 32;
+   break;
+
+    case DRIVEPHASE_EJECTED_WAITING:
 
 	if(Cur_CDIF)
 	{
          CurPosInfo.status = STATUS_BUSY;
 	 DrivePhase = DRIVEPHASE_STARTUP;
+    DriveCounter = (int64)(1 * 44100 * 256) << 32;
 	}
-	DriveCounter = (int64)(1 * 44100 * 256) << 32;
+   else
+	 DriveCounter = (int64)1000 << 32;
 	break;
 
     case DRIVEPHASE_STARTUP:
@@ -3414,10 +3431,16 @@ sscpu_timestamp_t CDB_Update(sscpu_timestamp_t timestamp)
     PlayRepeatCounter = 0;
 
     DriveCounter = (int64)1000 << 32;
-    DrivePhase = DRIVEPHASE_EJECTED;
+    DrivePhase = DRIVEPHASE_EJECTED_WAITING;
+
+    memset(TOC_Buffer, 0xFF, sizeof(TOC_Buffer));	// TODO: confirm 0xFF(or 0x00?)
+
     AuthDiscType = 0x00;
+    FileInfoValid = false;
+    RootDirInfoValid = false;
     PeriodicIdleCounter = PeriodicIdleCounter_Reload;
 
+    CurPosInfo.status = STATUS_OPEN;
     CurPosInfo.is_cdrom = false;
     CurPosInfo.fad = 0xFFFFFF;
     CurPosInfo.rel_fad = 0xFFFFFF;

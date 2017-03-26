@@ -42,6 +42,19 @@ class SS_SCSP
   return RAM;
  }
 
+ enum
+ {
+  GSREG_MVOL = 0,
+  GSREG_DAC18B,
+  GSREG_MEM4MB,
+  GSREG_RBP,
+  GSREG_RBL,
+  GSREG_MSLC,
+ };
+
+ uint32 GetRegister(const unsigned id, char* const special, const uint32 special_len) MDFN_COLD;
+ void SetRegister(const unsigned id, const uint32 value) MDFN_COLD;
+
  private:
 
  void RecalcSoundInt(void);

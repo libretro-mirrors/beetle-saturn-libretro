@@ -79,6 +79,7 @@ MDFNGI *MDFNGameInfo = &EmulatedSS;
 
 #include "mednafen/ss/ss.h"
 #include "mednafen/ss/sound.h"
+#include "mednafen/ss/scsp.h"
 #include "mednafen/ss/smpc.h"
 #include "mednafen/ss/cdb.h"
 #include "mednafen/ss/vdp1.h"

@@ -40,6 +40,9 @@
 
 static EmulateSpecStruct* espec = NULL;
 static bool PAL;
+static bool CorrectAspect;
+static bool ShowHOverscan;
+static bool DoHBlend;
 static int LineVisFirst, LineVisLast;
 static uint32 OutLineCounter;
 static bool Clock28M;
@@ -1378,7 +1381,7 @@ static NO_INLINE void ApplyHMosaic(const unsigned layer, uint64* buf, const unsi
 
 static void FetchVCScroll(const unsigned w)
 {
- const bool vcon[2] = { (bool)(SCRCTL & BGON & !(MZCTL & 0x1)), (bool)((SCRCTL >> 8) & (BGON >> 1) & (!(MZCTL >> 1)) & 0x1) };
+   const bool vcon[2] = { (bool)(SCRCTL & BGON & !(MZCTL & 0x1)), (bool)((SCRCTL >> 8) & (BGON >> 1) & !(MZCTL & 0x2) & 0x1) };
  const unsigned max_cyc = (HRes & 0x6) ? 4 : 8;
  const unsigned tc = (w >> 3) + 1;
  uint32 tmp[2] = { VCLast[0], VCLast[1] };
@@ -2319,20 +2322,6 @@ static void (*DrawSpriteData[2][2][0x40])(const uint16* vdp1sb, const bool vdp1_
  }
 };
 
-static INLINE unsigned bsr64(uint64 val)
-{
-#ifdef _MSC_VER
-   unsigned long ret;
-   _BitScanReverse64(&ret, val);
-#else
-   uint64 ret;
-
-   asm("bsrq %1, %0\n\t" : "=r"(ret) : "r"(val) : "cc");
-
-   return ret;
-#endif
-}
-
 // Don't change these constants without also updating the template variable
 // setup for the call into MixIt(and the contents of MixIt itself...).
 enum
@@ -2406,14 +2395,14 @@ static void T_MixIt(uint32* target, const unsigned vdp2_line, const unsigned w, 
   pt |= 0x20ULL << (uint8)(tmp_pix[5] >> PIX_PRIO_TEST_SHIFT);
   pt |= 0xC0ULL; // Back pixel(0x80) and null pixel(0x40)
 
-  st = bsr64(pt);
+  st = 63 ^ MDFN_lzcount64_0UD(pt);
   pt ^= 1ULL << st;
   pt |= 0x40;	// Restore the null!
   pix = tmp_pix[st & 0x7];
 
   if(pix & (1U << PIX_DOSHAD_SHIFT))
   {
-   st = bsr64(pt);
+   st = 63 ^ MDFN_lzcount64_0UD(pt);
    pt ^= 1ULL << st;
    pt |= 0x40;	// Restore the null!
    pix = tmp_pix[st & 0x7];
@@ -2437,12 +2426,12 @@ static void T_MixIt(uint32* target, const unsigned vdp2_line, const unsigned w, 
   {
    uint64 pix2, pix3;
 
-   st = bsr64(pt);
+   st = 63 ^ MDFN_lzcount64_0UD(pt);
    pt ^= 1ULL << st;
    pt |= 0x40;	// Restore the null!
    pix2 = tmp_pix[st & 0x7];
 
-   st = bsr64(pt);
+   st = 63 ^ MDFN_lzcount64_0UD(pt);
    pt ^= 1ULL << st;
    pt |= 0x40;	// Restore the null!
    pix3 = tmp_pix[st & 0x7];
@@ -2572,6 +2561,62 @@ static void (*MixIt[2][6][2][2])(uint32* target, const unsigned vdp2_line, const
  {  {  { T_MixIt<1, 0, 0, 0>, T_MixIt<1, 0, 0, 1>,  },  { T_MixIt<1, 0, 1, 0>, T_MixIt<1, 0, 1, 1>,  },  },  {  { T_MixIt<1, 1, 0, 0>, T_MixIt<1, 1, 0, 1>,  },  { T_MixIt<1, 1, 1, 0>, T_MixIt<1, 1, 1, 1>,  },  },  {  { T_MixIt<1, 2, 0, 0>, T_MixIt<1, 2, 0, 1>,  },  { T_MixIt<1, 2, 1, 0>, T_MixIt<1, 2, 1, 1>,  },  },  {  { T_MixIt<1, 3, 0, 0>, T_MixIt<1, 3, 0, 1>,  },  { T_MixIt<1, 3, 1, 0>, T_MixIt<1, 3, 1, 1>,  },  },  {  { T_MixIt<1, 4, 0, 0>, T_MixIt<1, 4, 0, 1>,  },  { T_MixIt<1, 4, 1, 0>, T_MixIt<1, 4, 1, 1>,  },  },  {  { T_MixIt<1, 5, 0, 0>, T_MixIt<1, 5, 0, 1>,  },  { T_MixIt<1, 5, 1, 0>, T_MixIt<1, 5, 1, 1>,  },  },  },
 };
 
+static int32 ApplyHBlend(uint32* const target, int32 w)
+{
+ #define BHALF(m, n) ((((uint64)(m) + (n)) - (((m) ^ (n)) & 0x01010101)) >> 1)
+
+ assert(w >= 4);
+
+#if 1
+ if(!(HRes & 0x2))
+ {
+  target[(w - 1) * 2 + 1] = target[w - 1];
+  target[(w - 1) * 2 + 0] = BHALF(BHALF(target[w - 2], target[w - 1]), target[w - 1]);
+
+  for(int32 x = w - 2; x > 0; x--)
+  {
+   uint32 ptxm1 = target[x - 1];
+   uint32 ptx = target[x];
+   uint32 ptxp1 = target[x + 1];
+   uint32 ptxm1_ptx = BHALF(ptxm1, ptx);
+   uint32 ptx_ptxp1 = BHALF(ptx, ptxp1);
+
+   target[x * 2 + 0] = BHALF(ptxm1_ptx, ptx);
+   target[x * 2 + 1] = BHALF(ptx_ptxp1, ptx);
+  }
+
+  target[1] = BHALF(BHALF(target[0], target[1]), target[0]);
+  target[0] = target[0];
+
+  return w << 1;
+ }
+ else
+#else
+ if(!(HRes & 0x2))
+ {
+  for(int32 x = w - 1; x >= 0; x--)
+   target[x * 2 + 0] = target[x * 2 + 1] = target[x];
+
+  w <<= 1;
+ }
+#endif
+ {
+  uint32 a = target[0];
+  for(int32 x = 0; x < w - 1; x++)
+  {
+   uint32 b = target[x];
+   uint32 c = target[x + 1];
+   uint32 ac = BHALF(a, c);
+   uint32 bac = BHALF(b, ac);
+
+   target[x] = bac;
+   a = b;
+  }
+  return w;
+ }
+ #undef BHALF
+}
+
 static void ReorderRGB(uint32* target, const unsigned w, const unsigned Rshift, const unsigned Gshift, const unsigned Bshift)
 {
  assert(!(w & 1));
@@ -2597,7 +2642,7 @@ static void ReorderRGB(uint32* target, const unsigned w, const unsigned Rshift, 
 static NO_INLINE void DrawLine(const uint16 out_line, const uint16 vdp2_line, const bool field)
 {
  uint32* target;
- const int32 tvdw = (Clock28M ? 352 : 330) << ((HRes & 0x2) >> 1);
+ const int32 tvdw = ((!CorrectAspect || Clock28M) ? 352 : 330) << ((HRes & 0x2) >> 1);
  const unsigned rbg_w = ((HRes & 0x1) ? 352 : 320);
  const unsigned w = ((HRes & 0x1) ? 352 : 320) << ((HRes & 0x2) >> 1);
  const int32 tvxo = std::max<int32>(0, (int32)(tvdw - w) >> 1);
@@ -2607,6 +2652,20 @@ static NO_INLINE void DrawLine(const uint16 out_line, const uint16 vdp2_line, co
  target = espec->surface->pixels + out_line * espec->surface->pitchinpix;
 
  espec->LineWidths[out_line] = tvdw;
+
+ if(!ShowHOverscan)
+ {
+    const int32 ntdw = tvdw * 1024 / 1056;
+    const int32 tadj = std::max<int32>(0, espec->DisplayRect.x - ((tvdw - ntdw) >> 1));
+
+    //if(out_line == 100)
+    // printf("tvdw=%d, ntdw=%d, tadj=%d --- tvdw+tadj=%d\n", tvdw, ntdw, tadj, tvdw + tadj);
+
+    assert((tvdw + tadj) <= 704);
+
+    target += tadj;
+    espec->LineWidths[out_line] = ntdw;
+ }
 
  //
  // FIXME: Timing
@@ -3062,6 +3121,17 @@ static NO_INLINE void DrawLine(const uint16 out_line, const uint16 vdp2_line, co
   else
    MosaicVCount++;
  }
+
+ //
+ //
+ //
+ if(DoHBlend)
+ {
+  espec->LineWidths[out_line] = ApplyHBlend(espec->surface->pixels + out_line * espec->surface->pitchinpix + espec->DisplayRect.x, espec->LineWidths[out_line]);
+
+  // Kind of late, but meh. ;p
+  assert((espec->DisplayRect.x + espec->LineWidths[out_line]) <= 704);
+ }
 }
 
 //
@@ -3203,19 +3273,28 @@ void VDP2REND_FillVideoParams(MDFNGI* gi)
 
  if(PAL)
  {
-   gi->nominal_width = 365;
+   gi->nominal_width = (ShowHOverscan ? 365 : 354);
    gi->fb_height = 576;
  }
  else
  {
-  gi->nominal_width = 302;
+  gi->nominal_width = (ShowHOverscan ? 302 : 292);
   gi->fb_height = 480;
  }
 
  gi->nominal_height = LineVisLast + 1 - LineVisFirst;
 
- gi->lcm_width = 10560;
+ gi->lcm_width = (ShowHOverscan? 10560 : 10240);
  gi->lcm_height = (LineVisLast + 1 - LineVisFirst) * 2;
+
+ //
+ //
+ //
+ if(!CorrectAspect)
+ {
+  gi->nominal_width = (ShowHOverscan ? 352 : 341);
+  gi->lcm_width = gi->nominal_width * 2;
+ }
 }
 
 void VDP2REND_Kill(void)
@@ -3243,7 +3322,7 @@ void VDP2REND_StartFrame(EmulateSpecStruct* espec_arg, const bool clock28m, cons
  else
   espec->InterlaceOn = false;
 
- espec->DisplayRect.x = 0;
+ espec->DisplayRect.x = (ShowHOverscan ? 0 : 10);
  espec->DisplayRect.y = LineVisFirst << espec->InterlaceOn;
  espec->DisplayRect.w = 0;
  espec->DisplayRect.h = (LineVisLast + 1 - LineVisFirst) << espec->InterlaceOn;

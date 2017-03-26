@@ -322,6 +322,10 @@ static NO_INLINE void GeneralInstr(void)
  //
  // FIXME: Will only work when running on little endian platforms!
  //
+ #ifdef MSB_FIRST
+ ct_inc = MDFN_bswap32(ct_inc);
+ #endif
+
  if(x_op >= 0x3 || y_op >= 0x3 || (d1_op & 0x1))
   DSP.CT32 = (DSP.CT32 + ct_inc) & 0x3F3F3F3F;
 }

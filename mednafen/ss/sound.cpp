@@ -318,6 +318,16 @@ static void SoundCPU_BusRESET(bool state)
  }
 }
 
+uint32 SOUND_GetSCSPRegister(const unsigned id, char* const special, const uint32 special_len)
+{
+ return SCSP.GetRegister(id, special, special_len);
+}
+
+void SOUND_SetSCSPRegister(const unsigned id, const uint32 value)
+{
+ SCSP.SetRegister(id, value);
+}
+
 #ifdef MDFN_SSFPLAY_COMPILE
 }
 #endif

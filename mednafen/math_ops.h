@@ -61,6 +61,43 @@ static INLINE unsigned MDFN_lzcount32(uint32 v)
  #endif
 }
 
+static INLINE unsigned MDFN_lzcount64_0UD(uint64 v)
+{
+ #if defined(__GNUC__) || defined(__clang__) || defined(__ICC) || defined(__INTEL_COMPILER)
+ return __builtin_clzll(v);
+ #elif defined(_MSC_VER)
+  #if defined(_WIN64)
+   unsigned long idx;
+   _BitScanReverse64(&idx, v);
+   return 63 ^ idx;
+  #else
+   unsigned long idx0;
+   unsigned long idx1;
+
+   _BitScanReverse(&idx1, v >> 0);
+   idx1 -= 32;
+   if(!_BitScanReverse(&idx0, v >> 32))
+    idx0 = idx1;
+
+   idx0 += 32;
+
+   return 63 ^ idx0;
+  #endif
+ #else
+ unsigned ret = 0;
+ unsigned tmp;
+
+ tmp = !(v & 0xFFFFFFFF00000000ULL) << 5; v <<= tmp; ret += tmp;
+ tmp = !(v & 0xFFFF000000000000ULL) << 4; v <<= tmp; ret += tmp;
+ tmp = !(v & 0xFF00000000000000ULL) << 3; v <<= tmp; ret += tmp;
+ tmp = !(v & 0xF000000000000000ULL) << 2; v <<= tmp; ret += tmp;
+ tmp = !(v & 0xC000000000000000ULL) << 1; v <<= tmp; ret += tmp;
+ tmp = !(v & 0x8000000000000000ULL) << 0;            ret += tmp;
+
+ return(ret);
+ #endif
+}
+
 // Source: http://graphics.stanford.edu/~seander/bithacks.html#RoundUpPowerOf2
 // Rounds up to the nearest power of 2.
 static INLINE uint32 round_up_pow2(uint32 v)
