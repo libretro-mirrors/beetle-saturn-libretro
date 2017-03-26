@@ -157,6 +157,13 @@ struct InputDeviceInfoStruct
  const char *Description;
 
  const IDIISG& IDII;
+
+ unsigned Flags;
+
+ enum
+ {
+  FLAG_KEYBOARD = (1U << 0)
+ };
 };
 
 struct InputPortInfoStruct

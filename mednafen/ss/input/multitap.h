@@ -1,8 +1,8 @@
 /******************************************************************************/
 /* Mednafen Sega Saturn Emulation Module                                      */
 /******************************************************************************/
-/* 3dpad.h:
-**  Copyright (C) 2016-2017 Mednafen Team
+/* multitap.h:
+**  Copyright (C) 2017 Mednafen Team
 **
 ** This program is free software; you can redistribute it and/or
 ** modify it under the terms of the GNU General Public License
@@ -19,33 +19,37 @@
 ** 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 */
 
-#ifndef __MDFN_SS_INPUT_3DPAD_H
-#define __MDFN_SS_INPUT_3DPAD_H
+#ifndef __MDFN_SS_INPUT_MULTITAP_H
+#define __MDFN_SS_INPUT_MULTITAP_H
 
-class IODevice_3DPad final : public IODevice
+class IODevice_Multitap final : public IODevice
 {
  public:
- IODevice_3DPad();
- virtual ~IODevice_3DPad() override;
+ IODevice_Multitap();
+ virtual ~IODevice_Multitap() override;
 
  virtual void Power(void) override;
- virtual void UpdateInput(const uint8* data, const int32 time_elapsed) override;
  virtual void StateAction(StateMem* sm, const unsigned load, const bool data_only, const char* sname_prefix) override;
 
  virtual uint8 UpdateBus(const uint8 smpc_out, const uint8 smpc_out_asserted) override;
 
- private:
- uint16 dbuttons;
- uint8 thumb[2];
- uint8 shoulder[2];
+ void SetSubDevice(unsigned sub_index, IODevice* device);
+ IODevice* GetSubDevice(unsigned sub_index);
 
- uint8 buffer[0x10];
+ private:
+
+ uint8 UASB(void);
+
+ IODevice* devices[6];
+ uint8 sub_state[6];
+ uint8 tmp[4];
+ uint8 id1;
+ uint8 id2;
  uint8 data_out;
  bool tl;
- int8 phase;
- bool mode;
+ int32 phase;
+ uint8 port_counter;
+ uint8 read_counter;
 };
-
-extern IDIISG IODevice_3DPad_IDII;
 
 #endif

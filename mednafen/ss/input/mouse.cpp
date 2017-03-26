@@ -2,7 +2,7 @@
 /* Mednafen Sega Saturn Emulation Module                                      */
 /******************************************************************************/
 /* mouse.cpp:
-**  Copyright (C) 2016 Mednafen Team
+**  Copyright (C) 2016-2017 Mednafen Team
 **
 ** This program is free software; you can redistribute it and/or
 ** modify it under the terms of the GNU General Public License
@@ -41,7 +41,7 @@ void IODevice_Mouse::Power(void)
  accum_ydelta = 0;
 }
 
-void IODevice_Mouse::UpdateInput(const uint8* data)
+void IODevice_Mouse::UpdateInput(const uint8* data, const int32 time_elapsed)
 {
  accum_xdelta += MDFN_de32lsb(&data[0]);
  accum_ydelta -= MDFN_de32lsb(&data[4]);

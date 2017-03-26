@@ -99,7 +99,11 @@ ifneq ($(HAVE_GRIFFIN), 1)
 	$(CORE_EMU_DIR)/smpc.cpp \
 	$(CORE_EMU_DIR)/input/gamepad.cpp \
 	$(CORE_EMU_DIR)/input/3dpad.cpp \
-	$(CORE_EMU_DIR)/input/mouse.cpp
+	$(CORE_EMU_DIR)/input/mouse.cpp \
+	$(CORE_EMU_DIR)/input/multitap.cpp \
+	$(CORE_EMU_DIR)/input/mission.cpp \
+	$(CORE_EMU_DIR)/input/keyboard.cpp \
+	$(CORE_EMU_DIR)/input/wheel.cpp
 
 SOURCES_CXX += $(MEDNAFEN_DIR)/hw_cpu/m68k/m68k.cpp
 

@@ -2,7 +2,7 @@
 /* Mednafen Sega Saturn Emulation Module                                      */
 /******************************************************************************/
 /* 3dpad.cpp:
-**  Copyright (C) 2016 Mednafen Team
+**  Copyright (C) 2016-2017 Mednafen Team
 **
 ** This program is free software; you can redistribute it and/or
 ** modify it under the terms of the GNU General Public License
@@ -39,7 +39,7 @@ void IODevice_3DPad::Power(void)
  data_out = 0x01;
 }
 
-void IODevice_3DPad::UpdateInput(const uint8* data)
+void IODevice_3DPad::UpdateInput(const uint8* data, const int32 time_elapsed)
 {
  const uint16 dtmp = MDFN_de16lsb(&data[0]);
 

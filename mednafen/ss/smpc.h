@@ -2,7 +2,7 @@
 /* Mednafen Sega Saturn Emulation Module                                      */
 /******************************************************************************/
 /* smpc.h:
-**  Copyright (C) 2015-2016 Mednafen Team
+**  Copyright (C) 2015-2017 Mednafen Team
 **
 ** This program is free software; you can redistribute it and/or
 ** modify it under the terms of the GNU General Public License
@@ -68,8 +68,10 @@ sscpu_timestamp_t SMPC_Update(sscpu_timestamp_t timestamp);
 void SMPC_ResetTS(void);
 
 int32 SMPC_StartFrame(EmulateSpecStruct* espec);
-void SMPC_UpdateInput(void);
+void SMPC_UpdateInput(const int32 time_elapsed);
+void SMPC_UpdateOutput(void);
 void SMPC_SetInput(unsigned port, const char* type, uint8* ptr);
+void SMPC_SetMultitap(unsigned sport, bool enabled);
 
 void SMPC_SetVB(sscpu_timestamp_t event_timestamp, bool vb_status);
 
@@ -81,7 +83,13 @@ class IODevice
  virtual ~IODevice();
 
  virtual void Power(void);
- virtual void UpdateInput(const uint8* data);
+
+ //
+ // time_elapsed is emulated time elapsed since last call to UpdateInput(), in microseconds;
+ // it's mostly for keyboard emulation, to keep the implementation from becoming unnecessarily complex.
+ //
+ virtual void UpdateInput(const uint8* data, const int32 time_elapsed);
+ virtual void UpdateOutput(uint8* data);
  virtual void StateAction(StateMem* sm, const unsigned load, const bool data_only, const char* sname_prefix);
  virtual uint8 UpdateBus(const uint8 smpc_out, const uint8 smpc_out_asserted);
 };

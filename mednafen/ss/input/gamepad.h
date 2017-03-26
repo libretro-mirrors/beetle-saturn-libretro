@@ -2,7 +2,7 @@
 /* Mednafen Sega Saturn Emulation Module                                      */
 /******************************************************************************/
 /* gamepad.h:
-**  Copyright (C) 2015-2016 Mednafen Team
+**  Copyright (C) 2015-2017 Mednafen Team
 **
 ** This program is free software; you can redistribute it and/or
 ** modify it under the terms of the GNU General Public License
@@ -29,7 +29,7 @@ class IODevice_Gamepad final : public IODevice
  virtual ~IODevice_Gamepad() override;
 
  virtual void Power(void) override;
- virtual void UpdateInput(const uint8* data) override;
+ virtual void UpdateInput(const uint8* data, const int32 time_elapsed) override;
  virtual void StateAction(StateMem* sm, const unsigned load, const bool data_only, const char* sname_prefix) override;
 
  virtual uint8 UpdateBus(const uint8 smpc_out, const uint8 smpc_out_asserted) override;

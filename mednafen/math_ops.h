@@ -98,6 +98,9 @@ static INLINE unsigned MDFN_lzcount64_0UD(uint64 v)
  #endif
 }
 
+static INLINE unsigned MDFN_lzcount64(uint64 v) { return !v ? 64 : MDFN_lzcount64_0UD(v); }
+
+
 // Source: http://graphics.stanford.edu/~seander/bithacks.html#RoundUpPowerOf2
 // Rounds up to the nearest power of 2.
 static INLINE uint32 round_up_pow2(uint32 v)
