@@ -30,8 +30,8 @@
 
 #define MEDNAFEN_CORE_NAME_MODULE "ss"
 #define MEDNAFEN_CORE_NAME "Mednafen Saturn"
-#define MEDNAFEN_CORE_VERSION "v0.9.41"
-#define MEDNAFEN_CORE_EXTENSIONS "pce|cue|ccd"
+#define MEDNAFEN_CORE_VERSION "v0.9.42"
+#define MEDNAFEN_CORE_EXTENSIONS "cue|ccd"
 #define MEDNAFEN_CORE_TIMING_FPS 59.82
 #define MEDNAFEN_CORE_GEOMETRY_BASE_W 320
 #define MEDNAFEN_CORE_GEOMETRY_BASE_H 240
@@ -198,10 +198,19 @@ static INLINE void BusRW(uint32 A, T& V, const bool BurstHax, int32* SH2DMAHax)
 
   if(!BurstHax)
   {
-   if(!SH2DMAHax)
-    SH7095_mem_timestamp += IsWrite ? 4 : 7;
-   else
-    *SH2DMAHax -= IsWrite ? 3 : 6;
+     if(!SH2DMAHax)
+     {
+        if(IsWrite)
+        {
+           SH7095_mem_timestamp = (SH7095_mem_timestamp + 4) &~ 3;
+        }
+        else
+        {
+           SH7095_mem_timestamp += 7;
+        }
+     }
+     else
+        *SH2DMAHax -= IsWrite ? 3 : 6;
   }
 
   return;
@@ -339,7 +348,7 @@ static INLINE void BusRW(uint32 A, T& V, const bool BurstHax, int32* SH2DMAHax)
    else
     *SH2DMAHax -= 8;
 
-   //printf("FT FRT %zu %08x %04x %d\n", sizeof(T), A, V, SMPC_IsSlaveOn());
+   //printf("FT FRT%08x %zu %08x %04x %d %d\n", A, sizeof(T), A, V, SMPC_IsSlaveOn(), SH7095_mem_timestamp);
 
    if(IsWrite)
    {

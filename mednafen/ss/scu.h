@@ -51,6 +51,8 @@ void SCU_Reset(bool powering_up) MDFN_COLD;
 void SCU_SetInt(unsigned which, bool active);
 int32 SCU_SetHBVB(int32 pclocks, bool hblank_in, bool vblank_in);
 
+bool SCU_CheckVDP1HaltKludge(void);
+
 sscpu_timestamp_t SCU_UpdateDMA(sscpu_timestamp_t timestamp);
 sscpu_timestamp_t SCU_UpdateDSP(sscpu_timestamp_t timestamp);
 

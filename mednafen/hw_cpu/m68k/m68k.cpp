@@ -153,7 +153,7 @@ INLINE void M68K::RecalcInt(void)
 {
  XPending &= ~XPENDING_MASK_INT;
 
- if(IPL == 0x7 || IPL > (SRHB & 0x7))
+ if(IPL > (SRHB & 0x7))
   XPending |= XPENDING_MASK_INT;
 }
 

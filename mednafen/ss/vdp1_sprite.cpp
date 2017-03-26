@@ -256,6 +256,9 @@ static INLINE int32 SpriteBase(const uint16* cmd_data)
  e[1].Setup(p[1], p[2], dmax);
 
  tex_base = cmd_data[0x4] << 2;
+ if(cm == 5) // RGB
+    tex_base &= ~0x7;
+
  {
   const bool v_inv = dir & 2;
   int32 tv[2];

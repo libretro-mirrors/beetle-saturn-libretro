@@ -126,6 +126,8 @@ static sscpu_timestamp_t SCU_DMA_TimeCounter;
 static sscpu_timestamp_t SCU_DMA_RunUntil;
 static int32 SCU_DMA_ReadOverhead;	// range -whatever to 0.
 
+static uint32 SCU_DMA_VDP1WriteIgnoreKludge;
+
 static void RecalcDMAHalt(void);
 static void CheckDMAStart(DMALevelS* d);
 static void CheckDMASFByInt(unsigned int_which);
@@ -139,7 +141,6 @@ static uint32 ABusIProhibit;
 static bool RSEL;
 
 static uint8 ILevel, IVec;
-static uint32 IClearMask;
 
 static INLINE void RecalcMasterIntOut(void)
 {
@@ -178,8 +179,8 @@ static INLINE void RecalcMasterIntOut(void)
   {
    ILevel = olev;
    IVec = ovec;
-   IClearMask = 1U << bpos;
 
+   IPending &= ~(1U << bpos);
    //SS_DBGTI(SS_DBG_ERROR, "[SCU] Interrupt level=0x%02x, vector=0x%02x --- IPending=0x%04x", ILevel, IVec, IPending);
   }
  }
@@ -216,8 +217,6 @@ static uint8 SCU_MSH2VectorFetch(void)
  if(MDFN_UNLIKELY(IVec == 0x40 /* || IVec == 0x41 */))	// VB In, apply cheats.
   MDFNMP_ApplyPeriodicCheats();
 
- IPending &= ~IClearMask;
- //IMask |= IClearMask;
  IMask = 0xBFFF;
 
  ILevel = 0;
@@ -348,7 +347,7 @@ static void SCU_Init(void)
 
 void SCU_Reset(bool powering_up)
 {
- ILevel = IVec = IClearMask = 0;
+ ILevel = IVec = 0;
  IMask = 0xBFFF;
  IPending = 0;
  ABusIProhibit = 0;
@@ -372,6 +371,8 @@ void SCU_Reset(bool powering_up)
   d.SF = 0;
  }
  SCU_DMA_ReadOverhead = 0;
+
+ SCU_DMA_VDP1WriteIgnoreKludge = 0;
 
  RecalcDMAHalt();
 
@@ -771,6 +772,21 @@ static INLINE void BBusRW_DB(uint32 A, uint16* DB, int32* time_thing, int32* dma
   if(dma_time_thing != NULL)
   {
    *dma_time_thing -= 1;
+
+   if(IsWrite)
+   {
+      if(MDFN_UNLIKELY(A >= 0x05D00000))
+      {
+         const bool ignore_write = (A >= 0x5D00004 && SCU_DMA_VDP1WriteIgnoreKludge > 0) | (SCU_DMA_VDP1WriteIgnoreKludge & 0x1);
+
+         SCU_DMA_VDP1WriteIgnoreKludge++;
+         if(ignore_write)
+         return;
+         //printf("%08x %04x\n", A, *DB);
+      }
+      else
+         SCU_DMA_VDP1WriteIgnoreKludge = 0;
+   }
   }
 
   if(time_thing != NULL)
@@ -1216,11 +1232,13 @@ static bool StartDMATransfer(DMALevelS* d, const uint32 ra, const uint32 wa, con
 {
  int rb, wb;
 
+ SCU_DMA_VDP1WriteIgnoreKludge = 0;
+
  rb = AddressToBus(ra);
  wb = AddressToBus(wa);
 
 #ifdef HAVE_DEBUG
- SS_DBG(SS_DBG_SCU, "[SCU] Starting DMA level %d transfer; ra=0x%08x wa=0x%08x bc=0x%08x - read_inc=%d, write_inc=0x%02x -- indirect=%d %d\n", (int)(d - DMALevel), ra, wa, bc, d->ReadAdd, d->WriteAdd, d->Indirect, d->SF);
+ SS_DBGTI(SS_DBG_SCU, "[SCU] Starting DMA level %d transfer; ra=0x%08x wa=0x%08x bc=0x%08x - read_inc=%d write_inc=0x%01x - indirect=%d %d", (int)(d - DMALevel), ra, wa, bc, d->ReadAdd, d->WriteAdd, d->Indirect, d->SF);
 #endif
 
  if(MDFN_UNLIKELY(rb == -1))
@@ -1302,6 +1320,28 @@ static bool NextIndirect(DMALevelS* d)
   tmp[0] = 0x100000;
 
  return StartDMATransfer(d, tmp[2] & 0x07FFFFFF, tmp[1] & 0x07FFFFFF, tmp[0]);
+}
+
+bool SCU_CheckVDP1HaltKludge(void)
+{
+ bool ret = false;
+
+ for(int level = 2; level >= 0; level--)
+ {
+  DMALevelS* d = &DMALevel[level];
+
+  if(d->Active > 0)
+  {
+   if(d->WriteBus == 1 && d->ReadFunc == DMA_ReadCBus && d->CurWriteAddr >= 0x5C00000 && d->CurWriteAddr <= 0x5DFFFFF)
+    ret = true;
+   //else if(d->WriteBus == 2 && d->ReadFunc == DMA_ReadBBus && d->CurReadBase >= 0x5C00000 && d->CurReadBase <= 0x5C7FFFF)
+   // ret = true;
+
+   break;
+  }
+ }
+
+ return ret;
 }
 
 static void RecalcDMAHalt(void)
@@ -1872,10 +1912,6 @@ uint32 SCU_GetRegister(const unsigned id, char* const special, const uint32 spec
 
   case SCU_GSREG_IVEC:
 	ret = IVec;
-	break;
-
-  case SCU_GSREG_ICLEARMASK:
-	ret = IClearMask;
 	break;
 
   case SCU_GSREG_IASSERTED:

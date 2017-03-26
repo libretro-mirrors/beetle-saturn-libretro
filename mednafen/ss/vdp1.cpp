@@ -382,7 +382,12 @@ sscpu_timestamp_t Update(sscpu_timestamp_t timestamp)
  if(CycleCounter > VDP1_UpdateTimingGran)
   CycleCounter = VDP1_UpdateTimingGran;
 
- if(DrawingActive)
+ if(CycleCounter > 0 && SCU_CheckVDP1HaltKludge())
+ {
+  //puts("Kludge");
+  CycleCounter = 0;
+ }
+ else if(DrawingActive)
  {
   while(CycleCounter > 0)
   {
