@@ -448,9 +448,9 @@ static void ChangePhase(const unsigned int new_phase)
 static void SendStatusAndMessage(uint8_t status, uint8_t message)
 {
  // This should never ever happen, but that doesn't mean it won't. ;)
- if(din->CanRead())
+ if(din->in_count)
  {
-  //printf("[SCSICD] BUG: %d bytes still in SCSI CD FIFO\n", din->CanRead());
+  //printf("[SCSICD] BUG: %d bytes still in SCSI CD FIFO\n", din->in_count);
   din->Flush();
  }
 
@@ -3012,7 +3012,7 @@ uint32_t SCSICD_Run(scsicd_timestamp_t system_timestamp)
     if(!REQ_signal && !ACK_signal)
     {
      //puts("REQ and ACK false");
-     if(din->CanRead() == 0)	// aaand we're done!
+     if(din->in_count == 0)	// aaand we're done!
      {
       CDIRQCallback(0x8000 | SCSICD_IRQ_DATA_TRANSFER_READY);
 
