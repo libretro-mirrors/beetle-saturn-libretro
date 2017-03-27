@@ -41,7 +41,7 @@
 static EmulateSpecStruct* espec = NULL;
 static bool PAL;
 static bool CorrectAspect;
-static bool ShowHOverscan;
+static bool ShowHOverscan = true;
 static bool DoHBlend;
 static int LineVisFirst, LineVisLast;
 static uint32 OutLineCounter;
