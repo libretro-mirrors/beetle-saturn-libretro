@@ -35,6 +35,8 @@ Save as foo.m3u and use this file in place of each disk's individual cue sheet.
 
 - sega_101.bin (85ec9ca47d8f6807718151cbcca8b964)
 - mpr-17933.bin (3240872c70984b6cbfda1586cab68dbe)
+- mpr-18811-mx.ic1 (255113ba943c92a54facd25a10fd780c)
+- mpr-19367-mx.ic1 (1cd19988d1d72a3e7caa0b73234c96b4)
 
 ## Options
 
