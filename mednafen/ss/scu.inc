@@ -66,7 +66,7 @@ struct DMAWriteTabS
  uint8 compare;
 };
 
-static DMAWriteTabS dma_write_tab[2/*bus*/][8/*add setting*/][4/*write align*/][12/*count*/][5] =
+static const DMAWriteTabS dma_write_tab[2/*bus*/][8/*add setting*/][4/*write align*/][12/*count*/][5] =
 {
  {
   #include "scu_actab.inc"
@@ -76,7 +76,7 @@ static DMAWriteTabS dma_write_tab[2/*bus*/][8/*add setting*/][4/*write align*/][
  }
 };
 
-static DMAWriteTabS dma_write_tab_aciv1[4][24][8] =
+static const DMAWriteTabS dma_write_tab_aciv1[4][24][8] =
 {
  #include "scu_aciv1tab.inc"
 };
@@ -918,10 +918,12 @@ template<typename T, bool IsWrite, bool SH32 = false>
 static INLINE void ABusRW_DB(uint32 A, uint16* DB, int32* time_thing, int32* dma_time_thing = NULL, int32* sh2_dma_time_thing = NULL)	// add to time_thing, subtract from dma_time_thing
 {
  //
- // A-Bus CS0
+ // A-Bus CS0 and CS1
  //
- if(A >= 0x02000000 && A <= 0x03FFFFFF)
+ if(A >= 0x02000000 && A <= 0x04FFFFFF)
  {
+  // [(bool)(A & 0x04000000)]
+
   if(sh2_dma_time_thing != NULL)
    *sh2_dma_time_thing -= 1;	// TODO
 
@@ -931,43 +933,23 @@ static INLINE void ABusRW_DB(uint32 A, uint16* DB, int32* time_thing, int32* dma
   if(IsWrite)
   {
    if(sizeof(T) == 1)
-    CART_CS0_Write8_DB(A, DB);
+    CART_CS01_Write8_DB(A, DB);
    else
-    CART_CS0_Write16_DB(A, DB);
-  }
-  else
-   CART_CS0_Read16_DB(A, DB);
-
-  return;
- }
-
- if(A >= 0x04000000 && A <= 0x04FFFFFF)
- {
-  // A-Bus CS1
-  if(sh2_dma_time_thing != NULL)
-   *sh2_dma_time_thing -= 1;	// TODO
-
-  if(dma_time_thing != NULL)
-   *dma_time_thing -= 1;	// TODO
-
-  if(IsWrite)
-  {
-   if(sizeof(T) == 1)
-    CART_CS1_Write8_DB(A, DB);
-   else
-    CART_CS1_Write16_DB(A, DB);
+    CART_CS01_Write16_DB(A, DB);
   }
   else
   {
-   CART_CS1_Read16_DB(A, DB);
+   CART_CS01_Read16_DB(A, DB);
   }
 
   return;
  }
 
- if(A >= 0x05000000 && A <= 0x057FFFFF)
+ //
+ // A-bus Dummy
+ //
+ if(MDFN_UNLIKELY(A >= 0x05000000 && A <= 0x057FFFFF))
  {
-  // A-Bus Dummy
   if(sh2_dma_time_thing != NULL)
    *sh2_dma_time_thing -= 16;
 
@@ -976,12 +958,15 @@ static INLINE void ABusRW_DB(uint32 A, uint16* DB, int32* time_thing, int32* dma
    *dma_time_thing -= 16;
   }
 
-#ifdef HAVE_DEBUG
   if(IsWrite)
-   SS_DBG(SS_DBG_WARNING | SS_DBG_SCU, "[A-Bus CSD] Unknown %zu-byte write to 0x%08x(DB=0x%04x)\n", sizeof(T), A, *DB);
+  {
+     if(sizeof(T) == 1)
+     CART_CS2_Write8_DB(A, DB);
+     else
+     CART_CS2_Write16_DB(A, DB);
+  }
   else
-   SS_DBG(SS_DBG_WARNING | SS_DBG_SCU, "[A-Bus CSD] Unknown %zu-byte read from 0x%08x\n", sizeof(T), A);
-#endif
+     CART_CS2_Read16_DB(A, DB);
 
   return;
  }
@@ -1884,7 +1869,7 @@ static NO_INLINE void DMAInstr(void)
  }
 }
 
-void (*DSP_DMAFuncTable[2][8][8])(void) =
+extern void (*const DSP_DMAFuncTable[2][8][8])(void) =
 {
  #include "scu_dsp_dmatab.inc"
 };

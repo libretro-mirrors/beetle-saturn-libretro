@@ -30,7 +30,7 @@
 
 #define MEDNAFEN_CORE_NAME_MODULE "ss"
 #define MEDNAFEN_CORE_NAME "Mednafen Saturn"
-#define MEDNAFEN_CORE_VERSION "v0.9.43"
+#define MEDNAFEN_CORE_VERSION "v0.9.44.1"
 #define MEDNAFEN_CORE_EXTENSIONS "cue|ccd"
 #define MEDNAFEN_CORE_TIMING_FPS 59.82
 #define MEDNAFEN_CORE_GEOMETRY_BASE_W 320
@@ -587,6 +587,8 @@ static MDFN_COLD void InitEvents(void)
 
  events[SS_EVENT_SOUND].event_handler = SOUND_Update;
 
+ events[SS_EVENT_CART].event_handler = CART_GetEventHandler();
+
  events[SS_EVENT_MIDSYNC].event_handler = MidSync;
  events[SS_EVENT_MIDSYNC].event_time = SS_EVENT_DISABLED_TS;
 }
@@ -839,6 +841,7 @@ static void Emulate(EmulateSpecStruct* espec_arg)
  cur_clock_div = SMPC_StartFrame(espec);
  UpdateSMPCInput(0);
  VDP2::StartFrame(espec, cur_clock_div == 61);
+ CART_SetCPUClock(EmulatedSS.MasterClock / MDFN_MASTERCLOCK_FIXED(1), cur_clock_div);
  espec->SoundBufSize = 0;
  espec->MasterCycles = 0;
  espec->soundmultiplier = 1;
@@ -867,6 +870,7 @@ static void Emulate(EmulateSpecStruct* espec_arg)
  VDP2::AdjustTS(-end_ts);
  SMPC_ResetTS();
  SCU_AdjustTS(-end_ts);
+ CART_AdjustTS(-end_ts);
 
  UpdateInputLastBigTS -= (int64)end_ts * cur_clock_div * 1000 * 1000;
 
@@ -1187,6 +1191,8 @@ static bool InitCommon(const unsigned cart_type, const unsigned smpc_area)
          { CART_EXTRAM_4M, "4MiB Extended RAM" },
          { CART_KOF95, "King of Fighters '95 ROM" },
          { CART_ULTRAMAN, "Ultraman ROM" },
+         { CART_CS1RAM_16M, _("16MiB CS1 RAM") },
+         { CART_NLMODEM, _("Netlink Modem") },
          { CART_MDFN_DEBUG, "Mednafen Debug" }
       };
       const char* cn = "Unknown";
@@ -1477,6 +1483,7 @@ static MDFN_COLD bool Load(MDFNFILE* fp)
    if(MDFN_GetSettingS("ss.dbg_exe_cdpath") != "")
    {
       RMD_Drive dr;
+      RMD_DriveDefaults drdef;
 
       dr.Name = std::string("Virtual CD Drive");
       dr.PossibleStates.push_back(RMD_State({"Tray Open", false, false, true}));
@@ -1485,7 +1492,12 @@ static MDFN_COLD bool Load(MDFNFILE* fp)
       dr.CompatibleMedia.push_back(0);
       dr.MediaMtoPDelay = 2000;
 
+      drdef.State = 2; // Tray Closed
+      drdef.Media = 0;
+      drdef.Orientation = 0;
+
       MDFNGameInfo->RMD->Drives.push_back(dr);
+      MDFNGameInfo->RMD->DrivesDefaults.push_back(drdef);
       MDFNGameInfo->RMD->MediaTypes.push_back(RMD_MediaType({"CD"}));
       MDFNGameInfo->RMD->Media.push_back(RMD_Media({"Test CD", 0}));
 
@@ -1642,7 +1654,7 @@ static MDFN_COLD bool LoadCD(std::vector<CDIF *>* CDInterfaces)
    {
       log_cb(RETRO_LOG_INFO, "Trying to lookup cartridge from DB...\n");
       cart_type = CART_BACKUP_MEM;
-      DB_LookupCartDB(sgid, &cart_type);
+      DB_LookupCartDB(sgid, fd_id, &cart_type);
    }
 
    if(MDFN_GetSettingB("ss.cd_sanity"))
@@ -1767,6 +1779,7 @@ static MDFN_COLD void LoadRTC(void)
 
 int StateAction(StateMem *sm, int load, int data_only)
 {
+   CART_StateAction(sm, load, data_only);
    return 0;
 }
 
@@ -1845,6 +1858,8 @@ static const MDFNSetting_EnumList Cart_List[] =
  { "backup", CART_BACKUP_MEM, "Backup Memory(512KiB)" },
  { "extram1", CART_EXTRAM_1M, "1MiB Extended RAM" },
  { "extram4", CART_EXTRAM_4M, "4MiB Extended RAM" },
+ { "cs1ram16", CART_CS1RAM_16M, "16MiB RAM mapped in A-bus CS1" },
+ // { "nlmodem", CART_NLMODEM, "NetLink Modem" },
 
  { NULL, 0 },
 };

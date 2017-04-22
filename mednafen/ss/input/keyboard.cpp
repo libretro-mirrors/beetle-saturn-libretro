@@ -19,6 +19,8 @@
 ** 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 */
 
+// TODO: Debouncing?
+
 //
 // PS/2 keyboard adapter seems to do PS/2 processing near/at the end of a Saturn-side read sequence, which creates about 1 frame of extra latency
 // in practice.  We handle things a bit differently here, to avoid the latency.

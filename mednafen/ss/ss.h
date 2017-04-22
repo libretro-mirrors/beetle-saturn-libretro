@@ -118,18 +118,22 @@
 
   SS_EVENT_SOUND,
 
+  SS_EVENT_CART,
+
   SS_EVENT_MIDSYNC,
 
   SS_EVENT__SYNLAST,
   SS_EVENT__COUNT,
  };
 
+typedef sscpu_timestamp_t (*ss_event_handler)(const sscpu_timestamp_t timestamp);
+
  struct event_list_entry
  {
   sscpu_timestamp_t event_time;
   event_list_entry *prev;
   event_list_entry *next;
-  sscpu_timestamp_t (*event_handler)(const sscpu_timestamp_t timestamp);
+  ss_event_handler event_handler;
  };
 
  extern event_list_entry events[SS_EVENT__COUNT];

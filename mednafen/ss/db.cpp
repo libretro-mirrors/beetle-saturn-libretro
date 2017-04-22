@@ -61,7 +61,7 @@ bool DB_LookupRegionDB(const uint8* fd_id, unsigned* const region)
  return false;
 }
 
-bool DB_LookupCartDB(const char* sgid, int* const cart_type)
+bool DB_LookupCartDB(const char* sgid, const uint8 *fd_id, int* const cart_type)
 {
 // printf("  { \"%s\", CART_EXTRAM_1M },\n", sgid);
 // printf("  { \"%s\", CART_EXTRAM_4M },\n", sgid);
@@ -71,6 +71,7 @@ bool DB_LookupCartDB(const char* sgid, int* const cart_type)
  {
   const char* sgid;
   int cart_type;
+  uint8 fd_id[16];
  } cartdb[] =
  {
 #if 0
@@ -86,9 +87,20 @@ bool DB_LookupCartDB(const char* sgid, int* const cart_type)
   // Modem TODO:
   { "MK-81218", CART_NONE },	// Daytona USA CCE Net Link Edition
   { "MK-81071", CART_NONE },	// Duke Nukem 3D
-  { "T-319-01H", CART_NONE },	// PlanetWeb Browser
-  { "T-14302G", CART_NONE },	// Saturn Bomberman (Japan)
+  { "T-319-01H", CART_NONE },	// PlanetWeb Browser (multiple versions)
   { "MK-81070", CART_NONE },	// Saturn Bomberman
+
+  { "MK-81215", CART_NONE },	// Sega Rally Championship Plus NetLink Edition
+  { "MK-81072", CART_NONE },	// Virtual On NetLink Edition
+  //
+  //
+  // Japanese modem TODO:
+  { "GS-7106", CART_NONE },	// Dennou Senki Virtual On (SegaNet)
+  { "GS-7105", CART_NONE },	// Habitat II
+  { "GS-7101", CART_NONE },	// Pad Nifty
+  { "GS-7113", CART_NONE },	// Puzzle Bobble 3 (SegaNet)
+  { "T-14305G", CART_NONE },	// Saturn Bomberman (SegaNet)
+  { "T-31301G", CART_NONE },	// SegaSaturn Internet Vol. 1
 
   //
   //
@@ -131,11 +143,16 @@ bool DB_LookupCartDB(const char* sgid, int* const cart_type)
   { "T-1246G", CART_EXTRAM_4M },	// Street Fighter Zero 3
   { "T-1229G", CART_EXTRAM_4M },	// Vampire Savior
   { "T-1226G", CART_EXTRAM_4M },	// X-Men vs. Street Fighter
+
+  //
+  //
+  //
+  { nullptr, CART_CS1RAM_16M, { 0x4a, 0xf9, 0xff, 0x30, 0xea, 0x54, 0xfe, 0x3a, 0x79, 0xa7, 0x68, 0x69, 0xae, 0xde, 0x55, 0xbb } }
  };
 
  for(auto& ca : cartdb)
  {
-  if(!strcmp(ca.sgid, sgid))
+  if((ca.sgid && !strcmp(ca.sgid, sgid)) || (!ca.sgid && !memcmp(ca.fd_id, fd_id, 16)))
   {
    *cart_type = ca.cart_type;
    return true;

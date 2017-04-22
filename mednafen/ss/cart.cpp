@@ -2,7 +2,7 @@
 /* Mednafen Sega Saturn Emulation Module                                      */
 /******************************************************************************/
 /* cart.cpp - Expansion cart emulation
-**  Copyright (C) 2016 Mednafen Team
+**  Copyright (C) 2016-2017 Mednafen Team
 **
 ** This program is free software; you can redistribute it and/or
 ** modify it under the terms of the GNU General Public License
@@ -22,101 +22,23 @@
 #include "ss.h"
 #include <mednafen/mednafen.h>
 #include <mednafen/FileStream.h>
-#include <mednafen/settings.h>
 #include <mednafen/general.h>
-
 #include "../mednafen-endian.h"
 
 #include "cart.h"
+#include "cart/backup.h"
+#include "cart/cs1ram.h"
+#include "cart/debug.h"
+#include "cart/extram.h"
+//#include "cart/nlmodem.h"
+#include "cart/rom.h"
 
-static uint16 ExtRAM[0x200000];	// Also used for cart ROM
-static size_t ExtRAM_Mask;
-
-static uint8 ExtBackupRAM[0x80000];
-static bool ExtBackupRAM_Dirty;
-
-static uint8 Cart_ID;
-
-static int CartType;
 CartInfo Cart;
-
-template<typename T, bool IsWrite>
-static void Debug_RW_DB(uint32 A, uint16* DB)
-{
- //
- // printf-related debugging
- //
- if((A &~ 0x3) == 0x02100000)
- {
-  if(IsWrite)
-  {
-   if(A == 0x02100001)
-   {
-    fputc(*DB, stderr);
-    fflush(stderr);
-   }
-  }
-  else
-   *DB = 0;
-
-  return;
- }
-}
-
-
-static void CartID_Read_DB(uint32 A, uint16* DB)
-{
- if((A & ~1) == 0x04FFFFFE)
-  *DB = Cart_ID;
-}
-
-template<typename T, bool IsWrite>
-static void ExtRAM_RW_DB(uint32 A, uint16* DB)
-{
- const uint32 mask = (sizeof(T) == 2) ? 0xFFFF : (0xFF << (((A & 1) ^ 1) << 3));
- uint16* const ptr = (uint16*)((uint8*)ExtRAM + (A & ExtRAM_Mask));
-
- //printf("Barf %zu %d: %08x\n", sizeof(T), IsWrite, A);
-
- if(IsWrite)
-  *ptr = (*ptr & ~mask) | (*DB & mask);
- else
-  *DB = *ptr;
-}
-
-// TODO: Check mirroring.
-template<typename T, bool IsWrite>
-static void ExtBackupRAM_RW_DB(uint32 A, uint16* DB)
-{
- uint8* const ptr = ExtBackupRAM + ((A >> 1) & 0x7FFFF);
-
- if(IsWrite)
- {
-  if(A & 1)
-  {
-   ExtBackupRAM_Dirty = true;
-   *ptr = *DB;
-  }
- }
- else
- {
-  *DB = (*ptr << 0) | 0xFF00;
-
-  if((A & ~1) == 0x04FFFFFE)
-   *DB = 0x21;
- }
-}
-
-static void ROM_Read(uint32 A, uint16* DB)
-{
- // TODO: Check mirroring.
- //printf("ROM: %08x\n", A);
- *DB = *(uint16*)((uint8*)ExtRAM + (A & ExtRAM_Mask));
-}
 
 template<typename T>
 static void DummyRead(uint32 A, uint16* DB)
 {
+ // Don't set *DB here.
  SS_DBG(SS_DBG_WARNING, "[CART] Unknown %zu-byte read from 0x%08x\n", sizeof(T), A);
 }
 
@@ -126,154 +48,139 @@ static void DummyWrite(uint32 A, uint16* DB)
  SS_DBG(SS_DBG_WARNING, "[CART] Unknown %zu-byte write to 0x%08x(DB=0x%04x)\n", sizeof(T), A, *DB);
 }
 
-void CART_Reset(bool powering_up)
+static sscpu_timestamp_t DummyUpdate(sscpu_timestamp_t timestamp)
 {
- if(powering_up)
- {
-  if(CartType == CART_EXTRAM_1M || CartType == CART_EXTRAM_4M)
-   memset(ExtRAM, 0, sizeof(ExtRAM));	// TODO: Test.
- }
+ return SS_EVENT_DISABLED_TS;
 }
 
-void CART_Init(const int cart_type)
+static void DummyAdjustTS(const int32 delta)
 {
- CartType = cart_type;
 
- for(auto& p : Cart.CS0_RW)
- {
-  p.Read16 = DummyRead<uint16>;
-  p.Write8 = DummyWrite<uint8>;
-  p.Write16 = DummyWrite<uint16>;
- }
-
- for(auto& p : Cart.CS1_RW)
- {
-  p.Read16 = DummyRead<uint16>;
-  p.Write8 = DummyWrite<uint8>;
-  p.Write16 = DummyWrite<uint16>;
- }
-
- if(cart_type == CART_NONE)
- {
-
- }
- else if(cart_type == CART_KOF95 || cart_type == CART_ULTRAMAN)
- {
-    const std::string path_cxx = MDFN_GetSettingS((cart_type == CART_KOF95) ? "ss.cart.kof95_path" : "ss.cart.ultraman_path");
-  const char *path = MDFN_MakeFName(MDFNMKF_FIRMWARE, 0, path_cxx.c_str());
-  FileStream fp(path, MODE_READ);
-
-  fp.read(ExtRAM, 0x200000);
-
-  for(unsigned i = 0; i < 0x100000; i++)
-  {
-   ExtRAM[i] = MDFN_de16msb<true>(&ExtRAM[i]);
-  }
-
-  ExtRAM_Mask = 0x1FFFFE;
-
-  SS_SetPhysMemMap(0x02000000, 0x03FFFFFF, ExtRAM, 0x200000, false);
-
-  for(uint32 A = 0x02000000; A < 0x04000000; A += (1U << 20))
-  {
-     CartInfo::A &cs0rw = Cart.CS0_RW[(A - 0x02000000) >> 20];
-
-     cs0rw.Read16 = ROM_Read;
-  }
- }
- else if(cart_type == CART_BACKUP_MEM)
- {
-  static const uint8 init[0x10] = { 0x42, 0x61, 0x63, 0x6B, 0x55, 0x70, 0x52, 0x61, 0x6D, 0x20, 0x46, 0x6F, 0x72, 0x6D, 0x61, 0x74 };
-  memset(ExtBackupRAM, 0x00, sizeof(ExtBackupRAM));
-  for(unsigned i = 0; i < 0x200; i += 0x10)
-   memcpy(ExtBackupRAM + i, init, 0x10);
-
-  ExtBackupRAM_Dirty = false;
-
-  for(uint32 A = 0x04000000; A < 0x05000000; A += (1U << 20))
-  {
-     CartInfo::B &cs1rw = Cart.CS1_RW[(A - 0x04000000) >> 20];
-
-   cs1rw.Read16 = ExtBackupRAM_RW_DB<uint16, false>;
-   cs1rw.Write8 = ExtBackupRAM_RW_DB<uint8, true>;
-   cs1rw.Write16 = ExtBackupRAM_RW_DB<uint16, true>;
-  }
- }
- else if(cart_type == CART_EXTRAM_1M || cart_type == CART_EXTRAM_4M)
- {
-  if(cart_type == CART_EXTRAM_4M)
-  {
-   Cart_ID = 0x5C;
-   ExtRAM_Mask = 0x3FFFFE;
-  }
-  else
-  {
-   Cart_ID = 0x5A;
-   ExtRAM_Mask = 0x27FFFE;
-  }
-
-  SS_SetPhysMemMap(0x02400000, 0x025FFFFF, ExtRAM + (0x000000 / sizeof(uint16)), ((cart_type == CART_EXTRAM_4M) ? 0x200000 : 0x080000), true);
-  SS_SetPhysMemMap(0x02600000, 0x027FFFFF, ExtRAM + (0x200000 / sizeof(uint16)), ((cart_type == CART_EXTRAM_4M) ? 0x200000 : 0x080000), true);
-
-  for(uint32 A = 0x02400000; A < 0x02800000; A += (1U << 20))
-  {
-     CartInfo::A& cs0rw = Cart.CS0_RW[(A - 0x02000000) >> 20];
-
-
-   cs0rw.Read16 = ExtRAM_RW_DB<uint16, false>;
-   cs0rw.Write8 = ExtRAM_RW_DB<uint8, true>;
-   cs0rw.Write16 = ExtRAM_RW_DB<uint16, true>;
-  }
-
-  for(uint32 A = 0x04FFFFFE; A < 0x05000000; A += (1U << 20))
-  {
-     CartInfo::B& cs1rw = Cart.CS1_RW[(A - 0x04000000) >> 20];
-
-   cs1rw.Read16 = CartID_Read_DB;
-  }
- }
- else if(cart_type == CART_MDFN_DEBUG)
- {
-  for(uint32 A = 0x02100000; A < 0x02100002; A += (1U << 20))
-  {
-     CartInfo::A& cs0rw = Cart.CS0_RW[(A - 0x02000000) >> 20];
-
-   cs0rw.Read16 = Debug_RW_DB<uint16, false>;
-   cs0rw.Write8 = Debug_RW_DB<uint8, true>;
-   cs0rw.Write16 = Debug_RW_DB<uint16, true>;
-  }
- }
- else
-  abort();
 }
 
-bool CART_GetClearNVDirty(void)
+static void DummySetCPUClock(const int32 master_clock, const int32 divider)
 {
- if(CartType == CART_BACKUP_MEM)
- {
-  bool ret = ExtBackupRAM_Dirty;
-  ExtBackupRAM_Dirty = false;
-  return ret;
- }
- else
-  return false;
+
 }
 
-void CART_GetNVInfo(const char** ext, void** nv_ptr, uint64* nv_size)
+static MDFN_COLD void DummyReset(bool powering_up)
+{
+
+}
+
+static MDFN_COLD void DummyStateAction(StateMem* sm, const unsigned load, const bool data_only)
+{
+
+}
+
+static MDFN_COLD bool DummyGetClearNVDirty(void)
+{
+ return false;
+}
+
+static MDFN_COLD void DummyGetNVInfo(const char** ext, void** nv_ptr, uint64* nv_size)
 {
  *ext = nullptr;
  *nv_ptr = nullptr;
  *nv_size = 0;
+}
 
- if(CartType == CART_BACKUP_MEM)
+static MDFN_COLD void DummyKill(void)
+{
+
+}
+
+void CartInfo::CS01_SetRW8W16(uint32 Astart, uint32 Aend, void (*r16)(uint32 A, uint16* DB), void (*w8)(uint32 A, uint16* DB), void (*w16)(uint32 A, uint16* DB))
+{
+ assert(Astart >= 0x02000000 && Aend <= 0x04FFFFFF);
+
+ assert(!(Astart & ((1U << 20) - 1)));
+ assert(!((Aend + 1) & ((1U << 20) - 1)));
+
+ for(unsigned i = (Astart - 0x02000000) >> 20; i <= (Aend - 0x02000000) >> 20; i++)
  {
-  *ext = "bcr";
-  *nv_ptr = ExtBackupRAM;
-  *nv_size = sizeof(ExtBackupRAM);
+  auto& rw = Cart.CS01_RW[i];
+
+  if(r16) rw.Read16 = r16;
+  if(w8) rw.Write8 = w8;
+  if(w16) rw.Write16 = w16;
  }
 }
 
-void CART_Kill(void)
+void CartInfo::CS2M_SetRW8W16(uint8 Ostart, uint8 Oend, void (*r16)(uint32 A, uint16* DB), void (*w8)(uint32 A, uint16* DB), void (*w16)(uint32 A, uint16* DB))
 {
+ assert(!(Ostart & 0x1));
+ assert(Oend & 0x1);
+ assert(Ostart < 0x40);
+ assert(Oend < 0x40);
 
+ for(int i = Ostart >> 1; i <= Oend >> 1; i++)
+ {
+  auto& rw = Cart.CS2M_RW[i];
+
+  if(r16) rw.Read16 = r16;
+  if(w8) rw.Write8 = w8;
+  if(w16) rw.Write16 = w16;
+ }
+}
+
+
+void CART_Init(const int cart_type)
+{
+ Cart.CS01_SetRW8W16(0x02000000, 0x04FFFFFF, DummyRead<uint16>, DummyWrite<uint8>, DummyWrite<uint16>);
+ Cart.CS2M_SetRW8W16(0x00, 0x3F, DummyRead<uint16>, DummyWrite<uint8>, DummyWrite<uint16>);
+
+ Cart.Reset = DummyReset;
+ Cart.Kill = DummyKill;
+ Cart.GetNVInfo = DummyGetNVInfo;
+ Cart.GetClearNVDirty = DummyGetClearNVDirty;
+ Cart.StateAction = DummyStateAction;
+ Cart.EventHandler = DummyUpdate;
+ Cart.AdjustTS = DummyAdjustTS;
+ Cart.SetCPUClock = DummySetCPUClock;
+
+ switch(cart_type)
+ {
+  default:
+  case CART_NONE:
+	break;
+
+  case CART_BACKUP_MEM:
+	CART_Backup_Init(&Cart);
+	break;
+
+  case CART_EXTRAM_1M:
+  case CART_EXTRAM_4M:
+	CART_ExtRAM_Init(&Cart, cart_type == CART_EXTRAM_4M);
+	break;
+
+  case CART_KOF95:
+  case CART_ULTRAMAN:
+	{
+      const std::string path_cxx = MDFN_GetSettingS((cart_type == CART_KOF95) ? "ss.cart.kof95_path" : "ss.cart.ultraman_path");
+      const char *path = MDFN_MakeFName(MDFNMKF_FIRMWARE, 0, path_cxx.c_str());
+      FileStream fp(path, MODE_READ);
+
+	 CART_ROM_Init(&Cart, &fp);
+	}
+	break;
+
+  case CART_CS1RAM_16M:
+	CART_CS1RAM_Init(&Cart);
+	break;
+
+  case CART_MDFN_DEBUG:
+	CART_Debug_Init(&Cart);
+	break;
+
+//  case CART_NLMODEM:
+//	CART_NLModem_Init(&Cart);
+//	break;
+ }
+
+ for(auto& m : Cart.CS01_RW)
+  assert(m.Read16 != nullptr && m.Write8 != nullptr && m.Write16 != nullptr);
+
+ for(auto& m : Cart.CS2M_RW)
+  assert(m.Read16 != nullptr && m.Write8 != nullptr && m.Write16 != nullptr);
 }

@@ -1,8 +1,8 @@
 /******************************************************************************/
 /* Mednafen Sega Saturn Emulation Module                                      */
 /******************************************************************************/
-/* scu_dsp_misc.cpp - SCU DSP Miscellaneous Instructions Emulation
-**  Copyright (C) 2015-2016 Mednafen Team
+/* debug.cpp - Mednafen debug cart emulation
+**  Copyright (C) 2017 Mednafen Team
 **
 ** This program is free software; you can redistribute it and/or
 ** modify it under the terms of the GNU General Public License
@@ -19,47 +19,37 @@
 ** 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 */
 
-#include "ss.h"
-#include "scu.h"
+#include "common.h"
+#include "debug.h"
 
-#pragma GCC optimize("Os")
-
-#include "scu_dsp_common.inc"
-
-template<bool looped, unsigned op>
-static NO_INLINE void MiscInstr(void)
+template<typename T, bool IsWrite>
+static void Debug_RW_DB(uint32 A, uint16* DB)
 {
- DSP_InstrPre<looped>();
+ //
+ // printf-related debugging
+ //
+ if((A &~ 0x3) == 0x02100000)
+ {
+  if(IsWrite)
+  {
+   if(A == 0x02100001)
+   {
+    fputc(*DB, stderr);
+    fflush(stderr);
+   }
+  }
+  else
+   *DB = 0;
 
- //
- // END/ENDI
- //
- if(op == 2 || op == 3)
- {
-  if(op & 0x1)
-  {
-   DSP.FlagEnd = true;
-   SCU_SetInt(SCU_INT_DSP, true);
-  }
-  DSP.NextInstr = DSP_DecodeInstruction(0);
-  DSP.State &= ~DSPS::STATE_MASK_EXECUTE;
-  DSP.CycleCounter -= DSP_EndCCSubVal;	// Break out of execution loop(also remember to handle this case for manual stepping via port writes).
- }
- else if(op == 0)	// BTM
- {
-  if(DSP.LOP)
-  {
-   DSP.LOP--;
-   DSP.PC = DSP.TOP;
-  }
- }
- else if(op == 1)	// LPS
- {
-  DSP.NextInstr = DSP_DecodeInstruction<true>(DSP.NextInstr >> 32);
+  return;
  }
 }
 
-extern void (*const DSP_MiscFuncTable[2][4])(void) =
+
+void CART_Debug_Init(CartInfo* c)
 {
- #include "scu_dsp_misctab.inc"
-};
+ c->CS01_SetRW8W16(0x02100000, /*0x02100001*/ 0x021FFFFF,
+	Debug_RW_DB<uint16, false>,
+	Debug_RW_DB<uint8, true>,
+	Debug_RW_DB<uint16, true>);
+}

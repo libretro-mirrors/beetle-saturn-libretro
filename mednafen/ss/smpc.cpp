@@ -43,6 +43,7 @@
 #include "input/wheel.h"
 #include "input/mission.h"
 #include "input/keyboard.h"
+//#include "input/jpkeyboard.h"
 
 #include <time.h>
 #include "input/multitap.h"
@@ -205,6 +206,7 @@ static struct
  IODevice_Mission mission{false};
  IODevice_Mission dualmission{true};
  IODevice_Keyboard keyboard;
+ // IODevice_Keyboard jpkeyboard;
 } PossibleDevices[12];
 
 static IODevice_Multitap PossibleMultitaps[2];
@@ -302,6 +304,8 @@ void SMPC_SetInput(unsigned port, const char* type, uint8* ptr)
       nd = &PossibleDevices[port].dualmission;
    else if(!strcmp(type, "keyboard"))
       nd = &PossibleDevices[port].keyboard;
+   // else if(!strcmp(type, "jpkeyboard"))
+   //  nd = &PossibleDevices[port].jpkeyboard;
    else
       abort();
 
@@ -810,7 +814,7 @@ sscpu_timestamp_t SMPC_Update(sscpu_timestamp_t timestamp)
 
    SMPC_WAIT_UNTIL_COND(PendingCommand >= 0 || PendingVB);
 
-   if(PendingVB)
+   if(PendingVB && PendingCommand < 0)
    {
     PendingVB = false;
 
@@ -1379,6 +1383,17 @@ static const std::vector<InputDeviceInfoStruct> InputDeviceInfoSSVPort =
   IODevice_Keyboard_US101_IDII,
   InputDeviceInfoStruct::FLAG_KEYBOARD
  },
+
+#if 0
+ // Keyboard (Japanese)
+ {
+    "jpkeyboard",
+    "Keyboard (JP)",
+    "89-key Japanese keyboard.",
+    IODevice_JPKeyboard_IDII,
+    InputDeviceInfoStruct::FLAG_KEYBOARD
+ },
+#endif
 };
 
 static IDIISG IDII_Builtin =

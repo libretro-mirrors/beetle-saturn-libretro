@@ -330,7 +330,7 @@ static NO_INLINE void GeneralInstr(void)
   DSP.CT32 = (DSP.CT32 + ct_inc) & 0x3F3F3F3F;
 }
 
-void (*DSP_GenFuncTable[2][16][8][8][4])(void) =
+extern void (*const DSP_GenFuncTable[2][16][8][8][4])(void) =
 {
  #include "scu_dsp_gentab.inc"
 };
