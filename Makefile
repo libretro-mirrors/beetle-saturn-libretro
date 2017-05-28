@@ -30,6 +30,11 @@ ifneq ($(platform), osx)
    endif
 endif
 
+prefix := /usr
+libdir := $(prefix)/lib
+
+LIBRETRO_INSTALL_DIR := libretro
+
 NEED_CD = 1
 NEED_TREMOR = 1
 NEED_BPP = 32
@@ -379,5 +384,10 @@ endif
 clean:
 	rm -f $(TARGET) $(OBJECTS)
 
-.PHONY: clean
+install:
+	install -D -m 755 $(TARGET) $(DESTDIR)$(libdir)/$(LIBRETRO_INSTALL_DIR)/$(TARGET)
 
+uninstall:
+	rm $(DESTDIR)$(libdir)/$(LIBRETRO_INSTALL_DIR)/$(TARGET)
+
+.PHONY: clean install uninstall
