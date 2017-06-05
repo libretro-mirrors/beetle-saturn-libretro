@@ -26,6 +26,8 @@ class SS_SCSP
  SS_SCSP() MDFN_COLD;
  ~SS_SCSP() MDFN_COLD;
 
+ void StateAction(StateMem* sm, const unsigned load, const bool data_only, const char* sname) MDFN_COLD;
+
  void Reset(bool powering_up) MDFN_COLD;
  void RunSample(int16* outlr);
 

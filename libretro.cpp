@@ -1791,6 +1791,35 @@ static MDFN_COLD void LoadRTC(void)
 
 int StateAction(StateMem *sm, int load, int data_only)
 {
+ SFORMAT StateRegs[] = 
+ {
+  // TODO: Events, or recalc?
+
+  SFARRAY16(WorkRAML, sizeof(WorkRAML) / sizeof(WorkRAML[0])),
+  SFARRAY16(WorkRAMH, sizeof(WorkRAMH) / sizeof(WorkRAMH[0])),
+  SFARRAY(BackupRAM, sizeof(BackupRAM) / sizeof(BackupRAM[0])),
+
+  SFEND
+ };
+ 
+ MDFNSS_StateAction(sm, load, data_only, StateRegs, "MAIN");
+
+ if(load)
+ {
+  BackupRAM_Dirty = true;
+ }
+
+/*
+ CPU[0].StateAction(sm, load, data_only, "SH2-M");
+ CPU[1].StateAction(sm, load, data_only, "SH2-S");
+ SCU_StateAction(sm, load, data_only);
+ SMPC_StateAction(sm, load, data_only);
+ CDB_StateAction(sm, load, data_only);
+ VDP1::StateAction(sm, load, data_only);
+ VDP2_StateAction(sm, load, data_only);
+*/
+
+ SOUND_StateAction(sm, load, data_only);
    CART_StateAction(sm, load, data_only);
    return 0;
 }

@@ -1497,6 +1497,157 @@ INLINE void SS_SCSP::RunSample(int16* outlr)
  outlr[1] = out_accum[1];
 }
 
+void SS_SCSP::StateAction(StateMem* sm, const unsigned load, const bool data_only, const char* sname)
+{
+ SFORMAT StateRegs[] =
+ {
+  SFARRAY16N(&SlotRegs[0][0], 0x20 * 0x10, "SlotRegs"),
+
+  #define SFSLOT(n)			\
+	SFVAR(Slots[n].PhaseWhacker),	\
+	SFVAR(Slots[n].CurrentAddr),	\
+	SFVAR(Slots[n].InLoop),		\
+	SFVAR(Slots[n].LoopSub),	\
+	SFVAR(Slots[n].WFAllowAccess),	\
+	SFVAR(Slots[n].EnvLevel),	\
+	SFVAR(Slots[n].EnvPhase),	\
+	SFVAR(Slots[n].EnvGCBTPrev),	\
+	SFVAR(Slots[n].LFOCounter),	\
+	SFVAR(Slots[n].LFOTimeCounter)
+  SFSLOT(0x00), SFSLOT(0x01), SFSLOT(0x02), SFSLOT(0x03), SFSLOT(0x04), SFSLOT(0x05), SFSLOT(0x06), SFSLOT(0x07),
+  SFSLOT(0x08), SFSLOT(0x09), SFSLOT(0x0A), SFSLOT(0x0B), SFSLOT(0x0C), SFSLOT(0x0D), SFSLOT(0x0E), SFSLOT(0x0F),
+  SFSLOT(0x10), SFSLOT(0x11), SFSLOT(0x12), SFSLOT(0x13), SFSLOT(0x14), SFSLOT(0x15), SFSLOT(0x16), SFSLOT(0x17),
+  SFSLOT(0x18), SFSLOT(0x19), SFSLOT(0x1A), SFSLOT(0x1B), SFSLOT(0x1C), SFSLOT(0x1D), SFSLOT(0x1E), SFSLOT(0x1F),
+  #undef SFSLOT
+
+  SFARRAY16(EXTS, 2),
+
+  SFARRAY16(SoundStack, 0x40),
+  SFARRAY16(SoundStackDelayer, 4),
+
+  SFVAR(MasterVolume),
+  SFVAR(MVOL),
+  SFVAR(DAC18bit),
+  SFVAR(Mem4Mb),
+
+  SFVAR(SlotMonitorWhich),
+  SFVAR(SlotMonitorData),
+
+  SFVAR(KeyExecute),
+  SFVAR(LFSR),
+  SFVAR(GlobalCounter),
+
+  SFARRAY(MIDI.InputFIFO, 4),
+  SFVAR(MIDI.InputRP),
+  SFVAR(MIDI.InputWP),
+  SFVAR(MIDI.InputCount),
+  SFARRAY(MIDI.OutputFIFO, 4),
+  SFVAR(MIDI.OutputRP),
+  SFVAR(MIDI.OutputWP),
+  SFVAR(MIDI.OutputCount),
+  SFVAR(MIDI.Flags),
+ 
+  SFVAR(SCIEB),
+  SFVAR(SCIPD),
+
+  SFVAR(MCIEB),
+  SFVAR(MCIPD),
+
+  SFARRAY(SCILV, 3),
+
+  #define SFTIMER(n)			\
+	SFVAR(Timers[n].Control),	\
+	SFVAR(Timers[n].Counter),	\
+	SFVAR(Timers[n].PrevClockIn),	\
+	SFVAR(Timers[n].Reload)
+  SFTIMER(0),
+  SFTIMER(1),
+  SFTIMER(2),
+  #undef SFTIMER
+
+  SFVAR(DMEA),
+  SFVAR(DRGA),
+  SFVAR(DTLG),
+
+  SFVAR(DMA_Execute),
+  SFVAR(DMA_Direction),
+  SFVAR(DMA_Gate),
+
+  SFVAR(RBP),
+  SFVAR(RBL),
+
+  SFARRAY64(DSP.MPROG, 0x80),
+  SFARRAY32(DSP.TEMP, 0x80),
+  SFARRAY32(DSP.MEMS, 0x20),
+  SFARRAY16(DSP.COEF, 64),
+  SFARRAY16(DSP.MADRS, 32),
+  SFARRAY32(DSP.MIXS, 0x10),
+  SFARRAY16(DSP.EFREG, 0x10),
+
+  SFVAR(DSP.INPUTS),
+
+  SFVAR(DSP.Product),
+  SFVAR(DSP.SFT_REG),
+  SFVAR(DSP.FRC_REG),
+  SFVAR(DSP.Y_REG),
+  SFVAR(DSP.ADRS_REG),
+
+  SFVAR(DSP.MDEC_CT),
+
+  SFVAR(DSP.RWAddr),
+
+  SFVAR(DSP.WritePending),
+  SFVAR(DSP.WriteValue),
+
+  SFVAR(DSP.ReadPending),
+  SFVAR(DSP.ReadValue),
+  //
+  SFARRAY16(RAM, 262144),
+
+  SFEND
+ };
+
+ MDFNSS_StateAction(sm, load, data_only, StateRegs, "SCSP");
+
+ if(load)
+ {
+  for(auto& s : Slots)
+  {
+   s.EnvLevel &= 0x3FF;
+   s.EnvPhase &= 0x3;
+  }
+
+  SlotMonitorWhich &= 0x1F;
+
+  MIDI.InputRP &= 0x3;
+  MIDI.InputWP &= 0x3;
+
+  MIDI.OutputRP &= 0x3;
+  MIDI.OutputWP &= 0x3;
+
+  DMEA &= 0x7FFFF;
+  DRGA &= 0x7FF;
+  DTLG &= 0x7FF;
+
+  RBP &= 0x7F;
+  RBL &= 0x3;
+
+  DSP.RWAddr &= 0x7FFFF;
+
+  for(uint32 A = 0x100000; A < 0x100400; A += 2)
+  {
+   RW<uint16, true>(A, *(&SlotRegs[0][0] + ((A & 0x3FE) >> 1)));
+  }
+  RecalcSoundInt();
+  RecalcMainInt();
+ }
+
+}
+
+//
+//
+//
+
 uint32 SS_SCSP::GetRegister(const unsigned id, char* const special, const uint32 special_len)
 {
  uint32 ret = 0xDEADBEEF;

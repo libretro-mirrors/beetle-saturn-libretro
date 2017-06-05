@@ -231,8 +231,26 @@ int32 SOUND_FlushOutput(void)
 
 void SOUND_StateAction(StateMem *sm, const unsigned load, const bool data_only)
 {
+   SFORMAT StateRegs[] =
+   {
+      SFVAR(next_scsp_time),
+      SFVAR(run_until_time),
 
+      SFEND
+   };
 
+   //
+   next_scsp_time -= SoundCPU.timestamp;
+   run_until_time -= (int64)SoundCPU.timestamp << 32;
+
+   MDFNSS_StateAction(sm, load, data_only, StateRegs, "SOUND");
+
+   next_scsp_time += SoundCPU.timestamp;
+   run_until_time += (int64)SoundCPU.timestamp << 32;
+   //
+
+   SoundCPU.StateAction(sm, load, data_only, "M68K");
+   SCSP.StateAction(sm, load, data_only, "SCSP");
 }
 
 //
