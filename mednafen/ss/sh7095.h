@@ -349,20 +349,20 @@ class SH7095 final
  uint16 VCRDIV;
  uint8 DVCR;
 
-#if 0
  struct
  {
   uint8 SMR;	// Mode
   uint8 BRR;	// Bit rate
   uint8 SCR;	// Control
   uint8 TDR;	// Transmit data
-  uint8 SSR;	// Status
+  uint8 SSR, SSRM;	// Status
   uint8 RDR;	// Receive data
 
   uint8 RSR;	// Receive shift register
   uint8 TSR;	// Transmit shift register
  } SCI;
-#endif
+
+ void SCI_Reset(void) MDFN_COLD;
 
  const char* const cpu_name;
 

@@ -879,6 +879,35 @@ INLINE void SH7095::DIVU_S64_S32(void)
 }
 
 //
+// Begin SCI
+//
+//
+void SH7095::SCI_Reset(void)
+{
+ SCI.SMR = 0x00;
+ SCI.BRR = 0xFF;
+ SCI.SCR = 0x00;
+ SCI.TDR = 0xFF;
+ SCI.SSR = 0x84;
+ SCI.SSRM = 0x00;
+ SCI.RDR = 0x00;
+ //
+ SCI.RSR = 0x00;
+ SCI.TSR = 0x00;
+
+ RecalcPendingIntPEX();
+}
+
+
+//
+//
+// End SCI
+//
+//
+
+//
+
+//
 // Misaligned/wrong-sized accesses aren't handled correctly, it's a mess, but probably doesn't matter.
 //
 template<typename T>
@@ -2059,6 +2088,8 @@ void NO_INLINE SH7095::Reset(bool power_on_reset, bool from_internal_wdt)
  FRT_Reset();
  WDT_Reset(from_internal_wdt);
  //
+ SCI_Reset();
+ //
  SBYCR = 0;
  Standby = false;
  //
@@ -2180,19 +2211,6 @@ uint8 INLINE SH7095::GetPendingInt(uint8* vecnum_out)
   vecnum = (VCRWDT >> 8) & 0x7F;
  }
 
-#if 0
- if(OPMIPending)
- {
-  static const uint32 sci_any_mask = (1U << OPMI_SCI_TEI) | (1U << OPMI_SCI_TXI) | (1U << OPMI_SCI_RXI) | (1U << OPMI_SCI_ERI);
-  static const uint32 dmac_any_mask = (1U << OPMI_DMAC1) | (1U << OPMI_DMAC0);
-  uint32 new_ipr;
-
-  if((OPMIPending & sci_any_mask) && (new_ipr = ((IPRB >> 12) & 0xF)) > ipr)
-  {
-  
-  }
- }
-#endif
  //
  //
  //
@@ -4209,6 +4227,9 @@ INLINE void SH7095::Step(void)
 	 WDT_StandbyReset();
 	 //
 	 //
+    SCI_Reset();
+    //
+    //
 
 	 timestamp++;
 	 Pipe_ID = (Pipe_ID & 0x00FFFFFF) | (0x7E << 24);

@@ -156,7 +156,7 @@ class SS_SCSP
   bool EnvGCBTPrev;
 
   uint8 LFOCounter;
-  int16 LFOTimeCounter;
+  uint16 LFOTimeCounter;
  } Slots[32];
 
  uint16 EXTS[2];

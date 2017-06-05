@@ -159,8 +159,6 @@ void Reset(bool powering_up)
   EWLR = 0;
   EWRR = 0;
 
-  TVMR = 0;
-  FBCR = 0;
  }
 
  UserClipX0 = 0;
@@ -186,8 +184,14 @@ void Reset(bool powering_up)
  RetCommandAddr = -1;
  DrawingActive = false;
 
+ //
+ // Begin confirmed.
+ TVMR = 0;
+ FBCR = 0;
  PTMR = 0;
  EDSR = 0;
+ // End confirmed.
+ //
 
  memset(&EraseParams, 0, sizeof(EraseParams));
  EraseYCounter = ~0U;

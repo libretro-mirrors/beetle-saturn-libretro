@@ -100,12 +100,14 @@ void SS_SCSP::Reset(bool powering_up)
  memset(SlotRegs, 0, sizeof(SlotRegs));
  memset(Slots, 0, sizeof(Slots));
 
- // Some SSFs require this; TODO: test to see if this is correct for a reset,
- // and if not, move it into special SSF loading code.
  for(unsigned i = 0; i < 32; i++)
  {
+ // Some SSFs require this; TODO: test to see if this is correct for a reset,
+ // and if not, move it into special SSF loading code.
   Slots[i].EnvLevel = 0x3FF;
   Slots[i].EnvPhase = ENV_PHASE_RELEASE;
+
+  Slots[i].LFOTimeCounter = 1;
  }
 
  memset(SoundStack, 0, sizeof(SoundStack));
@@ -963,7 +965,7 @@ INLINE int SS_SCSP::GetPLFO(Slot* s)
 INLINE void SS_SCSP::RunLFO(Slot* s)
 {
  s->LFOTimeCounter--;
- if(s->LFOTimeCounter <= 0)
+ if(!s->LFOTimeCounter)
  {
   s->LFOCounter++;
   s->LFOTimeCounter = (((8 - (s->LFOFreq & 0x3)) << 7) >> (s->LFOFreq >> 2)) - 4;
