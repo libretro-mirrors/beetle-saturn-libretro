@@ -44,7 +44,7 @@ static bool CorrectAspect;
 static bool ShowHOverscan = true;
 static bool DoHBlend;
 static int LineVisFirst, LineVisLast;
-static uint32 OutLineCounter;
+static uint32_t NextOutLine;
 static bool Clock28M;
 static unsigned VisibleLines;
 static VDP2Rend_LIB LIB[256];
@@ -3187,7 +3187,7 @@ static void RThreadEntry(void* data)
  {
   while(MDFN_UNLIKELY(WQ_InCount.load(std::memory_order_acquire) == 0))
   {
-   if(LastDrawnLine < 192) // || (LastDrawnLine == VisibleLines - 1))
+   if(LastDrawnLine < 192)
     retro_sleep(1);
    else
    {
@@ -3308,7 +3308,7 @@ void VDP2REND_Kill(void)
 
 void VDP2REND_StartFrame(EmulateSpecStruct* espec_arg, const bool clock28m, const int SurfInterlaceField)
 {
- OutLineCounter = 0;
+ NextOutLine = 0;
  Clock28M = clock28m;
 
  espec = espec_arg;
@@ -3340,12 +3340,12 @@ void VDP2REND_EndFrame(void)
  ;
 #endif
 
- if(OutLineCounter < VisibleLines)
+ if(NextOutLine < VisibleLines)
  {
-  //printf("OutLineCounter(%d) < VisibleLines(%d)\n", OutLineCounter, VisibleLines);
+  //printf("OutLineCounter(%d) < VisibleLines(%d)\n", NextOutLine, VisibleLines);
   do
   {
-   uint16 out_line = OutLineCounter;
+   uint16 out_line = NextOutLine;
    uint32* target;
 
    if(espec->InterlaceOn)
@@ -3354,7 +3354,7 @@ void VDP2REND_EndFrame(void)
    target = espec->surface->pixels + out_line * espec->surface->pitchinpix;
    target[0] = target[1] = target[2] = target[3] = MAKECOLOR(0, 0, 0, 0);
    espec->LineWidths[out_line] = 4;
-  } while(++OutLineCounter < VisibleLines);
+  } while(++NextOutLine < VisibleLines);
  }
 
  espec = NULL;
@@ -3369,17 +3369,20 @@ VDP2Rend_LIB* VDP2REND_GetLIB(unsigned line)
 
 void VDP2REND_DrawLine(int vdp2_line, const bool field)
 {
- if(MDFN_LIKELY(OutLineCounter < VisibleLines))
- {
-  uint16 out_line = OutLineCounter;
+   const uint32 crt_line = NextOutLine;
 
-  if(espec->InterlaceOn)
-   out_line = (out_line << 1) | espec->InterlaceField;
+   if(MDFN_LIKELY(crt_line < VisibleLines))
+   {
+      uint16 out_line = crt_line;
 
-  DrawCounter.fetch_add(1, std::memory_order_release);
-  WWQ(COMMAND_DRAW_LINE, ((uint16)vdp2_line << 16) | out_line, field);
-  OutLineCounter++;
- }
+      if(espec->InterlaceOn)
+         out_line = (out_line << 1) | espec->InterlaceField;
+
+      DrawCounter.fetch_add(1, std::memory_order_release);
+      WWQ(COMMAND_DRAW_LINE, ((uint16)vdp2_line << 16) | out_line, field);
+
+      NextOutLine = crt_line + 1;
+   }
 }
 
 void VDP2REND_Reset(bool powering_up)
