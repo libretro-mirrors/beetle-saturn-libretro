@@ -1,8 +1,8 @@
 /******************************************************************************/
 /* Mednafen Sega Saturn Emulation Module                                      */
 /******************************************************************************/
-/* 3dpad.h:
-**  Copyright (C) 2016-2017 Mednafen Team
+/* gun.h:
+**  Copyright (C) 2017 Mednafen Team
 **
 ** This program is free software; you can redistribute it and/or
 ** modify it under the terms of the GNU General Public License
@@ -19,33 +19,47 @@
 ** 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 */
 
-#ifndef __MDFN_SS_INPUT_3DPAD_H
-#define __MDFN_SS_INPUT_3DPAD_H
+#ifndef __MDFN_SS_INPUT_GUN_H
+#define __MDFN_SS_INPUT_GUN_H
 
-class IODevice_3DPad final : public IODevice
+class IODevice_Gun final : public IODevice
 {
  public:
- IODevice_3DPad();
- virtual ~IODevice_3DPad() override;
+ IODevice_Gun() MDFN_COLD;
+ virtual ~IODevice_Gun() override MDFN_COLD;
 
- virtual void Power(void) override;
+ virtual void Power(void) override MDFN_COLD;
+ virtual void TransformInput(uint8* const data, float gun_x_scale, float gun_x_offs) const override;
  virtual void UpdateInput(const uint8* data, const int32 time_elapsed) override;
  virtual void StateAction(StateMem* sm, const unsigned load, const bool data_only, const char* sname_prefix) override;
+ virtual void Draw(MDFN_Surface* surface, const MDFN_Rect& drect, const int32* lw, int ifield, float gun_x_scale, float gun_x_offs) const override;
 
  virtual uint8 UpdateBus(const sscpu_timestamp_t timestamp, const uint8 smpc_out, const uint8 smpc_out_asserted) override;
 
- private:
- uint16 dbuttons;
- uint8 thumb[2];
- uint8 shoulder[2];
+ virtual void LineHook(const sscpu_timestamp_t timestamp, int32 out_line, int32 div, int32 coord_adj) override;
 
- uint8 buffer[0x10];
- uint8 data_out;
- bool tl;
- int8 phase;
- bool mode;
+ void SetCrosshairsColor(uint32 color);
+
+ private:
+
+ void UpdateLight(const sscpu_timestamp_t timestamp);
+
+ uint8 state;
+
+ int32 osshot_counter;
+ bool prev_ossb;
+
+ //
+ int32 nom_coord[2];
+ bool light_phase;
+ int32 light_phase_counter;
+
+ bool chair_draw;
+ int chair_r, chair_g, chair_b;
+ //
+ float x_scale, x_offs;
 };
 
-extern IDIISG IODevice_3DPad_IDII;
+extern IDIISG IODevice_Gun_IDII;
 
 #endif

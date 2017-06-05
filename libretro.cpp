@@ -860,6 +860,7 @@ static void Emulate(EmulateSpecStruct* espec_arg)
 
  ForceEventUpdates(end_ts);
  //
+ SMPC_EndFrame(espec, end_ts);
  //
  //
  RebaseTS(end_ts);
@@ -1360,6 +1361,17 @@ static bool InitCommon(const unsigned cart_type, const unsigned smpc_area)
 #if 0
       MDFN_printf(_("Multitap on Saturn Port %u: %s\n"), sp + 1, sv ? _("Enabled") : _("Disabled"));
 #endif
+   }
+
+
+   for(unsigned vp = 0; vp < 12; vp++)
+   {
+      char buf[64];
+      uint32 sv;
+
+      snprintf(buf, sizeof(buf), "ss.input.port%u.gun_chairs", vp + 1);
+      sv = MDFN_GetSettingUI(buf);
+      SMPC_SetCrosshairsColor(vp, sv);  
    }
    //
    //

@@ -39,10 +39,36 @@ void SetLayerEnableMask(uint64 mask) MDFN_COLD;
 sscpu_timestamp_t Update(sscpu_timestamp_t timestamp);
 void AdjustTS(const int32 delta);
 
+void GetGunXTranslation(const bool clock28m, float* scale, float* offs);
 void StartFrame(EmulateSpecStruct* espec, const bool clock28m);
 
 static INLINE bool GetVBOut(void) { extern bool VBOut; return VBOut; }
 static INLINE bool GetHBOut(void) { extern bool HBOut; return HBOut; }
+
+INLINE void SetExtLatch(sscpu_timestamp_t event_timestamp, bool status)
+{
+ extern bool ExLatchIn;
+ extern bool ExLatchEnable;
+ extern bool ExLatchPending;
+
+ if(MDFN_UNLIKELY(ExLatchIn != status))
+ {
+  ExLatchIn = status;
+  //
+  //
+  if(ExLatchEnable & ExLatchIn)
+  {
+   //
+   // Should be safer(avoid unintended reentrant and recursive calls to *Update() functions, now and in the future) to just schedule a call to VDP2::Update()
+   // than calling it directly from here, though it's possible a scheduled DMA could rewrite
+   // ExLatchEnable and VDP2 timing registers and cause weird results(latching correct values or not latching at all, versus also latching wrong values), but that shouldn't
+   // be a problem in practice...
+   //
+   ExLatchPending = true;
+   SS_SetEventNT(&events[SS_EVENT_VDP2], event_timestamp);
+  }
+ }
+}
 
 //
 //

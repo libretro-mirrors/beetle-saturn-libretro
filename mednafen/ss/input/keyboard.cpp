@@ -202,7 +202,7 @@ void IODevice_Keyboard::StateAction(StateMem* sm, const unsigned load, const boo
  }
 }
 
-uint8 IODevice_Keyboard::UpdateBus(const uint8 smpc_out, const uint8 smpc_out_asserted)
+uint8 IODevice_Keyboard::UpdateBus(const sscpu_timestamp_t timestamp, const uint8 smpc_out, const uint8 smpc_out_asserted)
 {
  if(smpc_out & 0x40)
  {

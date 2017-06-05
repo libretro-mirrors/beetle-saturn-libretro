@@ -89,7 +89,7 @@ void IODevice_Wheel::StateAction(StateMem* sm, const unsigned load, const bool d
  }
 }
 
-uint8 IODevice_Wheel::UpdateBus(const uint8 smpc_out, const uint8 smpc_out_asserted)
+uint8 IODevice_Wheel::UpdateBus(const sscpu_timestamp_t timestamp, const uint8 smpc_out, const uint8 smpc_out_asserted)
 {
  uint8 tmp;
 

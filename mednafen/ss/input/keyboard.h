@@ -33,7 +33,7 @@ class IODevice_Keyboard final : public IODevice
  virtual void UpdateOutput(uint8* data) override;
  virtual void StateAction(StateMem* sm, const unsigned load, const bool data_only, const char* sname_prefix) override;
 
- virtual uint8 UpdateBus(const uint8 smpc_out, const uint8 smpc_out_asserted) override;
+ virtual uint8 UpdateBus(const sscpu_timestamp_t timestamp, const uint8 smpc_out, const uint8 smpc_out_asserted) override;
 
  private:
 

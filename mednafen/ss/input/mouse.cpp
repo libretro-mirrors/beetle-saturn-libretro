@@ -77,7 +77,7 @@ void IODevice_Mouse::StateAction(StateMem* sm, const unsigned load, const bool d
  }
 }
 
-uint8 IODevice_Mouse::UpdateBus(const uint8 smpc_out, const uint8 smpc_out_asserted)
+uint8 IODevice_Mouse::UpdateBus(const sscpu_timestamp_t timestamp, const uint8 smpc_out, const uint8 smpc_out_asserted)
 {
  uint8 tmp;
 

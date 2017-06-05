@@ -25,6 +25,7 @@
 void VDP2REND_Init(const bool IsPAL, const int sls, const int sle) MDFN_COLD;
 void VDP2REND_FillVideoParams(MDFNGI* gi) MDFN_COLD;
 void VDP2REND_Kill(void) MDFN_COLD;
+void VDP2REND_GetGunXTranslation(const bool clock28m, float* scale, float* offs);
 void VDP2REND_StartFrame(EmulateSpecStruct* espec, const bool clock28m, const int SurfInterlaceField);
 void VDP2REND_EndFrame(void);
 void VDP2REND_Reset(bool powering_up) MDFN_COLD;
@@ -46,7 +47,7 @@ struct VDP2Rend_LIB
 };
 
 VDP2Rend_LIB* VDP2REND_GetLIB(unsigned line);
-void VDP2REND_DrawLine(int vdp2_line, const bool field);
+void VDP2REND_DrawLine(int vdp2_line, const uint32 crt_line, const bool field);
 
 void VDP2REND_Write8_DB(uint32 A, uint16 DB);
 void VDP2REND_Write16_DB(uint32 A, uint16 DB);

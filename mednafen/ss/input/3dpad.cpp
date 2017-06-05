@@ -100,7 +100,7 @@ void IODevice_3DPad::StateAction(StateMem* sm, const unsigned load, const bool d
  }
 }
 
-uint8 IODevice_3DPad::UpdateBus(const uint8 smpc_out, const uint8 smpc_out_asserted)
+uint8 IODevice_3DPad::UpdateBus(const sscpu_timestamp_t timestamp, const uint8 smpc_out, const uint8 smpc_out_asserted)
 {
  uint8 tmp;
 

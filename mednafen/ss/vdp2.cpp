@@ -49,7 +49,7 @@ static uint16 RawRegs[0x100];	// For debugging
 
 static bool DisplayOn;
 static bool BorderMode;
-static bool ExLatchEnable;
+bool ExLatchEnable;
 static bool ExSyncEnable;
 static bool ExBGEnable;
 static bool DispAreaSelect;
@@ -206,6 +206,9 @@ static uint32 VPhase;
 /*static*/ int32 VCounter;
 static bool InternalVB;
 static bool Odd;
+
+static uint32_t CRTLineCounter;
+static bool Clock28M;
 //
 static int SurfInterlaceField;
 //
@@ -300,6 +303,8 @@ static uint32 HPhase;
 
 static uint16 Latched_VCNT, Latched_HCNT;
 static bool HVIsExLatched;
+bool ExLatchIn;
+bool ExLatchPending;
 
 static void LatchHV(void)
 {
@@ -321,15 +326,20 @@ static void LatchHV(void)
   Latched_HCNT = (HCounter + (0x200 - HTimings[HRes & 1][HPHASE__COUNT - 1])) << 1;
  else
   Latched_HCNT = HCounter << 1;
-
- //HVIsLatched = true; // Only on external signal-induced latching?
 }
 //
 //
+void GetGunXTranslation(const bool clock28m, float* scale, float* offs)
+{
+ VDP2REND_GetGunXTranslation(clock28m, scale, offs);
+}
+
 void StartFrame(EmulateSpecStruct* espec, const bool clock28m)
 {
+ Clock28M = clock28m;
  //printf("StartFrame: %d\n", SurfInterlaceField);
  VDP2REND_StartFrame(espec, clock28m, SurfInterlaceField);
+ CRTLineCounter = 0;
 }
 
 //
@@ -378,6 +388,10 @@ static INLINE void IncVCounter(const sscpu_timestamp_t event_timestamp)
    InternalVB = true;
    Out_VB = true;
   }
+  else if(VPhase == VPHASE_BOTTOM_BLANKING)
+  {
+   CRTLineCounter = 0x80000000U;
+  }
   else if(VPhase == VPHASE_VSYNC)
   {
    if(InterlaceMode)
@@ -396,7 +410,7 @@ static INLINE void IncVCounter(const sscpu_timestamp_t event_timestamp)
 
  RecalcVRAMPenalty();
 
- SMPC_SetVB(event_timestamp, Out_VB);
+ SMPC_SetVBVS(event_timestamp, Out_VB, VPhase == VPHASE_VSYNC);
 }
 
 static INLINE int32 AddHCounter(const sscpu_timestamp_t event_timestamp, int32 count)
@@ -471,10 +485,14 @@ static INLINE int32 AddHCounter(const sscpu_timestamp_t event_timestamp, int32 c
     //printf("%d, 0x%08x(%f) 0x%08x(%f)\n", VCounter, RotParams[0].KAstAccum >> 10, (int32)RotParams[0].DKAst / 1024.0, RotParams[1].KAstAccum >> 10, (int32)RotParams[1].DKAst / 1024.0);
     //printf("DL: %d\n", VCounter);
     lib->vdp1_hires8 = VDP1::GetLine(VCounter, lib->vdp1_line, (HRes & 1) ? 352 : 320, (int32)RotParams[0].XstAccum >> 1, (int32)RotParams[0].YstAccum >> 1, (int32)RotParams[0].DX >> 1, (int32)RotParams[0].DY >> 1); // Always call, has side effects.
-    VDP2REND_DrawLine(InternalVB ? -1 : VCounter, !Odd);
+    VDP2REND_DrawLine(InternalVB ? -1 : VCounter, CRTLineCounter, !Odd);
+    CRTLineCounter++;
    }
    else if(VPhase == VPHASE_TOP_BORDER || VPhase == VPHASE_BOTTOM_BORDER)
-    VDP2REND_DrawLine(-1, !Odd);
+   {
+      VDP2REND_DrawLine(-1, CRTLineCounter, !Odd);
+      CRTLineCounter++;
+   }
   }
   else if(HPhase == HPHASE_HSYNC)
   {
@@ -506,6 +524,16 @@ sscpu_timestamp_t Update(sscpu_timestamp_t timestamp)
  tmp = SCU_SetHBVB(clocks, HPhase > HPHASE_ACTIVE, Out_VB);
  if(tmp < ne)
   ne = tmp;
+
+ //
+ //
+ if(MDFN_UNLIKELY(ExLatchPending))
+ {
+  LatchHV();
+  HVIsExLatched = true;
+  ExLatchPending = false;
+  //printf("ExLatch: %04x %04x\n", Latched_VCNT, Latched_HCNT);
+ }
 
  return lastts + (ne << 2);
 }
@@ -799,6 +827,8 @@ void Init(const bool IsPAL, const int sls, const int sle)
 
  SS_SetPhysMemMap(0x05E00000, 0x05EFFFFF, VRAM, 0x80000, true);
 
+ ExLatchIn = false;
+
  VDP2REND_Init(IsPAL, sls, sle);
 }
 
@@ -817,6 +847,9 @@ void Kill(void)
  VDP2REND_Kill();
 }
 
+//
+// TODO: Check reset versus power on values.
+//
 void Reset(bool powering_up)
 {
  DisplayOn = false;
@@ -851,6 +884,20 @@ void Reset(bool powering_up)
  }
  RPTA = 0;
  memset(RotParams, 0, sizeof(RotParams));
+
+ //
+ //
+ //
+ if(powering_up)
+ {
+  HPhase = 0;
+  HCounter = 0;
+
+  Latched_VCNT = 0;
+  Latched_HCNT = 0;
+  HVIsExLatched = false;
+  ExLatchPending = false;
+ }
 
  //
  // FIXME(init values), also in VDP2REND.

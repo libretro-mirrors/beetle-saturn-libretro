@@ -32,6 +32,36 @@ IODevice_Multitap::~IODevice_Multitap()
 
 }
 
+void IODevice_Multitap::ForceSubUpdate(const sscpu_timestamp_t timestamp)
+{
+ for(unsigned i = 0; i < 6; i++)
+  devices[i]->UpdateBus(timestamp, sub_state[i], 0x60);
+
+ LastTS = timestamp;
+}
+
+void IODevice_Multitap::Draw(MDFN_Surface* surface, const MDFN_Rect& drect, const int32* lw, int ifield, float gun_x_scale, float gun_x_offs) const
+{
+ for(unsigned i = 0; i < 6; i++)
+  devices[i]->Draw(surface, drect, lw, ifield, gun_x_scale, gun_x_offs);
+}
+
+void IODevice_Multitap::LineHook(const sscpu_timestamp_t timestamp, int32 out_line, int32 div, int32 coord_adj)
+{
+ for(unsigned i = 0; i < 6; i++)
+  devices[i]->LineHook(timestamp, out_line, div, coord_adj);
+
+ LastTS = timestamp;
+}
+
+void IODevice_Multitap::ResetTS(void)
+{
+ LastTS = 0;
+
+ for(unsigned i = 0; i < 6; i++)
+  devices[i]->ResetTS();
+}
+
 void IODevice_Multitap::Power(void)
 {
  phase = -2;
@@ -49,7 +79,7 @@ void IODevice_Multitap::Power(void)
   if(devices[i])
   {
    sub_state[i] = 0x60;
-   devices[i]->UpdateBus(sub_state[i], 0x60);
+   devices[i]->UpdateBus(devices[i]->LastTS, sub_state[i], 0x60);
    devices[i]->Power();
   }
  }
@@ -59,7 +89,7 @@ void IODevice_Multitap::SetSubDevice(unsigned sub_index, IODevice* device)
 {
  assert(sub_index < 6);
  devices[sub_index] = device;
- devices[sub_index]->UpdateBus(sub_state[sub_index], 0x60);
+ devices[sub_index]->UpdateBus(devices[sub_index]->LastTS, sub_state[sub_index], 0x60);
 }
 
 IODevice* IODevice_Multitap::GetSubDevice(unsigned sub_index)
@@ -119,12 +149,12 @@ enum { PhaseBias = __COUNTER__ + 1 };
 #define WR_NYB(v) { WAIT_UNTIL((bool)(smpc_out & 0x20) != tl); data_out = (v) & 0xF; tl = !tl; }
 
 
-INLINE uint8 IODevice_Multitap::UASB(void)
+INLINE uint8 IODevice_Multitap::UASB(const sscpu_timestamp_t timestamp)
 {
- return devices[port_counter]->UpdateBus(sub_state[port_counter], 0x60);
+ return devices[port_counter]->UpdateBus(timestamp, sub_state[port_counter], 0x60);
 }
 
-uint8 IODevice_Multitap::UpdateBus(const uint8 smpc_out, const uint8 smpc_out_asserted)
+uint8 IODevice_Multitap::UpdateBus(const sscpu_timestamp_t timestamp, const uint8 smpc_out, const uint8 smpc_out_asserted)
 {
  if(smpc_out & 0x40)
  {
@@ -154,15 +184,15 @@ uint8 IODevice_Multitap::UpdateBus(const uint8 smpc_out, const uint8 smpc_out_as
     do
     {
      sub_state[port_counter] = 0x60;
-     UASB();
+     UASB(timestamp);
      // ...
-     tmp[0] = UASB();
+     tmp[0] = UASB(timestamp);
      id1 = ((((tmp[0] >> 3) | (tmp[0] >> 2)) & 1) << 3) | ((((tmp[0] >> 1) | (tmp[0] >> 0)) & 1) << 2);
 
      sub_state[port_counter] = 0x20;
-     UASB();
+     UASB(timestamp);
      // ...
-     tmp[1] = UASB();
+     tmp[1] = UASB(timestamp);
      id1 |= ((((tmp[1] >> 3) | (tmp[1] >> 2)) & 1) << 1) | ((((tmp[1] >> 1) | (tmp[1] >> 0)) & 1) << 0);
 
      //printf("%d, %01x\n", port_counter, id1);
@@ -173,14 +203,14 @@ uint8 IODevice_Multitap::UpdateBus(const uint8 smpc_out, const uint8 smpc_out_as
       WR_NYB(0x2);
 
       sub_state[port_counter] = 0x40;
-      UASB();
+      UASB(timestamp);
       WR_NYB(tmp[1] & 0xF);
-      tmp[2] = UASB();
+      tmp[2] = UASB(timestamp);
 
       sub_state[port_counter] = 0x00;
-      UASB();
+      UASB(timestamp);
       WR_NYB(tmp[2] & 0xF);
-      tmp[3] = UASB();
+      tmp[3] = UASB(timestamp);
 
       WR_NYB(tmp[3] & 0xF);
       WR_NYB((tmp[0] & 0xF) | 0x7);
@@ -188,12 +218,12 @@ uint8 IODevice_Multitap::UpdateBus(const uint8 smpc_out, const uint8 smpc_out_as
      else if(id1 == 0x3 || id1 == 0x5) // Analog
      {
       sub_state[port_counter] = 0x00;
-      WAIT_UNTIL(!(UASB() & 0x10));
-      id2 = ((UASB() & 0xF) << 4);
+      WAIT_UNTIL(!(UASB(timestamp) & 0x10));
+      id2 = ((UASB(timestamp) & 0xF) << 4);
 
       sub_state[port_counter] = 0x20;
-      WAIT_UNTIL(UASB() & 0x10);
-      id2 |= ((UASB() & 0xF) << 0);
+      WAIT_UNTIL(UASB(timestamp) & 0x10);
+      id2 |= ((UASB(timestamp) & 0xF) << 0);
 
       if(id1 == 0x3)
        id2 = 0xE3;
@@ -205,12 +235,12 @@ uint8 IODevice_Multitap::UpdateBus(const uint8 smpc_out, const uint8 smpc_out_as
       while(read_counter < (id2 & 0xF))
       {
        sub_state[port_counter] = 0x00;
-       WAIT_UNTIL(!(UASB() & 0x10));
-       WR_NYB(UASB() & 0xF);
+       WAIT_UNTIL(!(UASB(timestamp) & 0x10));
+       WR_NYB(UASB(timestamp) & 0xF);
 
        sub_state[port_counter] = 0x20;
-       WAIT_UNTIL(UASB() & 0x10);
-       WR_NYB(UASB() & 0xF);
+       WAIT_UNTIL(UASB(timestamp) & 0x10);
+       WR_NYB(UASB(timestamp) & 0xF);
 
        read_counter++;
       }
@@ -222,7 +252,7 @@ uint8 IODevice_Multitap::UpdateBus(const uint8 smpc_out, const uint8 smpc_out_as
      }
 
      sub_state[port_counter] = 0x60;
-     UASB();
+     UASB(timestamp);
     } while(++port_counter < 6);
 
     //

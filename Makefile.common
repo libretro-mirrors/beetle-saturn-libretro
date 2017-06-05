@@ -98,6 +98,7 @@ ifneq ($(HAVE_GRIFFIN), 1)
 	$(CORE_EMU_DIR)/vdp2_render.cpp \
 	$(CORE_EMU_DIR)/smpc.cpp \
 	$(CORE_EMU_DIR)/input/gamepad.cpp \
+	$(CORE_EMU_DIR)/input/gun.cpp \
 	$(CORE_EMU_DIR)/input/3dpad.cpp \
 	$(CORE_EMU_DIR)/input/mouse.cpp \
 	$(CORE_EMU_DIR)/input/multitap.cpp \

@@ -58,7 +58,7 @@ void IODevice_Gamepad::StateAction(StateMem* sm, const unsigned load, const bool
   buttons &= ~3;
 }
 
-uint8 IODevice_Gamepad::UpdateBus(const uint8 smpc_out, const uint8 smpc_out_asserted)
+uint8 IODevice_Gamepad::UpdateBus(const sscpu_timestamp_t timestamp, const uint8 smpc_out, const uint8 smpc_out_asserted)
 {
  uint8 tmp;
 

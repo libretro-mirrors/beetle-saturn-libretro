@@ -3267,6 +3267,19 @@ void VDP2REND_Init(const bool IsPAL, const int sls, const int sle)
  RThread = sthread_create(RThreadEntry, NULL);
 }
 
+// Needed for ss.correct_aspect == 0
+void VDP2REND_GetGunXTranslation(const bool clock28m, float* scale, float* offs)
+{
+ *scale = 1.0;
+ *offs = 0.0;
+
+ if(!CorrectAspect && !clock28m)
+ {
+  *scale = 65.0 / 61.0;
+  *offs = -(21472 - (21472.0 / 65 * 61)) * 0.5;
+ }
+}
+
 void VDP2REND_FillVideoParams(MDFNGI* gi)
 {
  gi->fb_width = 704;
@@ -3287,6 +3300,10 @@ void VDP2REND_FillVideoParams(MDFNGI* gi)
  gi->lcm_width = (ShowHOverscan? 10560 : 10240);
  gi->lcm_height = (LineVisLast + 1 - LineVisFirst) * 2;
 
+ gi->mouse_scale_x = (float)(ShowHOverscan? 21472 : 20821) / gi->nominal_width;
+ gi->mouse_offs_x = (float)(ShowHOverscan? 0 : 651) / 2;
+ gi->mouse_scale_y = 1.0;
+ gi->mouse_offs_y = LineVisFirst;
  //
  //
  //
@@ -3294,6 +3311,9 @@ void VDP2REND_FillVideoParams(MDFNGI* gi)
  {
   gi->nominal_width = (ShowHOverscan ? 352 : 341);
   gi->lcm_width = gi->nominal_width * 2;
+
+  gi->mouse_scale_x = (float)(ShowHOverscan? 21472 : 20821) / gi->nominal_width;
+  gi->mouse_offs_x = (float)(ShowHOverscan? 0 : 651) / 2;
  }
 }
 
@@ -3367,10 +3387,8 @@ VDP2Rend_LIB* VDP2REND_GetLIB(unsigned line)
  return &LIB[line];
 }
 
-void VDP2REND_DrawLine(int vdp2_line, const bool field)
+void VDP2REND_DrawLine(int vdp2_line, const uint32 crt_line, const bool field)
 {
-   const uint32 crt_line = NextOutLine;
-
    if(MDFN_LIKELY(crt_line < VisibleLines))
    {
       uint16 out_line = crt_line;
