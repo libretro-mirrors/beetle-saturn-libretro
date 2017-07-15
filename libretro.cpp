@@ -2346,21 +2346,6 @@ static void check_variables(bool startup)
    {
       setting_last_scanline_pal = atoi(var.value);
    }
-
-   if(setting_psx_multitap_port_1)
-   {
-      if(setting_psx_multitap_port_2)
-         players = 8;
-      else
-         players = 4;
-   }
-   else
-   {
-      if(setting_psx_multitap_port_2)
-         players = 4;
-      else
-         players = 2;
-   }
 }
 
 #ifdef NEED_CD
