@@ -29,11 +29,6 @@ int setting_initial_scanline_pal = 0;
 int setting_last_scanline = 239;
 int setting_last_scanline_pal = 287;
 
-uint32_t setting_psx_multitap_port_1 = 0;
-uint32_t setting_psx_multitap_port_2 = 0;
-uint32_t setting_psx_analog_toggle = 0;
-uint32_t setting_psx_fastboot = 1;
-
 extern char retro_cd_base_name[4096];
 extern char retro_save_directory[4096];
 extern char retro_base_directory[4096];
@@ -106,16 +101,8 @@ bool MDFN_GetSettingB(const char *name)
    /* LIBRETRO */
    if (!strcmp("libretro.cd_load_into_ram", name))
       return 0;
-   if (!strcmp("psx.input.pport1.multitap", name)) /* make configurable */
-      return setting_psx_multitap_port_1;
-   if (!strcmp("psx.input.pport2.multitap", name)) /* make configurable */
-      return setting_psx_multitap_port_2;
    if (!strcmp("ss.region_autodetect", name)) /* make configurable */
       return 1;
-   if (!strcmp("psx.input.analog_mode_ct", name)) /* make configurable */
-      return setting_psx_analog_toggle;
-   if (!strcmp("psx.fastboot", name))
-      return setting_psx_fastboot;
    if (!strcmp("ss.bios_sanity", name))
       return true;
    if (!strcmp("ss.cd_sanity", name))
