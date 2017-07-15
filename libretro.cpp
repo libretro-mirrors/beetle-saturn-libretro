@@ -2266,6 +2266,8 @@ void retro_init(void)
    else
       perf_get_cpu_features_cb = NULL;
 
+   setting_smpc_autortc = true;
+   setting_smpc_autortc_lang = 0;
    setting_initial_scanline = 0;
    setting_last_scanline = 239;
    setting_initial_scanline_pal = 0;
@@ -2317,6 +2319,34 @@ static void check_variables(bool startup)
       {
          old_cdimagecache = cdimage_cache;
       }
+   }
+
+   var.key = "beetle_saturn_autortc";
+   
+   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+   {
+      if (strcmp(var.value, "enabled") == 0)
+         setting_smpc_autortc = 1;
+      else if (strcmp(var.value, "disabled") == 0)
+         setting_smpc_autortc = 0;
+   }
+
+   var.key = "beetle_saturn_autortc_lang";
+
+   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+   {
+       if (strcmp(var.value, "english") == 0)
+          setting_smpc_autortc_lang = 0;
+       else if (strcmp(var.value, "german") == 0)
+          setting_smpc_autortc_lang = 1;
+       else if (strcmp(var.value, "french") == 0)
+          setting_smpc_autortc_lang = 2;
+       else if (strcmp(var.value, "spanish") == 0)
+          setting_smpc_autortc_lang = 3;
+       else if (strcmp(var.value, "italian") == 0)
+          setting_smpc_autortc_lang = 4;
+       else if (strcmp(var.value, "japanese") == 0)
+          setting_smpc_autortc_lang = 5;
    }
 
    var.key = "beetle_saturn_initial_scanline";
@@ -3068,6 +3098,8 @@ void retro_set_environment(retro_environment_t cb)
 
    static const struct retro_variable vars[] = {
       { "beetle_saturn_cdimagecache", "CD Image Cache (restart); disabled|enabled" },
+      { "beetle_saturn_autortc", "Automatically set RTC on game load; enabled|disabled" },
+      { "beetle_saturn_autortc_lang", "BIOS language; english|german|french|spanish|italian|japanese" },
       { "beetle_saturn_initial_scanline", "Initial scanline; 0|1|2|3|4|5|6|7|8|9|10|10|11|12|13|14|15|16|17|18|19|20|21|22|23|24|25|26|27|28|29|30|31|32|33|34|35|36|37|38|39|40" },
       { "beetle_saturn_initial_scanline_pal", "Initial scanline PAL; 0|1|2|3|4|5|6|7|8|9|10|10|11|12|13|14|15|16|17|18|19|20|21|22|23|24|25|26|27|28|29|30|31|32|33|34|35|36|37|38|39|40" },
       { "beetle_saturn_last_scanline", "Last scanline; 239|238|237|236|235|234|232|231|230|229|228|227|226|225|224|223|222|221|220|219|218|217|216|215|214|213|212|211|210" },

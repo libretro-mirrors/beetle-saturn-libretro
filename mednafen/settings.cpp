@@ -24,6 +24,8 @@
 #include "settings.h"
 #include <compat/msvc.h>
 
+bool setting_smpc_autortc = true;
+int setting_smpc_autortc_lang = 0;
 int setting_initial_scanline = 0;
 int setting_initial_scanline_pal = 0;
 int setting_last_scanline = 239;
@@ -51,6 +53,8 @@ uint64_t MDFN_GetSettingUI(const char *name)
        */
       return 0;
    }
+   if (!strcmp("ss.smpc.autortc.lang", name))
+      return setting_smpc_autortc_lang;
    if (!strcmp("ss.dbg_mask", name))
       return 1;
 
@@ -101,6 +105,8 @@ bool MDFN_GetSettingB(const char *name)
    /* LIBRETRO */
    if (!strcmp("libretro.cd_load_into_ram", name))
       return 0;
+   if (!strcmp("ss.smpc.autortc", name))
+      return int(setting_smpc_autortc);
    if (!strcmp("ss.region_autodetect", name)) /* make configurable */
       return 1;
    if (!strcmp("ss.bios_sanity", name))
