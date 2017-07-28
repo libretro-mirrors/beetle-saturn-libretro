@@ -78,7 +78,7 @@ endif
 
 ifeq ($(HAVE_CHD), 1)
    FLAGS += -DHAVE_CHD -D_7ZIP_ST -DPACKAGE_VERSION=\"1.3.2\" -DFLAC_API_EXPORTS -DFLAC__HAS_OGG=0 -DHAVE_LROUND -DHAVE_STDINT_H -DHAVE_STDLIB_H -DHAVE_SYS_PARAM_H
-   INCFLAGS += -I$(DEPS_DIR)/crypto -I$(DEPS_DIR)/flac-1.3.2/include -I$(DEPS_DIR)/flac-1.3.2/src/libFLAC/include -I$(DEPS_DIR)/lzma-16.04/C
+   INCFLAGS += -I$(DEPS_DIR)/crypto -I$(DEPS_DIR)/flac-1.3.2/include -I$(DEPS_DIR)/flac-1.3.2/src/libFLAC/include -I$(DEPS_DIR)/lzma-16.04/C -I$(DEPS_DIR)/libchdr
 endif
 
 ifeq ($(NEED_TREMOR), 1)
@@ -148,7 +148,6 @@ SOURCES_C += \
 	$(DEPS_DIR)/crypto/sha1.c \
 	$(DEPS_DIR)/flac-1.3.2/src/libFLAC/bitmath.c \
 	$(DEPS_DIR)/flac-1.3.2/src/libFLAC/bitreader.c \
-	$(DEPS_DIR)/flac-1.3.2/src/libFLAC/bitwriter.c \
 	$(DEPS_DIR)/flac-1.3.2/src/libFLAC/cpu.c \
 	$(DEPS_DIR)/flac-1.3.2/src/libFLAC/crc.c \
 	$(DEPS_DIR)/flac-1.3.2/src/libFLAC/fixed.c \
@@ -166,55 +165,26 @@ SOURCES_C += \
 	$(DEPS_DIR)/flac-1.3.2/src/libFLAC/metadata_iterators.c \
 	$(DEPS_DIR)/flac-1.3.2/src/libFLAC/metadata_object.c \
 	$(DEPS_DIR)/flac-1.3.2/src/libFLAC/stream_decoder.c \
-	$(DEPS_DIR)/flac-1.3.2/src/libFLAC/stream_encoder.c \
-	$(DEPS_DIR)/flac-1.3.2/src/libFLAC/stream_encoder_framing.c \
-	$(DEPS_DIR)/flac-1.3.2/src/libFLAC/stream_encoder_intrin_avx2.c \
-	$(DEPS_DIR)/flac-1.3.2/src/libFLAC/stream_encoder_intrin_sse2.c \
-	$(DEPS_DIR)/flac-1.3.2/src/libFLAC/stream_encoder_intrin_ssse3.c \
 	$(DEPS_DIR)/flac-1.3.2/src/libFLAC/window.c \
-	$(DEPS_DIR)/lzma-16.04/C/7zAlloc.c \
-	$(DEPS_DIR)/lzma-16.04/C/7zArcIn.c \
-	$(DEPS_DIR)/lzma-16.04/C/7zBuf2.c \
-	$(DEPS_DIR)/lzma-16.04/C/7zBuf.c \
-	$(DEPS_DIR)/lzma-16.04/C/7zCrc.c \
-	$(DEPS_DIR)/lzma-16.04/C/7zCrcOpt.c \
-	$(DEPS_DIR)/lzma-16.04/C/7zDec.c \
-	$(DEPS_DIR)/lzma-16.04/C/7zFile.c \
-	$(DEPS_DIR)/lzma-16.04/C/7zStream.c \
-	$(DEPS_DIR)/lzma-16.04/C/Aes.c \
-	$(DEPS_DIR)/lzma-16.04/C/AesOpt.c \
 	$(DEPS_DIR)/lzma-16.04/C/Alloc.c \
-	$(DEPS_DIR)/lzma-16.04/C/Bcj2.c \
 	$(DEPS_DIR)/lzma-16.04/C/Bra86.c \
 	$(DEPS_DIR)/lzma-16.04/C/Bra.c \
 	$(DEPS_DIR)/lzma-16.04/C/BraIA64.c \
 	$(DEPS_DIR)/lzma-16.04/C/CpuArch.c \
 	$(DEPS_DIR)/lzma-16.04/C/Delta.c \
-	$(DEPS_DIR)/lzma-16.04/C/DllSecur.c \
 	$(DEPS_DIR)/lzma-16.04/C/LzFind.c \
- 	$(DEPS_DIR)/lzma-16.04/C/Lzma2Dec.c \
- 	$(DEPS_DIR)/lzma-16.04/C/Lzma2Enc.c \
 	$(DEPS_DIR)/lzma-16.04/C/Lzma86Dec.c \
 	$(DEPS_DIR)/lzma-16.04/C/Lzma86Enc.c \
 	$(DEPS_DIR)/lzma-16.04/C/LzmaDec.c \
 	$(DEPS_DIR)/lzma-16.04/C/LzmaEnc.c \
  	$(DEPS_DIR)/lzma-16.04/C/LzmaLib.c \
-	$(DEPS_DIR)/lzma-16.04/C/Ppmd7.c \
- 	$(DEPS_DIR)/lzma-16.04/C/Ppmd7Dec.c \
-	$(DEPS_DIR)/lzma-16.04/C/Ppmd7Enc.c \
-	$(DEPS_DIR)/lzma-16.04/C/Sha256.c \
 	$(DEPS_DIR)/lzma-16.04/C/Sort.c \
-	$(DEPS_DIR)/lzma-16.04/C/Xz.c \
- 	$(DEPS_DIR)/lzma-16.04/C/XzCrc64.c \
- 	$(DEPS_DIR)/lzma-16.04/C/XzCrc64Opt.c \
-	$(DEPS_DIR)/lzma-16.04/C/XzDec.c \
-	$(DEPS_DIR)/lzma-16.04/C/XzEnc.c \
-	$(DEPS_DIR)/lzma-16.04/C/XzIn.c \
 	$(DEPS_DIR)/libchdr/bitstream.c \
 	$(DEPS_DIR)/libchdr/cdrom.c \
 	$(DEPS_DIR)/libchdr/chd.c \
 	$(DEPS_DIR)/libchdr/flac.c \
 	$(DEPS_DIR)/libchdr/huffman.c 
+
 
 SOURCES_CXX += \
 	$(CDROM_DIR)/CDAccess_CHD.cpp
