@@ -744,6 +744,9 @@ chd_error cdfl_codec_init(void *codec, uint32_t hunkbytes)
 	else if (zerr != Z_OK)
 		return CHDERR_CODEC_ERROR;
 
+	// init flac decoder
+	flac_decoder_init(&cdfl->decoder);
+
 	return CHDERR_NONE;
 }
 
