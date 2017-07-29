@@ -122,8 +122,10 @@ Tracks[NumTracks].postgap = postgap;
 Tracks[NumTracks].sectors = frames;
 Tracks[NumTracks].SubchannelMode = 0;
 
-if (strcmp(type, "AUDIO")==0)
+if (strcmp(type, "AUDIO")==0) {
   Tracks[NumTracks].DIFormat = DI_FORMAT_AUDIO;
+  Tracks[NumTracks].RawAudioMSBFirst = 1;
+}
 else if (strcmp(type, "MODE1_RAW")==0)
   Tracks[NumTracks].DIFormat = DI_FORMAT_MODE1_RAW;
 else if (strcmp(type, "MODE1") ==0)
