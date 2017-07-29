@@ -70,7 +70,9 @@ class CDAccess_CHD : public CDAccess
   // MakeSubPQ will OR the simulated P and Q subchannel data into SubPWBuf.
   int32_t MakeSubPQ(int32_t lba, uint8_t *SubPWBuf) const;
 
-bool Read_CHD_Hunk(uint8_t *buf, int32_t lba, int32_t offset, int32_t bytes);
+  bool Read_CHD_Hunk_RAW(uint8_t *buf, int32_t lba);
+  bool Read_CHD_Hunk_M1(uint8_t *buf, int32_t lba);
+  bool Read_CHD_Hunk_M2(uint8_t *buf, int32_t lba);
 
   int32_t NumTracks;
   int32_t FirstTrack;
