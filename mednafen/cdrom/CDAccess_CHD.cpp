@@ -22,13 +22,37 @@
 #include <mednafen/mednafen.h>
 #include <mednafen/general.h>
 
+#include <stdio.h>
+
 #include "CDAccess_CHD.h"
 
-#include <limits>
-#include <limits.h>
-#include <map>
+// Disk-image(rip) track/sector formats
+enum
+{
+   DI_FORMAT_AUDIO       = 0x00,
+   DI_FORMAT_MODE1       = 0x01,
+   DI_FORMAT_MODE1_RAW   = 0x02,
+   DI_FORMAT_MODE2       = 0x03,
+   DI_FORMAT_MODE2_FORM1 = 0x04,
+   DI_FORMAT_MODE2_FORM2 = 0x05,
+   DI_FORMAT_MODE2_RAW   = 0x06,
+   DI_FORMAT_CDI_RAW     = 0x07,
+   _DI_FORMAT_COUNT
+};
 
-CDAccess_CHD::CDAccess_CHD(const std::string& path, bool image_memcache) : img_numsectors(0)
+static const int32_t DI_Size_Table[8] =
+{
+   2352, // Audio
+   2048, // MODE1
+   2352, // MODE1 RAW
+   2336, // MODE2
+   2048, // MODE2 Form 1
+   2324, // Mode 2 Form 2
+   2352, // MODE2 RAW
+   2352  // CD-I RAW
+};
+
+CDAccess_CHD::CDAccess_CHD(const std::string& path, bool image_memcache) : NumTracks(0), total_sectors(0)
 {
    Load(path, image_memcache);
 }
@@ -36,6 +60,8 @@ CDAccess_CHD::CDAccess_CHD(const std::string& path, bool image_memcache) : img_n
 bool CDAccess_CHD::Load(const std::string& path, bool image_memcache)
 {
   chd_error err = chd_open(path.c_str(), CHD_OPEN_READ, NULL, &chd);
+  if (err!=CHDERR_NONE)
+	exit(-1);
 
   /* allocate storage for sector reads */
   const chd_header *head = chd_get_header(chd);
@@ -46,18 +72,19 @@ bool CDAccess_CHD::Load(const std::string& path, bool image_memcache)
     log_cb(RETRO_LOG_INFO, "chd_load '%s' hunkbytes=%d\n", path.c_str(), head->hunkbytes);
 
   int plba = 0;
+  int numsectors = 0;
   while (1) {
     int tkid = 0, frames = 0, pad = 0, pregap = 0, postgap = 0;
     char type[64], subtype[32], pgtype[32], pgsub[32];
     char tmp[512];
 
-    err = chd_get_metadata(chd, CDROM_TRACK_METADATA2_TAG, num_tracks, tmp, sizeof(tmp), NULL, NULL, NULL);
+    err = chd_get_metadata(chd, CDROM_TRACK_METADATA2_TAG, NumTracks, tmp, sizeof(tmp), NULL, NULL, NULL);
     if (err == CHDERR_NONE) {
       sscanf(tmp, CDROM_TRACK_METADATA2_FORMAT, &tkid, type, subtype, &frames, &pregap, pgtype, pgsub, &postgap);
     } else {
       /* try to read the old v3/v4 metadata tag */
         err = chd_get_metadata(chd, CDROM_TRACK_METADATA_TAG,
-                               num_tracks, tmp, sizeof(tmp), NULL, NULL,
+                               NumTracks, tmp, sizeof(tmp), NULL, NULL,
                                NULL);
         if (err == CHDERR_NONE) {
           sscanf(tmp, CDROM_TRACK_METADATA_FORMAT, &tkid, type, subtype,
@@ -82,104 +109,43 @@ bool CDAccess_CHD::Load(const std::string& path, bool image_memcache)
     plba += pregap;
 
     /* add track */
-    num_tracks++;
-    tocd.tracks[num_tracks].adr = 1;
-    tocd.tracks[num_tracks].control = strcmp(type, "AUDIO") == 0 ? 0 : 4;
-    tocd.tracks[num_tracks].lba = plba;
-    tocd.tracks[num_tracks].valid = true;
+    NumTracks++;
+    toc.tracks[NumTracks].adr = 1;
+    toc.tracks[NumTracks].control = strcmp(type, "AUDIO") == 0 ? 0 : 4;
+    toc.tracks[NumTracks].lba = plba;
+    toc.tracks[NumTracks].valid = true;
+    
+    Tracks[NumTracks].LBA = plba;
+    Tracks[NumTracks].pregap = pregap;
+    Tracks[NumTracks].pregap_dv = 0;
+    Tracks[NumTracks].postgap = postgap;
+    Tracks[NumTracks].sectors = frames;
+    Tracks[NumTracks].SubchannelMode = 0;
+    Tracks[NumTracks].DIFormat = strcmp(type, "AUDIO") == 0 ? DI_FORMAT_AUDIO : DI_FORMAT_MODE1_RAW;
+    Tracks[NumTracks].subq_control = strcmp(type, "AUDIO") == 0 ? 0 : 4;
 
-    log_cb(RETRO_LOG_INFO, "chd_parse '%s' track=%d lba=%d\n", tmp, num_tracks,
-             plba);
+    //printf("\ntrack %d lba %d track lba %d  pregap_dv %d pregap %d sectors %d postgap %d\n", NumTracks, plba, Tracks[NumTracks].LBA, Tracks[NumTracks].pregap_dv, Tracks[NumTracks].pregap, Tracks[NumTracks].sectors, Tracks[NumTracks].postgap);
+
+    log_cb(RETRO_LOG_INFO, "chd_parse '%s' track=%d lba=%d\n", tmp, NumTracks, plba);
 
     plba += frames;
     plba += postgap;
 
-    tocd.first_track = 1;
-    tocd.last_track = num_tracks;
+    numsectors += frames;
+    toc.first_track = 1;
+    toc.last_track = NumTracks;
   }
-    img_numsectors = plba;
-    log_cb(RETRO_LOG_INFO, "chd img_numsectors '%d'\n", img_numsectors);
+
+    FirstTrack = 1;
+    LastTrack = NumTracks;
+    total_sectors = numsectors;
+    log_cb(RETRO_LOG_INFO, "chd total_sectors '%d'\n", total_sectors);
   
     /* add track */
-    tocd.tracks[100].adr = 1;
-    tocd.tracks[100].control = 0;
-    tocd.tracks[100].lba = plba;
-    tocd.tracks[100].valid = true;
-  
-#if 0
-   {
-      CHD_Section& ds = Sections["DISC"];
-      unsigned toc_entries = CHD_ReadInt<unsigned>(ds, "TOCENTRIES");
-      unsigned num_sessions = CHD_ReadInt<unsigned>(ds, "SESSIONS");
-      bool data_tracks_scrambled = CHD_ReadInt<unsigned>(ds, "DATATRACKSSCRAMBLED");
-
-      if(num_sessions != 1)
-      {
-         log_cb(RETRO_LOG_ERROR, "Unsupported number of sessions: %u\n", num_sessions);
-         return false;
-      }
-
-      if(data_tracks_scrambled)
-      {
-         log_cb(RETRO_LOG_ERROR, "Scrambled CHD data tracks currently not supported.\n");
-         return false;
-      }
-
-      //printf("MOO: %d\n", toc_entries);
-
-      for(unsigned te = 0; te < toc_entries; te++)
-      {
-         char tmpbuf[64];
-         snprintf(tmpbuf, sizeof(tmpbuf), "ENTRY %u", te);
-         CHD_Section& ts = Sections[std::string(tmpbuf)];
-         unsigned session = CHD_ReadInt<unsigned>(ts, "SESSION");
-         uint8_t point = CHD_ReadInt<uint8_t>(ts, "POINT");
-         uint8_t adr = CHD_ReadInt<uint8_t>(ts, "ADR");
-         uint8_t control = CHD_ReadInt<uint8_t>(ts, "CONTROL");
-         uint8_t pmin = CHD_ReadInt<uint8_t>(ts, "PMIN");
-         uint8_t psec = CHD_ReadInt<uint8_t>(ts, "PSEC");
-         //uint8_t pframe = CHD_ReadInt<uint8_t>(ts, "PFRAME");
-         signed plba = CHD_ReadInt<signed>(ts, "PLBA");
-
-         if(session != 1)
-         {
-            log_cb(RETRO_LOG_ERROR, "Unsupported TOC entry Session value: %u\n", session);
-            return false;
-         }
-
-         // Reference: ECMA-394, page 5-14
-         if(point >= 1 && point <= 99)
-         {
-            tocd.tracks[point].adr = adr;
-            tocd.tracks[point].control = control;
-            tocd.tracks[point].lba = plba;
-            tocd.tracks[point].valid = true;
-         }
-         else switch(point)
-         {
-            default:
-               log_cb(RETRO_LOG_ERROR, "Unsupported TOC entry Point value: %u\n", point);
-               return false;
-            case 0xA0:
-               tocd.first_track = pmin;
-               tocd.disc_type = psec;
-               break;
-
-            case 0xA1:
-               tocd.last_track = pmin;
-               break;
-
-            case 0xA2:
-               tocd.tracks[100].adr = adr;
-               tocd.tracks[100].control = control;
-               tocd.tracks[100].lba = plba;
-               tocd.tracks[100].valid = true;
-               break;
-         }
-      }
-   }
-
-#endif
+    toc.tracks[100].adr = 1;
+    toc.tracks[100].control = 0;
+    toc.tracks[100].lba = numsectors; // HACK
+    toc.tracks[100].valid = true;
 
    return true;
 }
@@ -191,71 +157,293 @@ CDAccess_CHD::~CDAccess_CHD()
   chd_close(chd);
 }
 
+bool CDAccess_CHD::Read_CHD_Hunk(uint8_t *buf, int32_t lba, int32_t offset, int32_t bytes)
+{
+  const chd_header *head = chd_get_header(chd);
+    int cad = lba;// HACK - track->file_offset;
+    int sph = head->hunkbytes / (2352+96);
+    int hunknum = cad/sph; //(cad * head->unitbytes) / head->hunkbytes;
+    int hunkofs = cad%sph; //(cad * head->unitbytes) % head->hunkbytes;
+	int err = CHDERR_NONE;
+
+    /* each hunk holds ~8 sectors, optimize when reading contiguous sectors */
+    if (hunknum != oldhunk) {
+      err = chd_read(chd, hunknum, hunkmem);
+      if(err!=CHDERR_NONE)
+      log_cb(RETRO_LOG_ERROR, "chd_read_sector failed lba=%d error=%d\n", lba, err);
+      else
+           oldhunk = hunknum;
+    }
+
+    memcpy(buf + offset, hunkmem + hunkofs*(2352+96) + offset, bytes);
+
+   return err;
+}
 bool CDAccess_CHD::Read_Raw_Sector(uint8_t *buf, int32_t lba)
 {
-   if(lba < 0)
+   uint8_t SimuQ[0xC];
+   int32_t track;
+   CHDFILE_TRACK_INFO *ct;
+
+   //
+   // Leadout synthesis
+   //
+   if(lba >= total_sectors)
    {
-      synth_udapp_sector_lba(0xFF, tocd, lba, 0, buf);
-      return true; /* TODO/FIXME - see if we need to return false here? */
+      uint8_t data_synth_mode = 0x01; // Default for DISC_TYPE_CDDA_OR_M1, would be 0x02 for DISC_TYPE_CD_XA
+
+      switch(Tracks[LastTrack].DIFormat)
+      {
+         case DI_FORMAT_AUDIO:
+            break;
+
+         case DI_FORMAT_MODE1_RAW:
+         case DI_FORMAT_MODE1:
+            data_synth_mode = 0x01;
+            break;
+
+         case DI_FORMAT_MODE2_RAW:
+         case DI_FORMAT_MODE2_FORM1:
+         case DI_FORMAT_MODE2_FORM2:
+         case DI_FORMAT_MODE2:
+         case DI_FORMAT_CDI_RAW:
+            data_synth_mode = 0x02;
+            break;
+      }
+
+      synth_leadout_sector_lba(data_synth_mode, toc, lba, buf);
+      return true;
    }
 
-   if((size_t)lba >= img_numsectors)
+   memset(buf + 2352, 0, 96);
+   track = MakeSubPQ(lba, buf + 2352);
+   subq_deinterleave(buf + 2352, SimuQ);
+
+   ct = &Tracks[track];  
+
+   //
+   // Handle pregap and postgap reading
+   //
+   if(lba < (ct->LBA - ct->pregap_dv) || lba >= (ct->LBA + ct->sectors))
    {
-      synth_leadout_sector_lba(0xFF, tocd, lba, buf);
-      return true; /* TODO/FIXME - see if we need to return false here? */
+      int32_t pg_offset = lba - ct->LBA;
+      CHDFILE_TRACK_INFO* et = ct;
+
+      if(pg_offset < -150)
+      {
+         if((Tracks[track].subq_control & SUBQ_CTRLF_DATA) && (FirstTrack < track) && !(Tracks[track - 1].subq_control & SUBQ_CTRLF_DATA))
+            et = &Tracks[track - 1];
+      }
+
+      memset(buf, 0, 2352);
+      switch(et->DIFormat)
+      {
+         case DI_FORMAT_AUDIO:
+            break;
+
+         case DI_FORMAT_MODE1_RAW:
+         case DI_FORMAT_MODE1:
+            encode_mode1_sector(lba + 150, buf);
+            break;
+
+         case DI_FORMAT_MODE2_RAW:
+         case DI_FORMAT_MODE2_FORM1:
+         case DI_FORMAT_MODE2_FORM2:
+         case DI_FORMAT_MODE2:
+         case DI_FORMAT_CDI_RAW:
+            buf[12 +  6] = 0x20;
+            buf[12 + 10] = 0x20;
+            encode_mode2_form2_sector(lba + 150, buf);
+            // TODO: Zero out optional(?) checksum bytes?
+            break;
+      }
+      printf("Pre/post-gap read, LBA=%d(LBA-track_start_LBA=%d)\n", lba, lba - ct->LBA);
    }
+   else
+   {
+      {
+         switch(ct->DIFormat)
+         {
+            case DI_FORMAT_AUDIO:
+              Read_CHD_Hunk(buf, lba, 0, 2352);
+               if(ct->RawAudioMSBFirst)
+                  Endian_A16_Swap(buf, 588 * 2);
+               break;
 
-  const chd_header *head = chd_get_header(chd);
-  int cad = lba;// HACK - track->file_offset;
-  int hunknum = (cad * head->unitbytes) / head->hunkbytes;
-  int hunkofs = (cad * head->unitbytes) % head->hunkbytes;
+            case DI_FORMAT_MODE1:
+             Read_CHD_Hunk(buf, lba, 12 + 3 + 1, 2048);
+            encode_mode1_sector(lba + 150, buf);
+               break;
 
-  /* each hunk holds ~8 sectors, optimize when reading contiguous sectors */
-  if (hunknum != oldhunk) {
-    int err = chd_read(chd, hunknum, hunkmem);
-    if(err!=CHDERR_NONE)
-  	log_cb(RETRO_LOG_ERROR, "chd_read_sector failed lba=%d\n", lba);
-  }
+            case DI_FORMAT_MODE1_RAW:
+            case DI_FORMAT_MODE2_RAW:
+            case DI_FORMAT_CDI_RAW:
+             Read_CHD_Hunk(buf, lba, 0, 2352);
+               break;
+
+            case DI_FORMAT_MODE2:
+              Read_CHD_Hunk(buf, lba, 16, 2336);
+              encode_mode2_sector(lba + 150, buf);
+               break;
 
 
-  memcpy(buf, hunkmem + hunkofs /*+track->header_size*/, 2352 + 96);
-  //log_cb(RETRO_LOG_ERROR, "chd_read_sector OK buf=0x%x hunkmem=0x%x hunkofs=%d\n", buf, hunkmem, hunkofs);
-  subpw_interleave(hunkmem + hunkofs + 2352, buf + 2352);
-  
-#if 0
-   img_stream->seek(lba * 2352, SEEK_SET);
-   img_stream->read(buf, 2352);
+               // FIXME: M2F1, M2F2, does sub-header come before or after user data(standards say before, but I wonder
+               // about cdrdao...).
+            case DI_FORMAT_MODE2_FORM1:
+              // ct->fp->read(buf + 24, 2048);
+               //encode_mode2_form1_sector(lba + 150, buf);
+               break;
 
-   subpw_interleave(&sub_data[lba * 96], buf + 2352);
-#endif
+            case DI_FORMAT_MODE2_FORM2:
+               //ct->fp->read(buf + 24, 2324);
+               //encode_mode2_form2_sector(lba + 150, buf);
+               break;
+
+         }
+
+         //if(ct->SubchannelMode)
+         //   ct->fp->read(buf + 2352, 96);
+      }
+   } // end if audible part of audio track read.
+
    return true;
+}
+
+
+//
+// Note: this function makes use of the current contents(as in |=) in SubPWBuf.
+//
+int32_t CDAccess_CHD::MakeSubPQ(int32_t lba, uint8_t *SubPWBuf) const
+{
+   uint8_t buf[0xC];
+   int32_t track;
+   uint32_t lba_relative;
+   uint32_t ma, sa, fa;
+   uint32_t m, s, f;
+   uint8_t pause_or = 0x00;
+   bool track_found = false;
+
+   for(track = FirstTrack; track < (FirstTrack + NumTracks); track++)
+   {
+      //printf("\ntrack %d lba %d track lba %d  pregap_dv %d pregap %d sectors %d postgap %d\n", track, lba, Tracks[track].LBA, Tracks[track].pregap_dv, Tracks[track].pregap, Tracks[track].sectors,Tracks[track].postgap);
+      if(lba >= (Tracks[track].LBA - Tracks[track].pregap_dv - Tracks[track].pregap) && lba < (Tracks[track].LBA + Tracks[track].sectors + Tracks[track].postgap))
+      {
+         track_found = true;
+         break;
+      }
+   }
+
+   if(!track_found)
+      throw(MDFN_Error(0, _("Could not find track for sector %u!"), lba));
+
+   if(lba < Tracks[track].LBA)
+      lba_relative = Tracks[track].LBA - 1 - lba;
+   else
+      lba_relative = lba - Tracks[track].LBA;
+
+   f = (lba_relative % 75);
+   s = ((lba_relative / 75) % 60);
+   m = (lba_relative / 75 / 60);
+
+   fa = (lba + 150) % 75;
+   sa = ((lba + 150) / 75) % 60;
+   ma = ((lba + 150) / 75 / 60);
+
+   uint8_t adr = 0x1; // Q channel data encodes position
+   uint8_t control = Tracks[track].subq_control;
+
+   // Handle pause(D7 of interleaved subchannel byte) bit, should be set to 1 when in pregap or postgap.
+   if((lba < Tracks[track].LBA) || (lba >= Tracks[track].LBA + Tracks[track].sectors))
+   {
+      //printf("pause_or = 0x80 --- %d\n", lba);
+      pause_or = 0x80;
+   }
+
+   // Handle pregap between audio->data track
+   {
+      int32_t pg_offset = (int32_t)lba - Tracks[track].LBA;
+
+      // If we're more than 2 seconds(150 sectors) from the real "start" of the track/INDEX 01, and the track is a data track,
+      // and the preceding track is an audio track, encode it as audio(by taking the SubQ control field from the preceding track).
+      //
+      // TODO: Look into how we're supposed to handle subq control field in the four combinations of track types(data/audio).
+      //
+      if(pg_offset < -150)
+      {
+         if((Tracks[track].subq_control & SUBQ_CTRLF_DATA) && (FirstTrack < track) && !(Tracks[track - 1].subq_control & SUBQ_CTRLF_DATA))
+         {
+            //printf("Pregap part 1 audio->data: lba=%d track_lba=%d\n", lba, Tracks[track].LBA);
+            control = Tracks[track - 1].subq_control;
+         }
+      }
+   }
+
+
+   memset(buf, 0, 0xC);
+   buf[0] = (adr << 0) | (control << 4);
+   buf[1] = U8_to_BCD(track);
+
+   // Index
+   //if(lba < Tracks[track].LBA) // Index is 00 in pregap
+   // buf[2] = U8_to_BCD(0x00);
+   //else
+   // buf[2] = U8_to_BCD(0x01);
+   {
+      int index = 0;
+
+      for(int32_t i = 0; i < 100; i++)
+      {
+         if(lba >= Tracks[track].index[i])
+            index = i;
+      }
+      buf[2] = U8_to_BCD(index);
+   }
+
+   // Track relative MSF address
+   buf[3] = U8_to_BCD(m);
+   buf[4] = U8_to_BCD(s);
+   buf[5] = U8_to_BCD(f);
+
+   buf[6] = 0; // Zerroooo
+
+   // Absolute MSF address
+   buf[7] = U8_to_BCD(ma);
+   buf[8] = U8_to_BCD(sa);
+   buf[9] = U8_to_BCD(fa);
+
+   subq_generate_checksum(buf);
+
+   for(int i = 0; i < 96; i++)
+      SubPWBuf[i] |= (((buf[i >> 3] >> (7 - (i & 0x7))) & 1) ? 0x40 : 0x00) | pause_or;
+
+   return track;
 }
 
 bool CDAccess_CHD::Fast_Read_Raw_PW_TSRE(uint8_t* pwbuf, int32_t lba)
 {
-  uint8_t buf[2352 + 96];
+   int32_t track;
 
-   if(lba < 0)
+   if(lba >= total_sectors)
    {
-      subpw_synth_udapp_lba(tocd, lba, 0, pwbuf);
-      return true;
+      subpw_synth_leadout_lba(toc, lba, pwbuf);
+      return(true);
    }
 
-   if((size_t)lba >= img_numsectors)
-   {
-      subpw_synth_leadout_lba(tocd, lba, pwbuf);
-      return true;
-   }
+   memset(pwbuf, 0, 96);
+   track = MakeSubPQ(lba, pwbuf);
 
-    Read_Raw_Sector(buf, lba);
-    subpw_interleave(buf + 2352, pwbuf);
-    return true;
+   //
+   // If TOC+BIN has embedded subchannel data, we can't fast-read(synthesize) it...
+   //
+   if(Tracks[track].SubchannelMode && lba >= (Tracks[track].LBA - Tracks[track].pregap_dv) && (lba < Tracks[track].LBA + Tracks[track].sectors))
+      return(false);
 
+   return(true);
 }
 
 bool CDAccess_CHD::Read_TOC(TOC *toc)
 {
-   *toc = tocd;
+   *toc = this->toc;
    return true;
 }
 

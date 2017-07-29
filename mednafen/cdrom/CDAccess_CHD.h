@@ -25,6 +25,30 @@
 #include "CDAccess.h"
 #include "chd.h"
 
+struct CHDFILE_TRACK_INFO
+{
+   int32_t LBA;
+
+   uint32_t DIFormat;
+   uint8_t subq_control;
+
+   int32_t pregap;
+   int32_t pregap_dv;
+
+   int32_t postgap;
+
+   int32_t index[100];
+
+   int32_t sectors; // Not including pregap sectors!
+   bool FirstFileInstance;
+   bool RawAudioMSBFirst;
+   long FileOffset;
+   unsigned int SubchannelMode;
+
+   uint32_t LastSamplePos;
+
+};
+
 class CDAccess_CHD : public CDAccess
 {
  public:
@@ -43,8 +67,18 @@ class CDAccess_CHD : public CDAccess
  bool Load(const std::string& path, bool image_memcache);
  void Cleanup(void);
 
- size_t img_numsectors;
- TOC tocd;
+  // MakeSubPQ will OR the simulated P and Q subchannel data into SubPWBuf.
+  int32_t MakeSubPQ(int32_t lba, uint8_t *SubPWBuf) const;
+
+bool Read_CHD_Hunk(uint8_t *buf, int32_t lba, int32_t offset, int32_t bytes);
+
+  int32_t NumTracks;
+  int32_t FirstTrack;
+  int32_t LastTrack;
+  int32_t total_sectors;
+  uint8_t disc_type;
+  TOC toc;
+  CHDFILE_TRACK_INFO Tracks[100]; // Track #0(HMM?) through 99
 
   //struct disc;
   //struct session sessions[DISC_MAX_SESSIONS];
