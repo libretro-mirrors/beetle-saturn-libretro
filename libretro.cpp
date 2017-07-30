@@ -31,7 +31,7 @@
 #define MEDNAFEN_CORE_NAME_MODULE "ss"
 #define MEDNAFEN_CORE_NAME "Mednafen Saturn"
 #define MEDNAFEN_CORE_VERSION "v0.9.45.1"
-#define MEDNAFEN_CORE_EXTENSIONS "cue|ccd"
+#define MEDNAFEN_CORE_EXTENSIONS "cue|ccd|chd"
 #define MEDNAFEN_CORE_TIMING_FPS 59.82
 #define MEDNAFEN_CORE_GEOMETRY_BASE_W 320
 #define MEDNAFEN_CORE_GEOMETRY_BASE_H 240
@@ -2532,7 +2532,7 @@ static MDFNGI *MDFNI_LoadGame(const char *name)
 {
    MDFNFILE *GameFile = NULL;
 
-	if(strlen(name) > 4 && (!strcasecmp(name + strlen(name) - 4, ".cue") || !strcasecmp(name + strlen(name) - 4, ".ccd") || !strcasecmp(name + strlen(name) - 4, ".toc") || !strcasecmp(name + strlen(name) - 4, ".m3u") || !strcasecmp(name + strlen(name) - 4, ".pbp")))
+	if(strlen(name) > 4 && (!strcasecmp(name + strlen(name) - 4, ".cue") || !strcasecmp(name + strlen(name) - 4, ".ccd") || !strcasecmp(name + strlen(name) - 4, ".chd") || !strcasecmp(name + strlen(name) - 4, ".toc") || !strcasecmp(name + strlen(name) - 4, ".m3u") || !strcasecmp(name + strlen(name) - 4, ".pbp")))
    {
       MDFNGI *gi = MDFNI_LoadCD(name);
       if (!gi)
