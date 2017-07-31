@@ -101,7 +101,7 @@ bool CDAccess_CHD::Load(const std::string &path, bool image_memcache)
       }
     }
 
-    if (strcmp(type, "MODE1") && strcmp(type, "MODE1_RAW") &&
+    if (strcmp(type, "MODE1") && strcmp(type, "MODE1_RAW") && strcmp(type, "MODE2_RAW") &&
         strcmp(type, "AUDIO"))
     {
       log_cb(RETRO_LOG_ERROR, "chd_parse track type %s unsupported\n", type);
@@ -141,6 +141,8 @@ bool CDAccess_CHD::Load(const std::string &path, bool image_memcache)
     }
     else if (strcmp(type, "MODE1_RAW") == 0)
       Tracks[NumTracks].DIFormat = DI_FORMAT_MODE1_RAW;
+    else if (strcmp(type, "MODE2_RAW") == 0)
+      Tracks[NumTracks].DIFormat = DI_FORMAT_MODE2_RAW;
     else if (strcmp(type, "MODE1") == 0)
       Tracks[NumTracks].DIFormat = DI_FORMAT_MODE1;
 
