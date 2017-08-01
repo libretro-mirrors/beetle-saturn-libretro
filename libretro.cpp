@@ -2566,7 +2566,7 @@ error:
 
 #define MAX_PLAYERS 8
 #define MAX_BUTTONS 12
-
+#define MAX_BUTTONS_3D_PAD 11
 union
 {
    uint32_t u32[MAX_PLAYERS][1 + 8 + 1]; // Buttons + Axes + Rumble
@@ -2574,6 +2574,7 @@ union
 } static buf;
 
 static uint16_t input_buf[MAX_PLAYERS] = {0};
+static uint32_t input_type[MAX_PLAYERS] = {0};
 
 bool retro_load_game(const struct retro_game_info *info)
 {
@@ -2802,52 +2803,11 @@ void retro_unload_game(void)
 // See mednafen/psx/input/gamepad.cpp
 static void update_input(void)
 {
-   //input_buf[0] = 0;
-   //input_buf[1] = 0;
-
    for (unsigned j = 0; j < players; j++)
    {
        input_buf[j] = 0;
    }
 
-#if 0
-
-#if 0
-   /* Street Fighter Zero 3 */
-   static unsigned map[] = {
-      RETRO_DEVICE_ID_JOYPAD_L,
-      RETRO_DEVICE_ID_JOYPAD_X,
-      RETRO_DEVICE_ID_JOYPAD_Y,
-      RETRO_DEVICE_ID_JOYPAD_R2,
-      RETRO_DEVICE_ID_JOYPAD_UP,
-      RETRO_DEVICE_ID_JOYPAD_DOWN,
-      RETRO_DEVICE_ID_JOYPAD_LEFT,
-      RETRO_DEVICE_ID_JOYPAD_RIGHT,
-      RETRO_DEVICE_ID_JOYPAD_A,
-      RETRO_DEVICE_ID_JOYPAD_R,
-      RETRO_DEVICE_ID_JOYPAD_B,
-      RETRO_DEVICE_ID_JOYPAD_START,
-   };
-   static unsigned l2_map = RETRO_DEVICE_ID_JOYPAD_L2;
-#endif
-
-   /* Tomb Raider */
-   static unsigned map[] = {
-      RETRO_DEVICE_ID_JOYPAD_R2,        /* strafe right */
-      RETRO_DEVICE_ID_JOYPAD_L,         /* view         */
-      RETRO_DEVICE_ID_JOYPAD_L2,        /* strafe left  */
-      RETRO_DEVICE_ID_JOYPAD_A,         /* roll         */
-      RETRO_DEVICE_ID_JOYPAD_UP,
-      RETRO_DEVICE_ID_JOYPAD_DOWN,
-      RETRO_DEVICE_ID_JOYPAD_LEFT,
-      RETRO_DEVICE_ID_JOYPAD_RIGHT,
-      RETRO_DEVICE_ID_JOYPAD_B,         /* use */
-      RETRO_DEVICE_ID_JOYPAD_X,         /* draw weapon  */
-      RETRO_DEVICE_ID_JOYPAD_Y,         /* jump */
-      RETRO_DEVICE_ID_JOYPAD_START,
-   };
-   static unsigned l2_map = RETRO_DEVICE_ID_JOYPAD_R;
-#else
    /* Generic */
    static unsigned map[] = {
       RETRO_DEVICE_ID_JOYPAD_R,
@@ -2863,14 +2823,71 @@ static void update_input(void)
       RETRO_DEVICE_ID_JOYPAD_B,
       RETRO_DEVICE_ID_JOYPAD_START,
    };
+
+   /* 3D Control pad */
+   static unsigned map_3d[] = {
+      RETRO_DEVICE_ID_JOYPAD_UP,
+      RETRO_DEVICE_ID_JOYPAD_DOWN,
+      RETRO_DEVICE_ID_JOYPAD_LEFT,
+      RETRO_DEVICE_ID_JOYPAD_RIGHT,
+      RETRO_DEVICE_ID_JOYPAD_A,
+      RETRO_DEVICE_ID_JOYPAD_L,
+      RETRO_DEVICE_ID_JOYPAD_B,
+      RETRO_DEVICE_ID_JOYPAD_START,
+      RETRO_DEVICE_ID_JOYPAD_R,
+      RETRO_DEVICE_ID_JOYPAD_X,
+      RETRO_DEVICE_ID_JOYPAD_Y,
+   };
+
    static unsigned l2_map = RETRO_DEVICE_ID_JOYPAD_L2;
-#endif
 
    for (unsigned j = 0; j < players; j++)
    {
-      for (unsigned i = 0; i < MAX_BUTTONS; i++)
-         input_buf[j] |= input_state_cb(j, RETRO_DEVICE_JOYPAD, 0, map[i]) ? (1 << i) : 0;
-      input_buf[j] |= input_state_cb(j, RETRO_DEVICE_JOYPAD, 0, l2_map) ? (1 << 15) : 0;
+      switch (input_type[j])
+      {
+	 case RETRO_DEVICE_SS_3D_PAD:
+	 {
+	      // Buttons
+	      for (unsigned i = 0; i < MAX_BUTTONS_3D_PAD; i++)
+        	 input_buf[j] |= input_state_cb(j, RETRO_DEVICE_JOYPAD, 0, map_3d[i]) ? (1 << i) : 0;
+
+	     int analog_x = input_state_cb(j, RETRO_DEVICE_ANALOG, RETRO_DEVICE_INDEX_ANALOG_LEFT,
+        	    RETRO_DEVICE_ID_ANALOG_X);
+
+	      int analog_y = input_state_cb(j, RETRO_DEVICE_ANALOG, RETRO_DEVICE_INDEX_ANALOG_LEFT,
+        	    RETRO_DEVICE_ID_ANALOG_Y);
+
+	      uint16_t right = analog_x > 0 ?  analog_x : 0;
+	      uint16_t left  = analog_x < 0 ? -analog_x : 0;
+	      uint16_t down  = analog_y > 0 ?  analog_y : 0;
+	      uint16_t up    = analog_y < 0 ? -analog_y : 0;
+
+	      uint16_t l_trigger = input_state_cb(j, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_L2) ? 32767 : 0;
+	      uint16_t r_trigger = input_state_cb(j, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_R2) ? 32767 : 0;
+
+	      buf.u8[j][0x2] = ((left  >> 0) & 0xff);
+	      buf.u8[j][0x3] = ((left  >> 8) & 0xff);
+	      buf.u8[j][0x4] = ((right >> 0) & 0xff);
+	      buf.u8[j][0x5] = ((right >> 8) & 0xff);
+	      buf.u8[j][0x6] = ((up    >> 0) & 0xff);
+	      buf.u8[j][0x7] = ((up    >> 8) & 0xff);
+	      buf.u8[j][0x8] = ((down  >> 0) & 0xff);
+	      buf.u8[j][0x9] = ((down  >> 8) & 0xff);
+	      buf.u8[j][0xa] = ((r_trigger >> 0) & 0xff);
+	      buf.u8[j][0xb] = ((r_trigger >> 8) & 0xff);
+	      buf.u8[j][0xc] = ((l_trigger >> 0) & 0xff);
+	      buf.u8[j][0xd] = ((l_trigger >> 8) & 0xff);
+	 }
+	 break;
+
+	 default:
+	 {
+	      for (unsigned i = 0; i < MAX_BUTTONS; i++)
+        	 input_buf[j] |= input_state_cb(j, RETRO_DEVICE_JOYPAD, 0, map[i]) ? (1 << i) : 0;
+	      input_buf[j] |= input_state_cb(j, RETRO_DEVICE_JOYPAD, 0, l2_map) ? (1 << 15) : 0;
+	 }
+	 break;
+      }
    }
 
    // Buttons.
@@ -2883,58 +2900,9 @@ static void update_input(void)
    {
         buf.u8[j][0] = (input_buf[j] >> 0) & 0xff;
         buf.u8[j][1] = (input_buf[j] >> 8) & 0xff;
-   }
 
-   // Analogs
-   for (unsigned j = 0; j < players; j++)
-   {
-      int analog_left_x = input_state_cb(j, RETRO_DEVICE_ANALOG, RETRO_DEVICE_INDEX_ANALOG_LEFT,
-            RETRO_DEVICE_ID_ANALOG_X);
-
-      int analog_left_y = input_state_cb(j, RETRO_DEVICE_ANALOG, RETRO_DEVICE_INDEX_ANALOG_LEFT,
-            RETRO_DEVICE_ID_ANALOG_Y);
-
-      int analog_right_x = input_state_cb(j, RETRO_DEVICE_ANALOG, RETRO_DEVICE_INDEX_ANALOG_RIGHT,
-            RETRO_DEVICE_ID_ANALOG_X);
-
-      int analog_right_y = input_state_cb(j, RETRO_DEVICE_ANALOG, RETRO_DEVICE_INDEX_ANALOG_RIGHT,
-            RETRO_DEVICE_ID_ANALOG_Y);
-
-      uint32_t r_right = analog_right_x > 0 ?  analog_right_x : 0;
-      uint32_t r_left  = analog_right_x < 0 ? -analog_right_x : 0;
-      uint32_t r_down  = analog_right_y > 0 ?  analog_right_y : 0;
-      uint32_t r_up    = analog_right_y < 0 ? -analog_right_y : 0;
-
-      uint32_t l_right = analog_left_x > 0 ?  analog_left_x : 0;
-      uint32_t l_left  = analog_left_x < 0 ? -analog_left_x : 0;
-      uint32_t l_down  = analog_left_y > 0 ?  analog_left_y : 0;
-      uint32_t l_up    = analog_left_y < 0 ? -analog_left_y : 0;
-
-      buf.u32[j][1] = r_right;
-      buf.u32[j][2] = r_left;
-      buf.u32[j][3] = r_down;
-      buf.u32[j][4] = r_up;
-
-      buf.u32[j][5] = l_right;
-      buf.u32[j][6] = l_left;
-      buf.u32[j][7] = l_down;
-      buf.u32[j][8] = l_up;
-   }
-
-   //fprintf(stderr, "Rumble strong: %u, weak: %u.\n", buf.u8[0][9 * 4 + 1], buf.u8[0][9 * 4]);
-   if (rumble.set_rumble_state)
-   {
-      // Appears to be correct.
-      //rumble.set_rumble_state(0, RETRO_RUMBLE_WEAK, buf.u8[0][9 * 4] * 0x101);
-      //rumble.set_rumble_state(0, RETRO_RUMBLE_STRONG, buf.u8[0][9 * 4 + 1] * 0x101);
-      //rumble.set_rumble_state(1, RETRO_RUMBLE_WEAK, buf.u8[1][9 * 4] * 0x101);
-      //rumble.set_rumble_state(1, RETRO_RUMBLE_STRONG, buf.u8[1][9 * 4 + 1] * 0x101);
-
-      for (unsigned j = 0; j < players; j++)
-      {
-          rumble.set_rumble_state(j, RETRO_RUMBLE_WEAK, buf.u8[j][9 * 4] * 0x101);
-          rumble.set_rumble_state(j, RETRO_RUMBLE_STRONG, buf.u8[j][9 * 4 + 1] * 0x101);
-      }
+	if (input_type[j]==RETRO_DEVICE_SS_3D_PAD)
+		buf.u8[j][1] |= 0x10;
    }
 }
 
@@ -3063,6 +3031,9 @@ unsigned retro_api_version(void)
 
 void retro_set_controller_port_device(unsigned in_port, unsigned device)
 {
+   // Store input type 
+   input_type[in_port] = device;
+
    switch (device)
    {
       case RETRO_DEVICE_JOYPAD:
@@ -3081,15 +3052,6 @@ void retro_set_controller_port_device(unsigned in_port, unsigned device)
       default:
          log_cb(RETRO_LOG_WARN, "[%s]: Unsupported controller device %u, falling back to gamepad.\n", MEDNAFEN_CORE_NAME,device);
    }
-
-#if 0
-   if (rumble.set_rumble_state)
-   {
-      rumble.set_rumble_state(in_port, RETRO_RUMBLE_STRONG, 0);
-      rumble.set_rumble_state(in_port, RETRO_RUMBLE_WEAK, 0);
-      buf.u32[in_port][9] = 0;
-   }
-#endif
 }
 
 void retro_set_environment(retro_environment_t cb)
