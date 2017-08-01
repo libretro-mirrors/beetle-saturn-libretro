@@ -2566,7 +2566,7 @@ error:
 
 #define MAX_PLAYERS 8
 #define MAX_BUTTONS 12
-
+#define MAX_BUTTONS_3D_PAD 11
 union
 {
    uint32_t u32[MAX_PLAYERS][1 + 8 + 1]; // Buttons + Axes + Rumble
@@ -2824,13 +2824,65 @@ static void update_input(void)
       RETRO_DEVICE_ID_JOYPAD_START,
    };
 
+   /* 3D Control pad */
+   static unsigned map_3d[] = {
+      RETRO_DEVICE_ID_JOYPAD_UP,
+      RETRO_DEVICE_ID_JOYPAD_DOWN,
+      RETRO_DEVICE_ID_JOYPAD_LEFT,
+      RETRO_DEVICE_ID_JOYPAD_RIGHT,
+      RETRO_DEVICE_ID_JOYPAD_A,
+      RETRO_DEVICE_ID_JOYPAD_L,
+      RETRO_DEVICE_ID_JOYPAD_B,
+      RETRO_DEVICE_ID_JOYPAD_START,
+      RETRO_DEVICE_ID_JOYPAD_R,
+      RETRO_DEVICE_ID_JOYPAD_X,
+      RETRO_DEVICE_ID_JOYPAD_Y,
+   };
+
    static unsigned l2_map = RETRO_DEVICE_ID_JOYPAD_L2;
 
    for (unsigned j = 0; j < players; j++)
    {
-      for (unsigned i = 0; i < MAX_BUTTONS; i++)
-         input_buf[j] |= input_state_cb(j, RETRO_DEVICE_JOYPAD, 0, map[i]) ? (1 << i) : 0;
-      input_buf[j] |= input_state_cb(j, RETRO_DEVICE_JOYPAD, 0, l2_map) ? (1 << 15) : 0;
+      switch (input_type[j])
+      {
+	 case RETRO_DEVICE_SS_3D_PAD:
+	 {
+	      // Buttons
+	      for (unsigned i = 0; i < MAX_BUTTONS_3D_PAD; i++)
+        	 input_buf[j] |= input_state_cb(j, RETRO_DEVICE_JOYPAD, 0, map_3d[i]) ? (1 << i) : 0;
+
+	     int analog_left_x = input_state_cb(j, RETRO_DEVICE_ANALOG, RETRO_DEVICE_INDEX_ANALOG_LEFT,
+        	    RETRO_DEVICE_ID_ANALOG_X);
+
+	      int analog_left_y = input_state_cb(j, RETRO_DEVICE_ANALOG, RETRO_DEVICE_INDEX_ANALOG_LEFT,
+        	    RETRO_DEVICE_ID_ANALOG_Y);
+
+	      uint16_t l_right = analog_left_x > 0 ?  analog_left_x : 0;
+	      uint16_t l_left  = analog_left_x < 0 ? -analog_left_x : 0;
+	      uint16_t l_down  = analog_left_y > 0 ?  analog_left_y : 0;
+	      uint16_t l_up    = analog_left_y < 0 ? -analog_left_y : 0;
+
+	      //printf("l_right=%d l_left=%d l_down=%d l_up=%d\n", l_right, l_left, l_down, l_up);
+
+	      buf.u8[j][4] = ((l_right >> 0) & 0xff);
+	      buf.u8[j][5] = ((l_right >> 8) & 0xff);
+	      buf.u8[j][2] = ((l_left  >> 0) & 0xff);
+	      buf.u8[j][3] = ((l_left  >> 8) & 0xff);
+	      buf.u8[j][8] = ((l_down  >> 0) & 0xff);
+	      buf.u8[j][9] = ((l_down  >> 8) & 0xff);
+	      buf.u8[j][6] = ((l_up    >> 0) & 0xff);
+	      buf.u8[j][7] = ((l_up    >> 8) & 0xff);
+	 }
+	 break;
+
+	 default:
+	 {
+	      for (unsigned i = 0; i < MAX_BUTTONS; i++)
+        	 input_buf[j] |= input_state_cb(j, RETRO_DEVICE_JOYPAD, 0, map[i]) ? (1 << i) : 0;
+	      input_buf[j] |= input_state_cb(j, RETRO_DEVICE_JOYPAD, 0, l2_map) ? (1 << 15) : 0;
+	 }
+	 break;
+      }
    }
 
    // Buttons.
@@ -2846,50 +2898,6 @@ static void update_input(void)
 
 	if (input_type[j]==RETRO_DEVICE_SS_3D_PAD)
 		buf.u8[j][1] |= 0x10;
-   }
-
-   // Analogs
-   for (unsigned j = 0; j < players; j++)
-   {
-      int analog_left_x = input_state_cb(j, RETRO_DEVICE_ANALOG, RETRO_DEVICE_INDEX_ANALOG_LEFT,
-            RETRO_DEVICE_ID_ANALOG_X);
-
-      int analog_left_y = input_state_cb(j, RETRO_DEVICE_ANALOG, RETRO_DEVICE_INDEX_ANALOG_LEFT,
-            RETRO_DEVICE_ID_ANALOG_Y);
-
-/*
-      int analog_right_x = input_state_cb(j, RETRO_DEVICE_ANALOG, RETRO_DEVICE_INDEX_ANALOG_RIGHT,
-            RETRO_DEVICE_ID_ANALOG_X);
-
-      int analog_right_y = input_state_cb(j, RETRO_DEVICE_ANALOG, RETRO_DEVICE_INDEX_ANALOG_RIGHT,
-            RETRO_DEVICE_ID_ANALOG_Y);
-
-      uint32_t r_right = analog_right_x > 0 ?  analog_right_x : 0;
-      uint32_t r_left  = analog_right_x < 0 ? -analog_right_x : 0;
-      uint32_t r_down  = analog_right_y > 0 ?  analog_right_y : 0;
-      uint32_t r_up    = analog_right_y < 0 ? -analog_right_y : 0;
-
-      buf.u32[j][1] = r_right;
-      buf.u32[j][2] = r_left;
-      buf.u32[j][3] = r_down;
-      buf.u32[j][4] = r_up;
-*/
-
-      uint16_t l_right = analog_left_x > 0 ?  analog_left_x : 0;
-      uint16_t l_left  = analog_left_x < 0 ? -analog_left_x : 0;
-      uint16_t l_down  = analog_left_y > 0 ?  analog_left_y : 0;
-      uint16_t l_up    = analog_left_y < 0 ? -analog_left_y : 0;
-
-      printf("l_right=%d l_left=%d l_down=%d l_up=%d\n", l_right, l_left, l_down, l_up);
-
-      buf.u8[j][4] = ((l_right >> 0) & 0xff);
-      buf.u8[j][5] = ((l_right >> 8) & 0xff);
-      buf.u8[j][2] = ((l_left  >> 0) & 0xff);
-      buf.u8[j][3] = ((l_left  >> 8) & 0xff);
-      buf.u8[j][8] = ((l_down  >> 0) & 0xff);
-      buf.u8[j][9] = ((l_down  >> 8) & 0xff);
-      buf.u8[j][6] = ((l_up    >> 0) & 0xff);
-      buf.u8[j][7] = ((l_up    >> 8) & 0xff);
    }
 }
 
