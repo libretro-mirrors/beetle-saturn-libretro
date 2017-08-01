@@ -2851,27 +2851,32 @@ static void update_input(void)
 	      for (unsigned i = 0; i < MAX_BUTTONS_3D_PAD; i++)
         	 input_buf[j] |= input_state_cb(j, RETRO_DEVICE_JOYPAD, 0, map_3d[i]) ? (1 << i) : 0;
 
-	     int analog_left_x = input_state_cb(j, RETRO_DEVICE_ANALOG, RETRO_DEVICE_INDEX_ANALOG_LEFT,
+	     int analog_x = input_state_cb(j, RETRO_DEVICE_ANALOG, RETRO_DEVICE_INDEX_ANALOG_LEFT,
         	    RETRO_DEVICE_ID_ANALOG_X);
 
-	      int analog_left_y = input_state_cb(j, RETRO_DEVICE_ANALOG, RETRO_DEVICE_INDEX_ANALOG_LEFT,
+	      int analog_y = input_state_cb(j, RETRO_DEVICE_ANALOG, RETRO_DEVICE_INDEX_ANALOG_LEFT,
         	    RETRO_DEVICE_ID_ANALOG_Y);
 
-	      uint16_t l_right = analog_left_x > 0 ?  analog_left_x : 0;
-	      uint16_t l_left  = analog_left_x < 0 ? -analog_left_x : 0;
-	      uint16_t l_down  = analog_left_y > 0 ?  analog_left_y : 0;
-	      uint16_t l_up    = analog_left_y < 0 ? -analog_left_y : 0;
+	      uint16_t right = analog_x > 0 ?  analog_x : 0;
+	      uint16_t left  = analog_x < 0 ? -analog_x : 0;
+	      uint16_t down  = analog_y > 0 ?  analog_y : 0;
+	      uint16_t up    = analog_y < 0 ? -analog_y : 0;
 
-	      //printf("l_right=%d l_left=%d l_down=%d l_up=%d\n", l_right, l_left, l_down, l_up);
+	      uint16_t l_trigger = input_state_cb(j, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_L2) ? 32767 : 0;
+	      uint16_t r_trigger = input_state_cb(j, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_R2) ? 32767 : 0;
 
-	      buf.u8[j][4] = ((l_right >> 0) & 0xff);
-	      buf.u8[j][5] = ((l_right >> 8) & 0xff);
-	      buf.u8[j][2] = ((l_left  >> 0) & 0xff);
-	      buf.u8[j][3] = ((l_left  >> 8) & 0xff);
-	      buf.u8[j][8] = ((l_down  >> 0) & 0xff);
-	      buf.u8[j][9] = ((l_down  >> 8) & 0xff);
-	      buf.u8[j][6] = ((l_up    >> 0) & 0xff);
-	      buf.u8[j][7] = ((l_up    >> 8) & 0xff);
+	      buf.u8[j][0x2] = ((left  >> 0) & 0xff);
+	      buf.u8[j][0x3] = ((left  >> 8) & 0xff);
+	      buf.u8[j][0x4] = ((right >> 0) & 0xff);
+	      buf.u8[j][0x5] = ((right >> 8) & 0xff);
+	      buf.u8[j][0x6] = ((up    >> 0) & 0xff);
+	      buf.u8[j][0x7] = ((up    >> 8) & 0xff);
+	      buf.u8[j][0x8] = ((down  >> 0) & 0xff);
+	      buf.u8[j][0x9] = ((down  >> 8) & 0xff);
+	      buf.u8[j][0xa] = ((r_trigger >> 0) & 0xff);
+	      buf.u8[j][0xb] = ((r_trigger >> 8) & 0xff);
+	      buf.u8[j][0xc] = ((l_trigger >> 0) & 0xff);
+	      buf.u8[j][0xd] = ((l_trigger >> 8) & 0xff);
 	 }
 	 break;
 
