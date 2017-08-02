@@ -2846,7 +2846,7 @@ static void update_input(void)
       switch (input_type[j])
       {
 	 case RETRO_DEVICE_SS_3D_PAD:
-	 {
+        {
 	      // Buttons
 	      for (unsigned i = 0; i < MAX_BUTTONS_3D_PAD; i++)
         	 input_buf[j] |= input_state_cb(j, RETRO_DEVICE_JOYPAD, 0, map_3d[i]) ? (1 << i) : 0;
