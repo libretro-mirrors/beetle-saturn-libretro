@@ -2859,84 +2859,84 @@ static void update_input(void)
    {
       switch (input_type[j])
       {
-	 case RETRO_DEVICE_SS_3D_PAD:
+        case RETRO_DEVICE_SS_3D_PAD:
         {
-	      // Buttons
-	      for (unsigned i = 0; i < MAX_BUTTONS_3D_PAD; i++)
-        	 input_buf[j] |= input_state_cb(j, RETRO_DEVICE_JOYPAD, 0, map_3d[i]) ? (1 << i) : 0;
+          // Buttons
+          for (unsigned i = 0; i < MAX_BUTTONS_3D_PAD; i++)
+            input_buf[j] |= input_state_cb(j, RETRO_DEVICE_JOYPAD, 0, map_3d[i]) ? (1 << i) : 0;
 
-        int analog_x = input_state_cb(j, RETRO_DEVICE_ANALOG, RETRO_DEVICE_INDEX_ANALOG_LEFT,
-        	    RETRO_DEVICE_ID_ANALOG_X);
+          int analog_x = input_state_cb(j, RETRO_DEVICE_ANALOG, RETRO_DEVICE_INDEX_ANALOG_LEFT,
+            RETRO_DEVICE_ID_ANALOG_X);
 
-	      int analog_y = input_state_cb(j, RETRO_DEVICE_ANALOG, RETRO_DEVICE_INDEX_ANALOG_LEFT,
-        	    RETRO_DEVICE_ID_ANALOG_Y);
+          int analog_y = input_state_cb(j, RETRO_DEVICE_ANALOG, RETRO_DEVICE_INDEX_ANALOG_LEFT,
+            RETRO_DEVICE_ID_ANALOG_Y);
 
-        // Analog stick deadzone (borrowed code from parallel-n64 core)
-        if (astick_deadzone > 0)
-        {
-          static const int ASTICK_MAX = 0x8000;
-
-          // Convert cartesian coordinate analog stick to polar coordinates
-          double radius = sqrt(analog_x * analog_x + analog_y * analog_y);
-          double angle = atan2(analog_y, analog_x);
-
-          if (radius > astick_deadzone)
+          // Analog stick deadzone (borrowed code from parallel-n64 core)
+          if (astick_deadzone > 0)
           {
-            // Re-scale analog stick range to negate deadzone (makes slow movements possible)
-            radius = (radius - astick_deadzone)*((float)ASTICK_MAX/(ASTICK_MAX - astick_deadzone));
+            static const int ASTICK_MAX = 0x8000;
 
-            // Convert back to cartesian coordinates
-            analog_x = +(int)round(radius * cos(angle));
-            analog_y = -(int)round(radius * sin(angle));
+            // Convert cartesian coordinate analog stick to polar coordinates
+            double radius = sqrt(analog_x * analog_x + analog_y * analog_y);
+            double angle = atan2(analog_y, analog_x);
+
+            if (radius > astick_deadzone)
+            {
+              // Re-scale analog stick range to negate deadzone (makes slow movements possible)
+              radius = (radius - astick_deadzone)*((float)ASTICK_MAX/(ASTICK_MAX - astick_deadzone));
+
+              // Convert back to cartesian coordinates
+              analog_x = +(int)round(radius * cos(angle));
+              analog_y = -(int)round(radius * sin(angle));
+            }
+            else
+            {
+              analog_x = 0;
+              analog_y = 0;
+            }
           }
-          else
+          uint16_t right = analog_x > 0 ?  analog_x : 0;
+          uint16_t left  = analog_x < 0 ? -analog_x : 0;
+          uint16_t down  = analog_y > 0 ?  analog_y : 0;
+          uint16_t up    = analog_y < 0 ? -analog_y : 0;
+
+          uint16_t l_trigger = input_state_cb(j, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_L2) ? 32767 : 0;
+          uint16_t r_trigger = input_state_cb(j, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_R2) ? 32767 : 0;
+
+          // Handle MODE button as a switch
+          uint16_t mode = input_state_cb(j, RETRO_DEVICE_JOYPAD, 0, mode_map) ? 1 : 0;
+          if (((input_mode[j] & 1) == 1) && (!mode))
           {
-            analog_x = 0;
-            analog_y = 0;
+            input_mode[j] ^= 0x1000;
+            input_mode[j] &= 0x1000;
           }
+          else if (((input_mode[j] & 1) == 0) && mode)
+          {
+            input_mode[j] |= 0x0001;
+          }
+
+          buf.u8[j][0x2] = ((left  >> 0) & 0xff);
+          buf.u8[j][0x3] = ((left  >> 8) & 0xff);
+          buf.u8[j][0x4] = ((right >> 0) & 0xff);
+          buf.u8[j][0x5] = ((right >> 8) & 0xff);
+          buf.u8[j][0x6] = ((up    >> 0) & 0xff);
+          buf.u8[j][0x7] = ((up    >> 8) & 0xff);
+          buf.u8[j][0x8] = ((down  >> 0) & 0xff);
+          buf.u8[j][0x9] = ((down  >> 8) & 0xff);
+          buf.u8[j][0xa] = ((r_trigger >> 0) & 0xff);
+          buf.u8[j][0xb] = ((r_trigger >> 8) & 0xff);
+          buf.u8[j][0xc] = ((l_trigger >> 0) & 0xff);
+          buf.u8[j][0xd] = ((l_trigger >> 8) & 0xff);
         }
-	      uint16_t right = analog_x > 0 ?  analog_x : 0;
-	      uint16_t left  = analog_x < 0 ? -analog_x : 0;
-	      uint16_t down  = analog_y > 0 ?  analog_y : 0;
-	      uint16_t up    = analog_y < 0 ? -analog_y : 0;
+        break;
 
-	      uint16_t l_trigger = input_state_cb(j, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_L2) ? 32767 : 0;
-	      uint16_t r_trigger = input_state_cb(j, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_R2) ? 32767 : 0;
-
-        // Handle MODE button as a switch
-        uint16_t mode = input_state_cb(j, RETRO_DEVICE_JOYPAD, 0, mode_map) ? 1 : 0;
-        if (((input_mode[j] & 1) == 1) && (!mode))
+        default:
         {
-          input_mode[j] ^= 0x1000;
-          input_mode[j] &= 0x1000;
+            for (unsigned i = 0; i < MAX_BUTTONS; i++)
+              input_buf[j] |= input_state_cb(j, RETRO_DEVICE_JOYPAD, 0, map[i]) ? (1 << i) : 0;
+            input_buf[j] |= input_state_cb(j, RETRO_DEVICE_JOYPAD, 0, l2_map) ? (1 << 15) : 0;
         }
-        else if (((input_mode[j] & 1) == 0) && mode)
-        {
-          input_mode[j] |= 0x0001;
-        }
-
-	      buf.u8[j][0x2] = ((left  >> 0) & 0xff);
-	      buf.u8[j][0x3] = ((left  >> 8) & 0xff);
-	      buf.u8[j][0x4] = ((right >> 0) & 0xff);
-	      buf.u8[j][0x5] = ((right >> 8) & 0xff);
-	      buf.u8[j][0x6] = ((up    >> 0) & 0xff);
-	      buf.u8[j][0x7] = ((up    >> 8) & 0xff);
-	      buf.u8[j][0x8] = ((down  >> 0) & 0xff);
-	      buf.u8[j][0x9] = ((down  >> 8) & 0xff);
-	      buf.u8[j][0xa] = ((r_trigger >> 0) & 0xff);
-	      buf.u8[j][0xb] = ((r_trigger >> 8) & 0xff);
-	      buf.u8[j][0xc] = ((l_trigger >> 0) & 0xff);
-	      buf.u8[j][0xd] = ((l_trigger >> 8) & 0xff);
-	 }
-	 break;
-
-	 default:
-	 {
-	      for (unsigned i = 0; i < MAX_BUTTONS; i++)
-        	 input_buf[j] |= input_state_cb(j, RETRO_DEVICE_JOYPAD, 0, map[i]) ? (1 << i) : 0;
-	      input_buf[j] |= input_state_cb(j, RETRO_DEVICE_JOYPAD, 0, l2_map) ? (1 << 15) : 0;
-	 }
-	 break;
+        break;
       }
    }
 
@@ -2951,8 +2951,8 @@ static void update_input(void)
         buf.u8[j][0] = (input_buf[j] >> 0) & 0xff;
         buf.u8[j][1] = (input_buf[j] >> 8) & 0xff;
 
-	if (input_type[j]==RETRO_DEVICE_SS_3D_PAD && (input_mode[j]&0x1000))
-		buf.u8[j][1] |= 0x10;
+        if (input_type[j]==RETRO_DEVICE_SS_3D_PAD && (~input_mode[j]&0x1000))
+          buf.u8[j][1] |= 0x10;
    }
 }
 
