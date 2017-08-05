@@ -2574,7 +2574,12 @@ union
 } static buf;
 
 static uint16_t input_buf[MAX_PLAYERS] = {0};
+
+// Controller type (per player)
 static uint32_t input_type[MAX_PLAYERS] = {0};
+
+// Mode switch for 3D Control Pad (per player)
+static uint32_t input_mode[MAX_PLAYERS] = {0};
 
 bool retro_load_game(const struct retro_game_info *info)
 {
@@ -2839,6 +2844,7 @@ static void update_input(void)
       RETRO_DEVICE_ID_JOYPAD_Y,
    };
 
+   static unsigned mode_map = RETRO_DEVICE_ID_JOYPAD_SELECT;
    static unsigned l2_map = RETRO_DEVICE_ID_JOYPAD_L2;
 
    for (unsigned j = 0; j < players; j++)
@@ -2864,6 +2870,18 @@ static void update_input(void)
 
 	      uint16_t l_trigger = input_state_cb(j, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_L2) ? 32767 : 0;
 	      uint16_t r_trigger = input_state_cb(j, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_R2) ? 32767 : 0;
+
+        // Handle MODE button as a switch
+        uint16_t mode = input_state_cb(j, RETRO_DEVICE_JOYPAD, 0, mode_map) ? 1 : 0;
+        if (((input_mode[j] & 1) == 1) && (!mode))
+        {
+          input_mode[j] ^= 0x1000;
+          input_mode[j] &= 0x1000;
+        }
+        else if (((input_mode[j] & 1) == 0) && mode)
+        {
+          input_mode[j] |= 0x0001;
+        }
 
 	      buf.u8[j][0x2] = ((left  >> 0) & 0xff);
 	      buf.u8[j][0x3] = ((left  >> 8) & 0xff);
@@ -2901,7 +2919,7 @@ static void update_input(void)
         buf.u8[j][0] = (input_buf[j] >> 0) & 0xff;
         buf.u8[j][1] = (input_buf[j] >> 8) & 0xff;
 
-	if (input_type[j]==RETRO_DEVICE_SS_3D_PAD)
+	if (input_type[j]==RETRO_DEVICE_SS_3D_PAD && (input_mode[j]&0x1000))
 		buf.u8[j][1] |= 0x10;
    }
 }
