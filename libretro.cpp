@@ -56,6 +56,8 @@ static bool failed_init = false;
 static unsigned image_offset = 0;
 static unsigned image_crop = 0;
 
+static int astick_deadzone = 0;
+
 // Sets how often (in number of output frames/retro_run invocations)
 // the internal framerace counter should be updated if
 // display_internal_framerate is true.
@@ -2376,6 +2378,12 @@ static void check_variables(bool startup)
    {
       setting_last_scanline_pal = atoi(var.value);
    }
+
+   var.key = "beetle_saturn_analog_stick_deadzone";
+   var.value = NULL;
+
+   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+      astick_deadzone = (int)(atoi(var.value) * 0.01f * 0x8000);
 }
 
 #ifdef NEED_CD
@@ -2857,12 +2865,36 @@ static void update_input(void)
 	      for (unsigned i = 0; i < MAX_BUTTONS_3D_PAD; i++)
         	 input_buf[j] |= input_state_cb(j, RETRO_DEVICE_JOYPAD, 0, map_3d[i]) ? (1 << i) : 0;
 
-	     int analog_x = input_state_cb(j, RETRO_DEVICE_ANALOG, RETRO_DEVICE_INDEX_ANALOG_LEFT,
+        int analog_x = input_state_cb(j, RETRO_DEVICE_ANALOG, RETRO_DEVICE_INDEX_ANALOG_LEFT,
         	    RETRO_DEVICE_ID_ANALOG_X);
 
 	      int analog_y = input_state_cb(j, RETRO_DEVICE_ANALOG, RETRO_DEVICE_INDEX_ANALOG_LEFT,
         	    RETRO_DEVICE_ID_ANALOG_Y);
 
+        // Analog stick deadzone (borrowed code from parallel-n64 core)
+        if (astick_deadzone > 0)
+        {
+          static const int ASTICK_MAX = 0x8000;
+
+          // Convert cartesian coordinate analog stick to polar coordinates
+          double radius = sqrt(analog_x * analog_x + analog_y * analog_y);
+          double angle = atan2(analog_y, analog_x);
+
+          if (radius > astick_deadzone)
+          {
+            // Re-scale analog stick range to negate deadzone (makes slow movements possible)
+            radius = (radius - astick_deadzone)*((float)ASTICK_MAX/(ASTICK_MAX - astick_deadzone));
+
+            // Convert back to cartesian coordinates
+            analog_x = +(int)round(radius * cos(angle));
+            analog_y = -(int)round(radius * sin(angle));
+          }
+          else
+          {
+            analog_x = 0;
+            analog_y = 0;
+          }
+        }
 	      uint16_t right = analog_x > 0 ?  analog_x : 0;
 	      uint16_t left  = analog_x < 0 ? -analog_x : 0;
 	      uint16_t down  = analog_y > 0 ?  analog_y : 0;
@@ -3084,6 +3116,7 @@ void retro_set_environment(retro_environment_t cb)
       { "beetle_saturn_initial_scanline_pal", "Initial scanline PAL; 0|1|2|3|4|5|6|7|8|9|10|10|11|12|13|14|15|16|17|18|19|20|21|22|23|24|25|26|27|28|29|30|31|32|33|34|35|36|37|38|39|40" },
       { "beetle_saturn_last_scanline", "Last scanline; 239|238|237|236|235|234|232|231|230|229|228|227|226|225|224|223|222|221|220|219|218|217|216|215|214|213|212|211|210" },
       { "beetle_saturn_last_scanline_pal", "Last scanline PAL; 287|286|285|284|283|283|282|281|280|279|278|277|276|275|274|273|272|271|270|269|268|267|266|265|264|263|262|261|260" },
+      { "beetle_saturn_analog_stick_deadzone", "Analog Deadzone (percent); 15|20|25|30|0|5|10"},
       { NULL, NULL },
    };
    static const struct retro_controller_description pads[] = {
