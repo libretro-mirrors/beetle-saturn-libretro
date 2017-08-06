@@ -2886,8 +2886,14 @@ static void update_input(void)
               radius = (radius - astick_deadzone)*((float)ASTICK_MAX/(ASTICK_MAX - astick_deadzone));
 
               // Convert back to cartesian coordinates
-              analog_x = +(int)round(radius * cos(angle));
-              analog_y = -(int)round(radius * sin(angle));
+              analog_x = (int)round(radius * cos(angle));
+              analog_y = (int)round(radius * sin(angle));
+
+              // Clamp to correct range
+              if (analog_x > +32767) analog_x = +32767;
+              if (analog_x < -32767) analog_x = -32767;
+              if (analog_y > +32767) analog_y = +32767;
+              if (analog_y < -32767) analog_y = -32767;
             }
             else
             {
