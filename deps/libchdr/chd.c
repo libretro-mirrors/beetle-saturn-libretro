@@ -407,10 +407,11 @@ void lzma_allocator_init(void* p)
 
 void lzma_allocator_free(void* p )
 {
+   int i;
 	lzma_allocator *codec = (lzma_allocator *)(p);
 
 	// free our memory
-	for (int i = 0 ; i < MAX_LZMA_ALLOCS ; i++)
+	for (i = 0 ; i < MAX_LZMA_ALLOCS ; i++)
 	{
 		if (codec->allocptr[i] != NULL)
 			free(codec->allocptr[i]);
@@ -424,13 +425,15 @@ void lzma_allocator_free(void* p )
 
 void *lzma_fast_alloc(void *p, size_t size)
 {
+   int scan;
+   uint32_t *addr        = NULL;
 	lzma_allocator *codec = (lzma_allocator *)(p);
 
 	// compute the size, rounding to the nearest 1k
 	size = (size + 0x3ff) & ~0x3ff;
 
 	// reuse a hunk if we can
-	for (int scan = 0; scan < MAX_LZMA_ALLOCS; scan++)
+	for (scan = 0; scan < MAX_LZMA_ALLOCS; scan++)
 	{
 		uint32_t *ptr = codec->allocptr[scan];
 		if (ptr != NULL && size == *ptr)
@@ -442,10 +445,10 @@ void *lzma_fast_alloc(void *p, size_t size)
 	}
 
 	// alloc a new one and put it into the list
-	uint32_t *addr = (uint32_t *)malloc(sizeof(uint8_t) * (size + sizeof(uint32_t)));
+	addr = (uint32_t *)malloc(sizeof(uint8_t) * (size + sizeof(uint32_t)));
 	if (addr==NULL)
 		return NULL;
-	for (int scan = 0; scan < MAX_LZMA_ALLOCS; scan++)
+	for (scan = 0; scan < MAX_LZMA_ALLOCS; scan++)
 	{
 		if (codec->allocptr[scan] == NULL)
 		{
@@ -467,14 +470,16 @@ void *lzma_fast_alloc(void *p, size_t size)
 
 void lzma_fast_free(void *p, void *address)
 {
+   int scan;
+   uint32_t *ptr;
 	if (address == NULL)
 		return;
 
 	lzma_allocator *codec = (lzma_allocator *)(p);
 
 	// find the hunk
-	uint32_t *ptr = (uint32_t *)(address) - 1;
-	for (int scan = 0; scan < MAX_LZMA_ALLOCS; scan++)
+	ptr = (uint32_t *)(address) - 1;
+	for (scan = 0; scan < MAX_LZMA_ALLOCS; scan++)
 	{
 		if (ptr == codec->allocptr[scan])
 		{
@@ -601,6 +606,7 @@ void cdlz_codec_free(void* codec)
 
 chd_error cdlz_codec_decompress(void *codec, const uint8_t *src, uint32_t complen, uint8_t *dest, uint32_t destlen)
 {
+   uint32_t framenum;
 	cdlz_codec_data* cdlz = (cdlz_codec_data*)codec;
 
 	// determine header bytes
@@ -619,7 +625,7 @@ chd_error cdlz_codec_decompress(void *codec, const uint8_t *src, uint32_t comple
 	zlib_codec_decompress(&cdlz->subcode_decompressor, &src[header_bytes + complen_base], complen - complen_base - header_bytes, &cdlz->buffer[frames * CD_MAX_SECTOR_DATA], frames * CD_MAX_SUBCODE_DATA);
 
 	// reassemble the data
-	for (uint32_t framenum = 0; framenum < frames; framenum++)
+	for (framenum = 0; framenum < frames; framenum++)
 	{
 		memcpy(&dest[framenum * CD_FRAME_SIZE], &cdlz->buffer[framenum * CD_MAX_SECTOR_DATA], CD_MAX_SECTOR_DATA);
 		memcpy(&dest[framenum * CD_FRAME_SIZE + CD_MAX_SECTOR_DATA], &cdlz->buffer[frames * CD_MAX_SECTOR_DATA + framenum * CD_MAX_SUBCODE_DATA], CD_MAX_SUBCODE_DATA);
@@ -660,6 +666,7 @@ void cdzl_codec_free(void *codec)
 
 chd_error cdzl_codec_decompress(void *codec, const uint8_t *src, uint32_t complen, uint8_t *dest, uint32_t destlen)
 {
+   uint32_t framenum;
 	cdzl_codec_data* cdzl = (cdzl_codec_data*)codec;
 	
 	// determine header bytes
@@ -678,7 +685,7 @@ chd_error cdzl_codec_decompress(void *codec, const uint8_t *src, uint32_t comple
 	zlib_codec_decompress(&cdzl->subcode_decompressor, &src[header_bytes + complen_base], complen - complen_base - header_bytes, &cdzl->buffer[frames * CD_MAX_SECTOR_DATA], frames * CD_MAX_SUBCODE_DATA);
 
 	// reassemble the data
-	for (uint32_t framenum = 0; framenum < frames; framenum++)
+	for (framenum = 0; framenum < frames; framenum++)
 	{
 		memcpy(&dest[framenum * CD_FRAME_SIZE], &cdzl->buffer[framenum * CD_MAX_SECTOR_DATA], CD_MAX_SECTOR_DATA);
 		memcpy(&dest[framenum * CD_FRAME_SIZE + CD_MAX_SECTOR_DATA], &cdzl->buffer[frames * CD_MAX_SECTOR_DATA + framenum * CD_MAX_SUBCODE_DATA], CD_MAX_SUBCODE_DATA);
@@ -758,6 +765,7 @@ void cdfl_codec_free(void *codec)
 
 chd_error cdfl_codec_decompress(void *codec, const uint8_t *src, uint32_t complen, uint8_t *dest, uint32_t destlen)
 {
+   uint32_t framenum;
 	cdfl_codec_data *cdfl = (cdfl_codec_data*)codec;
 
 	// reset and decode
@@ -788,7 +796,7 @@ chd_error cdfl_codec_decompress(void *codec, const uint8_t *src, uint32_t comple
 		return CHDERR_DECOMPRESSION_ERROR;
 
 	// reassemble the data
-	for (uint32_t framenum = 0; framenum < frames; framenum++)
+	for (framenum = 0; framenum < frames; framenum++)
 	{
 		memcpy(&dest[framenum * CD_FRAME_SIZE], &cdfl->buffer[framenum * CD_MAX_SECTOR_DATA], CD_MAX_SECTOR_DATA);
 		memcpy(&dest[framenum * CD_FRAME_SIZE + CD_MAX_SECTOR_DATA], &cdfl->buffer[frames * CD_MAX_SECTOR_DATA + framenum * CD_MAX_SUBCODE_DATA], CD_MAX_SUBCODE_DATA);
@@ -1100,6 +1108,8 @@ uint16_t crc16(const void *data, uint32_t length)
 
 static chd_error decompress_v5_map(chd_file* chd, chd_header* header)
 {
+   int hunknum;
+
 	if (header->mapoffset == 0)
 	{
 		//memset(header->rawmap, 0xff,map_size_v5(header));
@@ -1131,7 +1141,7 @@ static chd_error decompress_v5_map(chd_file* chd, chd_header* header)
 		return CHDERR_DECOMPRESSION_ERROR;
 	uint8_t lastcomp = 0;
 	int repcount = 0;
-	for (int hunknum = 0; hunknum < header->hunkcount; hunknum++)
+	for (hunknum = 0; hunknum < header->hunkcount; hunknum++)
 	{
 		uint8_t *rawmap = header->rawmap + (hunknum * 12);
 		if (repcount > 0)
@@ -1152,7 +1162,7 @@ static chd_error decompress_v5_map(chd_file* chd, chd_header* header)
 	uint64_t curoffset = firstoffs;
 	uint32_t last_self = 0;
 	uint64_t last_parent = 0;
-	for (int hunknum = 0; hunknum < header->hunkcount; hunknum++)
+	for (hunknum = 0; hunknum < header->hunkcount; hunknum++)
 	{
 		uint8_t *rawmap = header->rawmap + (hunknum * 12);
 		uint64_t offset = curoffset;
@@ -1263,10 +1273,10 @@ chd_error chd_open_file(core_file *file, int mode, chd_file *parent, chd_file **
 		EARLY_EXIT(err = CHDERR_INVALID_PARAMETER);
 
 	/* allocate memory for the final result */
-	newchd = (chd_file *)malloc(sizeof(**chd));
+	newchd = (chd_file *)malloc(sizeof(chd_file));
 	if (newchd == NULL)
 		EARLY_EXIT(err = CHDERR_OUT_OF_MEMORY);
-	memset(newchd, 0, sizeof(*newchd));
+	memset(newchd, 0, sizeof(chd_file));
 	newchd->cookie = COOKIE_VALUE;
 	newchd->parent = parent;
 	newchd->file = file;
@@ -1382,9 +1392,10 @@ chd_error chd_open_file(core_file *file, int mode, chd_file *parent, chd_file **
 								break;
 						}
 						if (codec != NULL)
+						{
 							err = (*newchd->codecintf[decompnum]->init)(codec, newchd->header.hunkbytes);
+						}
 					}
-					
 				}
 			}
 		}

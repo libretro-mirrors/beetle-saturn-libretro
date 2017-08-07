@@ -292,17 +292,19 @@ FLAC__StreamDecoderWriteStatus flac_decoder_write_callback(void *client_data, co
 	int blocksize = frame->header.blocksize;
 	if (decoder->uncompressed_start[1] == NULL)
 	{
+      int sampnum, chan;
 		int16_t *dest = decoder->uncompressed_start[0] + decoder->uncompressed_offset * frame->header.channels;
-		for (int sampnum = 0; sampnum < blocksize && decoder->uncompressed_offset < decoder->uncompressed_length; sampnum++, decoder->uncompressed_offset++)
-			for (int chan = 0; chan < frame->header.channels; chan++)
+		for (sampnum = 0; sampnum < blocksize && decoder->uncompressed_offset < decoder->uncompressed_length; sampnum++, decoder->uncompressed_offset++)
+			for (chan = 0; chan < frame->header.channels; chan++)
 				*dest++ = (int16_t)((((uint16_t)buffer[chan][sampnum]) << shift) | (((uint16_t)buffer[chan][sampnum]) >> shift));
 	}
 
 	// non-interleaved case
 	else
 	{
-		for (int sampnum = 0; sampnum < blocksize && decoder->uncompressed_offset < decoder->uncompressed_length; sampnum++, decoder->uncompressed_offset++)
-			for (int chan = 0; chan < frame->header.channels; chan++)
+      int sampnum, chan;
+		for (sampnum = 0; sampnum < blocksize && decoder->uncompressed_offset < decoder->uncompressed_length; sampnum++, decoder->uncompressed_offset++)
+			for (chan = 0; chan < frame->header.channels; chan++)
 				if (decoder->uncompressed_start[chan] != NULL)
 					decoder->uncompressed_start[chan][decoder->uncompressed_offset] = (int16_t) ( (((uint16_t)(buffer[chan][sampnum])) << shift) | ( ((uint16_t)(buffer[chan][sampnum])) >> shift) );
 	}
