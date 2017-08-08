@@ -38,7 +38,7 @@ struct bitstream* create_bitstream(const void *src, uint32_t srclength)
 //  but don't advance the input pointer
 //-----------------------------------------------------
 
-inline uint32_t bitstream_peek(struct bitstream* bitstream, int numbits)
+uint32_t bitstream_peek(struct bitstream* bitstream, int numbits)
 {
 	if (numbits == 0)
 		return 0;
@@ -65,7 +65,7 @@ inline uint32_t bitstream_peek(struct bitstream* bitstream, int numbits)
 //  specified number of bits
 //-----------------------------------------------------
 
-inline void bitstream_remove(struct bitstream* bitstream, int numbits)
+void bitstream_remove(struct bitstream* bitstream, int numbits)
 {
 	bitstream->buffer <<= numbits;
 	bitstream->bits -= numbits;
@@ -76,7 +76,7 @@ inline void bitstream_remove(struct bitstream* bitstream, int numbits)
 //  bitstream_read - fetch the requested number of bits
 //-----------------------------------------------------
 
-inline uint32_t bitstream_read(struct bitstream* bitstream, int numbits)
+uint32_t bitstream_read(struct bitstream* bitstream, int numbits)
 {
 	uint32_t result = bitstream_peek(bitstream, numbits);
 	bitstream_remove(bitstream, numbits);
@@ -88,7 +88,7 @@ inline uint32_t bitstream_read(struct bitstream* bitstream, int numbits)
 //  read_offset - return the current read offset
 //-------------------------------------------------
 
-inline uint32_t bitstream_read_offset(struct bitstream* bitstream)
+uint32_t bitstream_read_offset(struct bitstream* bitstream)
 {
 	uint32_t result = bitstream->doffset;
 	int bits = bitstream->bits;
@@ -105,7 +105,7 @@ inline uint32_t bitstream_read_offset(struct bitstream* bitstream)
 //  flush - flush to the nearest byte
 //-------------------------------------------------
 
-inline uint32_t bitstream_flush(struct bitstream* bitstream)
+uint32_t bitstream_flush(struct bitstream* bitstream)
 {
 	while (bitstream->bits >= 8)
 	{

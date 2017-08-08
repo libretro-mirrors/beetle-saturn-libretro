@@ -247,12 +247,13 @@ FLAC__StreamDecoderReadStatus flac_decoder_read_callback(void* client_data, FLAC
 
 void flac_decoder_metadata_callback_static(const FLAC__StreamDecoder *decoder, const FLAC__StreamMetadata *metadata, void *client_data)
 {
+   flac_decoder *fldecoder;
 	// ignore all but STREAMINFO metadata
 	if (metadata->type != FLAC__METADATA_TYPE_STREAMINFO)
 		return;
 
 	// parse out the data we care about
-	flac_decoder *fldecoder = (flac_decoder *)(client_data);
+	fldecoder = (flac_decoder *)(client_data);
 	fldecoder->sample_rate = metadata->data.stream_info.sample_rate;
 	fldecoder->bits_per_sample = metadata->data.stream_info.bits_per_sample;
 	fldecoder->channels = metadata->data.stream_info.channels;
@@ -283,13 +284,15 @@ FLAC__StreamDecoderWriteStatus flac_decoder_write_callback_static(const FLAC__St
 
 FLAC__StreamDecoderWriteStatus flac_decoder_write_callback(void *client_data, const FLAC__Frame *frame, const FLAC__int32 * const buffer[])
 {
+   int shift, blocksize;
 	flac_decoder * decoder = (flac_decoder *)client_data;
 
 	assert(frame->header.channels == channels(decoder));
 
 	// interleaved case
-	int shift = decoder->uncompressed_swap ? 8 : 0;
-	int blocksize = frame->header.blocksize;
+	shift = decoder->uncompressed_swap ? 8 : 0;
+	blocksize = frame->header.blocksize;
+
 	if (decoder->uncompressed_start[1] == NULL)
 	{
       int sampnum, chan;
