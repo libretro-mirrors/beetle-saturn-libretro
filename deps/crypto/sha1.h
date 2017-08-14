@@ -12,13 +12,12 @@
 /*************************** HEADER FILES ***************************/
 #include <stddef.h>
 
+#include "crypto_types.h"
+
 /****************************** MACROS ******************************/
 #define SHA1_BLOCK_SIZE 20              // SHA1 outputs a 20 byte digest
 
 /**************************** DATA TYPES ****************************/
-typedef unsigned char BYTE;             // 8-bit byte
-typedef unsigned int  WORD;             // 32-bit word, change to "long" for 16-bit machines
-
 typedef struct {
 	BYTE data[64];
 	WORD datalen;

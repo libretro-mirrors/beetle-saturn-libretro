@@ -11,7 +11,7 @@
 
 /*************************** HEADER FILES ***************************/
 #include <stdlib.h>
-#include <memory.h>
+#include <string.h>
 #include "md2.h"
 
 /**************************** VARIABLES *****************************/

@@ -53,7 +53,9 @@ typedef int WRes;
 #define RINOK(x) { int __result__ = (x); if (__result__ != 0) return __result__; }
 #endif
 
+#ifndef DONT_SET_BYTE
 typedef unsigned char Byte;
+#endif
 typedef short Int16;
 typedef unsigned short UInt16;
 

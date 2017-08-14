@@ -59,6 +59,8 @@ typedef unsigned char Byte;
 
 #include <retro_inline.h>
 
+#include "../deps/crypto/md5.h"
+
 #define TRUE 1
 #define FALSE 0
 

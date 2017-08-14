@@ -361,7 +361,7 @@
 #  define FAR
 #endif
 
-#if !defined(__MACTYPES__)
+#if !defined(__MACTYPES__) && !defined(DONT_SET_BYTE)
 typedef unsigned char  Byte;  /* 8 bits */
 #endif
 typedef unsigned int   uInt;  /* 16 bits or more */
