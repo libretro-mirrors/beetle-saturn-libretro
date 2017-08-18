@@ -797,7 +797,13 @@ static struct FileInfoS
  uint8 gap_size;
  uint8 fnum;
  uint8 attr;
-} __attribute__((__packed__)) FileInfo[256];
+}
+#ifndef _MSC_VER
+__attribute__((__packed__)) FileInfo[256];
+#else
+FileInfo[256];
+#endif
+
 static bool FileInfoValid;
 
 enum
