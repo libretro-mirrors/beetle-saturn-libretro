@@ -2282,70 +2282,73 @@ void M68K::Reset(bool powering_up)
 //
 uint32 M68K::GetRegister(unsigned which, char* special, const uint32 special_len)
 {
- switch(which)
- {
-  default:
-	return 0xDEADBEEF;
-
-  case GSREG_D0 ... GSREG_D7:
-	return D[which - GSREG_D0];
-
-  case GSREG_A0 ... GSREG_A7:
-	return A[which - GSREG_A0];
-
-  case GSREG_PC:
-	return PC;
-
-  case GSREG_SR:
-	return GetSR();
-
-  case GSREG_SSP:
-	if(GetSVisor())
-	 return A[7];
-	else
-	 return SP_Inactive;
-
-  case GSREG_USP:
-	if(!GetSVisor())
-	 return A[7];
-	else
-	 return SP_Inactive;
- }
+  if (which >= GSREG_D0 && which <= GSREG_D7)
+  {
+    return D[which - GSREG_D0];
+  }
+  else if (which >= GSREG_A0 && which <= GSREG_A7)
+  {
+    return A[which - GSREG_A0];
+  }
+  else if (which == GSREG_PC)
+  {
+    return PC;
+  }
+  else if (which == GSREG_SR)
+  {
+    return GetSR();
+  }
+  else if (which == GSREG_SSP)
+  {
+    if (GetSVisor())
+      return A[7];
+    else
+      return SP_Inactive;
+  }
+  else if (which == GSREG_USP)
+  {
+    if (!GetSVisor())
+      return A[7];
+    else
+      return SP_Inactive;
+  }
+  else
+  {
+    return 0xDEADBEEF;
+  }
 }
 
 void M68K::SetRegister(unsigned which, uint32 value)
 {
- switch(which)
- {
-  case GSREG_D0 ... GSREG_D7:
-	D[which - GSREG_D0] = value;
-	break;
-
-  case GSREG_A0 ... GSREG_A7:
-	A[which - GSREG_A0] = value;
-	break;
-
-  case GSREG_PC:
-	PC = value;
-	break;
-
-  case GSREG_SR:
-	SetSR(value);
-	break;
-
-  case GSREG_SSP:
-	if(GetSVisor())
-	 A[7] = value;
-	else
-	 SP_Inactive = value;
-	break;
-
-  case GSREG_USP:
-	if(!GetSVisor())
-	 A[7] = value;
-	else
-	 SP_Inactive = value;
-	break;
- }
+  if (which >= GSREG_D0 && which <= GSREG_D7)
+  {
+    D[which - GSREG_D0] = value;
+  }
+  else if (which >= GSREG_A0 && which <= GSREG_A7)
+  {
+    A[which - GSREG_A0] = value;
+  }
+  else if (which == GSREG_PC)
+  {
+    PC = value;
+  }
+  else if (which == GSREG_SR)
+  {
+    SetSR(value);
+  }
+  else if (which == GSREG_SSP)
+  {
+    if (GetSVisor())
+      A[7] = value;
+    else
+      SP_Inactive = value;
+  }
+  else if (which == GSREG_USP)
+  {
+    if (!GetSVisor())
+      A[7] = value;
+    else
+      SP_Inactive = value;
+  }
 }
 

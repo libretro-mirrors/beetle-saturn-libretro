@@ -797,7 +797,13 @@ static struct FileInfoS
  uint8 gap_size;
  uint8 fnum;
  uint8 attr;
-} __attribute__((__packed__)) FileInfo[256];
+}
+#ifndef _MSC_VER
+__attribute__((__packed__)) FileInfo[256];
+#else
+FileInfo[256];
+#endif
+
 static bool FileInfoValid;
 
 enum
@@ -921,6 +927,8 @@ static void ClearPendingSec(void);
 
 static bool FLS_Run(void)
 {
+ static const char stdid[5] = { 'C', 'D', '0', '0', '1' };
+
  bool ret = false;
  //printf("%d, %d\n", Partitions[FLS.pnum].Count, FreeBufferCount);
 
@@ -946,7 +954,6 @@ static bool FLS_Run(void)
 
    for(;;)
    {
-    static const char stdid[5] = { 'C', 'D', '0', '0', '1' };
     FLS_WAIT_GRAB_BUF;
 
     if(memcmp(FLS.pbuf + 1, stdid, 5) || FLS.pbuf[0] == 0xFF)

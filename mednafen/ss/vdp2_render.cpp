@@ -457,21 +457,23 @@ struct RotVars
  TileFetcher<true> tf;
 };
 
+typedef uint64 nbgarr[4][8 + 704 + 8];
+
 static struct
 {
  uint64 spr[704];
  uint64 rbg0[704];
  union
  {
-  uint64 nbg[4][8 + 704 + 8];
+  nbgarr nbg;
   struct
   {
-   uint8 dummy[sizeof(nbg) / 2];
+   uint8 dummy[sizeof(nbgarr) / 2];
    uint16 vcscr[2][88 + 1 + 1];	// + 1 for fine x scroll != 0, + 1 for pointer shenanigans in FetchVCScroll
   };
   struct
   {
-   uint8 rotdummy[sizeof(nbg) / 4];
+   uint8 rotdummy[sizeof(nbgarr) / 4];
    uint8 rotabsel[352];	// Also used as a scratch buffer in T_DrawRBG() to handle mosaic-related junk.
    RotVars rotv[2];
    uint32 rotcoeff[352];

@@ -75,7 +75,7 @@ char retro_cd_base_name[4096];
 #endif
 
 extern MDFNGI EmulatedSS;
-MDFNGI *MDFNGameInfo = &EmulatedSS;
+MDFNGI *MDFNGameInfo = NULL;
 
 #include "../MemoryStream.h"
 
@@ -2519,6 +2519,11 @@ static MDFNGI *MDFNI_LoadCD(const char *devicename)
 
    log_cb(RETRO_LOG_DEBUG, "Done calculating layout MD5.\n");
    // TODO: include module name in hash
+   if (MDFNGameInfo == NULL)
+   {
+      MDFNGameInfo = &EmulatedSS;
+   }
+
    memcpy(MDFNGameInfo->MD5, LayoutMD5, 16);
 
    if(!(LoadCD(&CDInterfaces)))
