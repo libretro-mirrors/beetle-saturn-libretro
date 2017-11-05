@@ -1642,8 +1642,7 @@ static bool DiscSanityChecks(void)
 
 static MDFN_COLD bool LoadCD(std::vector<CDIF *>* CDInterfaces)
 {
-   const unsigned region_default = MDFN_GetSettingI("ss.region_default");
-   unsigned region = region_default;
+   unsigned region = setting_region;
    int cart_type;
    uint8 fd_id[16];
    char sgid[16 + 1];
@@ -1653,15 +1652,18 @@ static MDFN_COLD bool LoadCD(std::vector<CDIF *>* CDInterfaces)
    CalcGameID(MDFNGameInfo->MD5, fd_id, sgid);
    log_cb(RETRO_LOG_INFO, "Game ID is now: %s\n", sgid);
 
-   if(MDFN_GetSettingB("ss.region_autodetect"))
-   {
-      log_cb(RETRO_LOG_INFO, "Trying to autodetect region...\n");
-      if(!DB_LookupRegionDB(fd_id, &region))
-      {
-         log_cb(RETRO_LOG_INFO, "[Mednafen]: Could not find region inside DB.\n");
-         DetectRegion(&region);
-      }
-   }
+	// auto-detect?
+	if ( region == 0 )
+	{
+		region = SMPC_AREA_NA; /* most likely */
+		log_cb(RETRO_LOG_INFO, "Trying to autodetect region...\n");
+		if ( !DB_LookupRegionDB( fd_id, &region ) )
+		{
+			log_cb(RETRO_LOG_INFO, "[Mednafen]: Could not find region inside DB.\n");
+			DetectRegion(&region);
+		}
+	}
+
    //
    //
    if((cart_type = MDFN_GetSettingI("ss.cart")) == CART__RESERVED)
@@ -1914,9 +1916,6 @@ static MDFNSetting SSSettings[] =
 
  { "ss.scsp.resamp_quality", MDFNSF_NOFLAGS, "SCSP output resampler quality.",
 	"0 is lowest quality and CPU usage, 10 is highest quality and CPU usage.  The resampler that this setting refers to is used for converting from 44.1KHz to the sampling rate of the host audio device Mednafen is using.  Changing Mednafen's output rate, via the \"sound.rate\" setting, to \"44100\" may bypass the resampler, which can decrease CPU usage by Mednafen, and can increase or decrease audio quality, depending on various operating system and hardware factors.", MDFNST_UINT, "4", "0", "10" },
-
- { "ss.region_autodetect", MDFNSF_EMU_STATE | MDFNSF_UNTRUSTED_SAFE, "Attempt to auto-detect region of game.", NULL, MDFNST_BOOL, "1" },
- { "ss.region_default", MDFNSF_EMU_STATE | MDFNSF_UNTRUSTED_SAFE, "Default region to use.", "Used if region autodetection fails or is disabled.", MDFNST_ENUM, "jp", NULL, NULL, NULL, NULL, Region_List },
 
  { "ss.input.mouse_sensitivity", MDFNSF_NOFLAGS, "Emulated mouse sensitivity.", NULL, MDFNST_FLOAT, "0.50", NULL, NULL },
   { "ss.input.sport1.multitap", MDFNSF_EMU_STATE | MDFNSF_UNTRUSTED_SAFE, "Enable multitap on Saturn port 1.", NULL, MDFNST_BOOL, "0", NULL, NULL },
@@ -2268,6 +2267,7 @@ void retro_init(void)
    else
       perf_get_cpu_features_cb = NULL;
 
+   setting_region = 0; // auto
    setting_smpc_autortc = true;
    setting_smpc_autortc_lang = 0;
    setting_initial_scanline = 0;
@@ -2307,6 +2307,30 @@ static void check_variables(bool startup)
    if (startup)
    {
    }
+
+	var.key = "beetle_saturn_region";
+
+	if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+	{
+		if (!strcmp(var.value, "Auto Detect") || !strcmp(var.value, "auto"))
+			setting_region = 0;
+		else if (!strcmp(var.value, "Japan") || !strcmp(var.value, "jp"))
+			setting_region = SMPC_AREA_JP;
+		else if (!strcmp(var.value, "North America") || !strcmp(var.value, "na"))
+			setting_region = SMPC_AREA_NA;
+		else if (!strcmp(var.value, "Europe") || !strcmp(var.value, "eu"))
+			setting_region = SMPC_AREA_EU_PAL;
+		else if (!strcmp(var.value, "South Korea") || !strcmp(var.value, "kr"))
+			setting_region = SMPC_AREA_KR;
+		else if (!strcmp(var.value, "Asia (NTSC)") || !strcmp(var.value, "tw"))
+			setting_region = SMPC_AREA_ASIA_NTSC;
+		else if (!strcmp(var.value, "Asia (PAL)") || !strcmp(var.value, "as"))
+			setting_region = SMPC_AREA_ASIA_PAL;
+		else if (!strcmp(var.value, "Brazil") || !strcmp(var.value, "br"))
+			setting_region = SMPC_AREA_CSA_NTSC;
+		else if (!strcmp(var.value, "Latin America") || !strcmp(var.value, "la"))
+			setting_region = SMPC_AREA_CSA_PAL;
+	}
 
    var.key = "beetle_saturn_cdimagecache";
 
@@ -3128,6 +3152,7 @@ void retro_set_environment(retro_environment_t cb)
    environ_cb = cb;
 
    static const struct retro_variable vars[] = {
+      { "beetle_saturn_region", "System Region; Auto Detect|Japan|North America|Europe|South Korea|Asia (NTSC)|Asia (PAL)|Brazil|Latin America" },
       { "beetle_saturn_cdimagecache", "CD Image Cache (restart); disabled|enabled" },
       { "beetle_saturn_autortc", "Automatically set RTC on game load; enabled|disabled" },
       { "beetle_saturn_autortc_lang", "BIOS language; english|german|french|spanish|italian|japanese" },

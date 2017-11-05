@@ -24,6 +24,7 @@
 #include "settings.h"
 #include <compat/msvc.h>
 
+int setting_region = 0;
 bool setting_smpc_autortc = true;
 int setting_smpc_autortc_lang = 0;
 int setting_initial_scanline = 0;
@@ -39,20 +40,6 @@ uint64_t MDFN_GetSettingUI(const char *name)
 {
    if (!strcmp("ss.scsp.resamp_quality", name)) /* make configurable */
       return 4;
-   if (!strcmp("ss.region_default", name))
-   {
-      /*
-       * 0 - jp
-       * 1 - na 
-       * 2 - eu
-       * 3 - kr
-       * 4 - tw
-       * 5 - as
-       * 6 - br
-       * 7 - la
-       */
-      return 0;
-   }
    if (!strcmp("ss.smpc.autortc.lang", name))
       return setting_smpc_autortc_lang;
    if (!strcmp("ss.dbg_mask", name))
@@ -64,8 +51,6 @@ uint64_t MDFN_GetSettingUI(const char *name)
 
 int64 MDFN_GetSettingI(const char *name)
 {
-   if (!strcmp("ss.region_default", name))
-      return MDFN_GetSettingUI("ss.region_default");
    if (!strcmp("ss.slstart", name))
       return setting_initial_scanline;
    if (!strcmp("ss.slstartp", name))
@@ -107,8 +92,6 @@ bool MDFN_GetSettingB(const char *name)
       return 0;
    if (!strcmp("ss.smpc.autortc", name))
       return int(setting_smpc_autortc);
-   if (!strcmp("ss.region_autodetect", name)) /* make configurable */
-      return 1;
    if (!strcmp("ss.bios_sanity", name))
       return true;
    if (!strcmp("ss.cd_sanity", name))
@@ -137,8 +120,6 @@ std::string MDFN_GetSettingS(const char *name)
       return std::string("mpr-18811-mx.ic1");
    if (!strcmp("ss.cart.ultraman_path", name))
       return std::string("mpr-19367-mx.ic1");
-   if (!strcmp("ss.region_default", name)) /* make configurable */
-      return "na";
    /* FILESYS */
    if (!strcmp("filesys.path_firmware", name))
       return std::string(retro_base_directory);
