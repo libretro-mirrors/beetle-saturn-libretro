@@ -3074,7 +3074,7 @@ void retro_run(void)
    video_frames++;
    audio_frames += spec.SoundBufSize;
 
-   video_cb(surf->pixels, width, height, 704 * sizeof(uint32_t));
+   video_cb(surf->pixels + surf->pitchinpix * spec.DisplayRect.y, width, height, 704 * sizeof(uint32_t));
 
    int16_t *interbuf = (int16_t*)&IBuffer;
 
