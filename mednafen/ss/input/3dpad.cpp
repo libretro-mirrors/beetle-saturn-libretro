@@ -164,10 +164,10 @@ uint8 IODevice_3DPad::UpdateBus(const sscpu_timestamp_t timestamp, const uint8 s
  return (smpc_out & (smpc_out_asserted | 0xE0)) | (tmp &~ smpc_out_asserted);
 }
 
-static const char* ModeSwitchPositions[] =
+static const IDIIS_SwitchPos ModeSwitchPositions[] =
 {
- "Digital(+)",
- "Analog(○)",
+ { "digital", "Digital(+)" },
+ { "analog", "Analog(○)", "Analog mode is not compatible with all games.  For some compatible games, analog mode reportedly must be enabled before the game boots up for the game to recognize it properly." },
 };
 
 IDIISG IODevice_3DPad_IDII =
@@ -187,7 +187,7 @@ IDIISG IODevice_3DPad_IDII =
  { "x", "X", 8, IDIT_BUTTON },
  { NULL, "empty", 0, IDIT_BUTTON },
 
- IDIIS_Switch("mode", "Mode", 17, ModeSwitchPositions, sizeof(ModeSwitchPositions) / sizeof(ModeSwitchPositions[0])),
+ IDIIS_Switch("mode", "Mode", 17, ModeSwitchPositions, sizeof(ModeSwitchPositions) / sizeof(ModeSwitchPositions[0]), false),
 
  { "analog_left", "Analog LEFT ←", 15, IDIT_BUTTON_ANALOG },
  { "analog_right", "Analog RIGHT →", 16, IDIT_BUTTON_ANALOG },

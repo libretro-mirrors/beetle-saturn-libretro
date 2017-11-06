@@ -184,10 +184,15 @@ static struct
  uint8 TapCount;
  uint8 ReadCounter;
  uint8 ReadCount;
- uint8 ReadBuffer[255]; //16];
+ uint8 ReadBuffer[256];	// Maybe should only be 255, but +1 for save state sanitization simplification.
  uint8 WriteCounter;
  uint8 PDCounter;
 } JRS;
+//
+//
+static bool vb;
+static bool vsync;
+static sscpu_timestamp_t lastts;
 //
 //
 static uint8 DataOut[2][2];
@@ -234,10 +239,6 @@ void IODevice::LineHook(const sscpu_timestamp_t timestamp, int32 out_line, int32
 
 //
 //
-
-static bool vb;
-static bool vsync;
-static sscpu_timestamp_t lastts;
 
 static void UpdateIOBus(unsigned port, const sscpu_timestamp_t timestamp)
 {
@@ -492,6 +493,100 @@ void SMPC_Reset(bool powering_up)
 }
 
  
+void SMPC_StateAction(StateMem* sm, const unsigned load, const bool data_only)
+{
+ SFORMAT StateRegs[] =
+ {
+  SFVAR(RTC.ClockAccum),
+  SFVAR(RTC.Valid),
+  SFARRAY(RTC.raw, 7),
+
+  SFARRAY(SaveMem, 4),
+
+  SFARRAY(IREG, 7),
+  SFARRAY(OREG, 0x20),
+  SFVAR(SR),
+  SFVAR(SF),
+
+  SFVAR(ResetNMIEnable),
+  SFVAR(ResetButtonPhysStatus),
+  SFVAR(ResetButtonCount),
+  SFVAR(ResetPending),
+  SFVAR(PendingCommand),
+  SFVAR(ExecutingCommand),
+  SFVAR(PendingClockDivisor),
+  SFVAR(CurrentClockDivisor),
+
+  SFVAR(PendingVB),
+
+  SFVAR(SubPhase),
+  SFVAR(ClockCounter),
+  SFVAR(SMPC_ClockRatio),
+
+  SFVAR(SoundCPUOn),
+  SFVAR(SlaveSH2On),
+  SFVAR(CDOn),
+
+  SFVAR(BusBuffer),
+
+  SFVAR(JRS.TimeCounter),
+  SFVAR(JRS.StartTime),
+  SFVAR(JRS.OptWaitUntilTime),
+  SFVAR(JRS.OptEatTime),
+  SFVAR(JRS.OptReadTime),
+
+  SFARRAY(JRS.Mode, 2),
+  SFVAR(JRS.TimeOptEn),
+  SFVAR(JRS.NextContBit),
+
+  SFVAR(JRS.CurPort),
+  SFVAR(JRS.ID1),
+  SFVAR(JRS.ID2),
+  SFVAR(JRS.IDTap),
+
+  SFVAR(JRS.CommMode),
+
+  SFVAR(JRS.OWP),
+
+  SFARRAY(JRS.work, 8),
+
+  SFVAR(JRS.TapCounter),
+  SFVAR(JRS.TapCount),
+  SFVAR(JRS.ReadCounter),
+  SFVAR(JRS.ReadCount),
+  SFARRAY(JRS.ReadBuffer, 256),
+  SFVAR(JRS.WriteCounter),
+  SFVAR(JRS.PDCounter),
+
+  SFARRAY(&DataOut[0][0], 4),
+  SFARRAY(&DataDir[0][0], 4),
+  SFARRAYB(DirectModeEn, 2),
+  SFARRAYB(ExLatchEn, 2),
+
+  SFARRAY(IOBusState, 2),
+
+  SFVAR(vb),
+  SFVAR(vsync),
+
+  SFEND
+ };
+
+ MDFNSS_StateAction(sm, load, data_only, StateRegs, "SMPC");
+
+ for(unsigned port = 0; port < 2; port++)
+ {
+  const char snp[] = { 'S', 'M', 'P', 'C', '_', 'P', (char)('0' + port), 0 };
+
+  IOPorts[port]->StateAction(sm, load, data_only, snp);
+ }
+
+ if(load)
+ {
+  JRS.CurPort &= 0x1;
+  JRS.OWP &= 0x3F;
+ }
+}
+
 void SMPC_TransformInput(void)
 {
  float gun_x_scale, gun_x_offs;
@@ -1305,6 +1400,8 @@ sscpu_timestamp_t SMPC_Update(sscpu_timestamp_t timestamp)
        JR_EAT(26);
        JR_TH_TR(-1, -1);
       }
+
+      JRS.CurPort = 0; // For save state sanitization consistency.
 
       SR = (SR & ~SR_NPE);
       SR = (SR & ~0xF) | (JRS.Mode[0] << 0) | (JRS.Mode[1] << 2);
