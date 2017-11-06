@@ -26,6 +26,8 @@
 	DMA timing is very rough.  DMA burst mode probably isn't handled totally correctly, especially in
 	relation to the other CPU and the SCU(is DMA burst mode even legal on the Saturn?).
 
+	DMA channel bus priority handling is not correct(at least not for non-burst mode transfers).
+
 	Misaligned memory accesses(that cause address errors) aren't emulated correctly(for
 	future reference, there's a difference between how cache versus external bus is accessed
 	for misaligned addresses, and perhaps a difference between 32-bit and 16-bit spaces as
@@ -879,6 +881,7 @@ INLINE void SH7095::DIVU_S64_S32(void)
 }
 
 //
+//
 // Begin SCI
 //
 //
@@ -903,8 +906,6 @@ void SH7095::SCI_Reset(void)
 //
 // End SCI
 //
-//
-
 //
 
 //
@@ -1065,6 +1066,33 @@ NO_INLINE void SH7095::OnChipRegWrite(uint32 A, uint32 V)
 	SS_DBG(SS_DBG_WARNING | SS_DBG_SH2, "[%s] Unhandled %zu-byte write to on-chip low register area; address=0x%08x value=0x%08x\n", cpu_name, sizeof(T), A, V);
 	break;
 
+#if 0
+   //
+   // SCI registers.
+   //
+   case 0x00:
+	SCI.SMR = V;
+	break;
+
+   case 0x01:
+	SCI.BRR = V;
+	break;
+
+   case 0x02:
+	SCI.SCR = V;
+	RecalcPendingIntPEX();
+	break;
+
+   case 0x03:
+	SCI.TDR = V;
+	break;
+
+   case 0x04:
+	SCI.SSR = (SCI.SSR & ~SCI.SSRM & 0xF8) | (SCI.SSR & 0x06) | (V & 0x01);
+	SCI.SSRM = 0;
+	RecalcPendingIntPEX();
+	break;
+#endif
    //
    // Free-running timer registers.
    //
@@ -1478,6 +1506,35 @@ INLINE T SH7095::OnChipRegRead(uint32 A)
 	SS_DBG(SS_DBG_WARNING | SS_DBG_SH2, "[%s] Unhandled %zu-byte read from on-chip low register area; address=0x%08x\n", cpu_name, sizeof(T), A);
 	break;
 
+#if 0
+   //
+   // SCI registers.
+   //
+   case 0x00:
+	ret = SCI.SMR;
+	break;
+
+   case 0x01:
+	ret = SCI.BRR;
+	break;
+
+   case 0x02:
+	ret = SCI.SCR;
+	break;
+
+   case 0x03:
+	ret = SCI.TDR;
+	break;
+
+   case 0x04:
+	ret = SCI.SSR;
+	SCI.SSRM = SCI.SSR & 0xF8;
+	break;
+
+   case 0x05:
+	ret = SCI.RDR;
+	break;
+#endif
    //
    // FRT registers.  Some weirdness with 16-bit reads duplicating the lower 8 bits in the upper 8-bits, but the upper 8-bits are masked
    // with the last data written to the FRT area or something...not emulated here.
@@ -1808,6 +1865,14 @@ INLINE T SH7095::MemReadRT(uint32 A)
 	  else
 	   timestamp = SH7095_mem_timestamp;
 	 }
+
+#if 0
+	 if((SH7095_FastMap[A >> SH7095_EXT_MAP_GRAN_BITS] + (A & ((1U << SH7095_EXT_MAP_GRAN_BITS) - 1))) == (uintptr_t)fmap_dummy)
+	  SS_DBG(SS_DBG_WARNING | SS_DBG_SH2, "[%s] Cacheable %zu-byte read from non-RAM address 0x%08x!\n", cpu_name, sizeof(T), A);
+	 else if(ne16_rbo_be<T>((uint16*)(SH7095_FastMap[A >> SH7095_EXT_MAP_GRAN_BITS] + (A & ~0x3)), A & 0x3) != MDFN_densb<T, true>(&cent->Data[way_match][NE32ASU8_IDX_ADJ(T, A & 0x0F)]))
+	  SS_DBG(SS_DBG_WARNING | SS_DBG_SH2, "[%s] Cache incoherency for %zu-byte read from address 0x%08x!\n", cpu_name, sizeof(T), A);
+#endif
+
 	 cent->LRU = (cent->LRU & LRU_Update_Tab[way_match].AND) | LRU_Update_Tab[way_match].OR;
   	 return MDFN_densb<T, true>(&cent->Data[way_match][NE32ASU8_IDX_ADJ(T, A & 0x0F)]);
 	}
@@ -2211,6 +2276,28 @@ uint8 INLINE SH7095::GetPendingInt(uint8* vecnum_out)
   vecnum = (VCRWDT >> 8) & 0x7F;
  }
 
+ //
+ //
+ //
+#if 0
+ {
+  const uint32 sci_ip_tmp = (SCI.SSR & SCI.SCR & 0xC4) | (SCI.SSR & 0x38);
+
+  if(sci_ip_tmp && (tmp_ipr = ((IPRB >> 12) & 0xF)) > ipr)
+  {
+   ipr = tmp_ipr;
+
+   if(sci_ip_tmp & 0x38) // ERI(receive error; ORER, PER, FER)
+    vecnum = (VCRA >> 8) & 0x7F;
+   else if(sci_ip_tmp & 0x40)// RXI(receive data full; RDRF)
+    vecnum = (VCRA >> 0) & 0x7F;
+   else if(sci_ip_tmp & 0x80)// TXI(transmit data empty; TDRE)
+    vecnum = (VCRB >> 8) & 0x7F;
+   else if(sci_ip_tmp & 0x04)// TEI(transmit end; TEND)
+    vecnum = (VCRB >> 0) & 0x7F;
+  }
+ }
+#endif
  //
  //
  //
@@ -4227,9 +4314,9 @@ INLINE void SH7095::Step(void)
 	 WDT_StandbyReset();
 	 //
 	 //
-    SCI_Reset();
-    //
-    //
+	 SCI_Reset();
+	 //
+	 //
 
 	 timestamp++;
 	 Pipe_ID = (Pipe_ID & 0x00FFFFFF) | (0x7E << 24);
@@ -4624,7 +4711,7 @@ INLINE uint32 SH7095::GetRegister(const unsigned id, char* const special, const 
 	ret = VCRC;
 	if(special)
 	{
-    snprintf(special, special_len, "FIC: 0x%02x, FOC: 0x%02x", (ret >> 8) & 0x7F, ret & 0x7F);
+		snprintf(special, special_len, "FIC: 0x%02x, FOC: 0x%02x", (ret >> 8) & 0x7F, ret & 0x7F);
 	}
 	break;
 

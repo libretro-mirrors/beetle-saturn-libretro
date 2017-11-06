@@ -30,7 +30,7 @@
 
 #define MEDNAFEN_CORE_NAME_MODULE "ss"
 #define MEDNAFEN_CORE_NAME "Mednafen Saturn"
-#define MEDNAFEN_CORE_VERSION "v0.9.45.1"
+#define MEDNAFEN_CORE_VERSION "v0.9.46"
 #define MEDNAFEN_CORE_EXTENSIONS "cue|ccd|chd"
 #define MEDNAFEN_CORE_TIMING_FPS 59.82
 #define MEDNAFEN_CORE_GEOMETRY_BASE_W 320
@@ -1817,7 +1817,9 @@ int StateAction(StateMem *sm, int load, int data_only)
  CPU[0].StateAction(sm, load, data_only, "SH2-M");
  CPU[1].StateAction(sm, load, data_only, "SH2-S");
  SCU_StateAction(sm, load, data_only);
+*/
  SMPC_StateAction(sm, load, data_only);
+/*
  CDB_StateAction(sm, load, data_only);
  VDP1::StateAction(sm, load, data_only);
  VDP2_StateAction(sm, load, data_only);

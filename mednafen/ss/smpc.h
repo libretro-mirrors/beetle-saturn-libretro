@@ -58,6 +58,7 @@ bool SMPC_IsSlaveOn(void);
 void SMPC_Reset(bool powering_up);
 void SMPC_LoadNV(Stream* s);
 void SMPC_SaveNV(Stream* s);
+void SMPC_StateAction(StateMem* sm, const unsigned load, const bool data_only);
 
 void SMPC_SetRTC(const struct tm* ht, const uint8 lang);
 
