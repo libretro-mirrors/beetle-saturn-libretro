@@ -3091,13 +3091,23 @@ void retro_run(void)
    audio_frames += spec.SoundBufSize;
 
    if (PrevInterlaced)
-      video_cb(surf->pixels + surf->pitchinpix * spec.DisplayRect.y, width, height, 704 * sizeof(uint32_t));
-   else if (is_pal)
-      video_cb(surf->pixels + surf->pitchinpix * (spec.DisplayRect.y + first_sl_pal) + (h_mask/2),
-         width - h_mask, (last_sl_pal - first_sl_pal), 704 * sizeof(uint32_t));
+   {
+      if (is_pal)
+         video_cb(surf->pixels + surf->pitchinpix * (spec.DisplayRect.y + 2*first_sl_pal) + (h_mask/2),
+            width - h_mask, 2*(last_sl_pal - first_sl_pal + 1), 704 * sizeof(uint32_t));
+      else
+         video_cb(surf->pixels + surf->pitchinpix * (spec.DisplayRect.y + 2*first_sl) + (h_mask/2),
+            width - h_mask, 2*(last_sl - first_sl + 1), 704 * sizeof(uint32_t));
+   }
    else
-      video_cb(surf->pixels + surf->pitchinpix * (spec.DisplayRect.y + first_sl) + (h_mask/2),
-         width - h_mask, last_sl - first_sl, 704 * sizeof(uint32_t));
+   {
+      if (is_pal)
+         video_cb(surf->pixels + surf->pitchinpix * (spec.DisplayRect.y + first_sl_pal) + (h_mask/2),
+            width - h_mask, last_sl_pal - first_sl_pal + 1, 704 * sizeof(uint32_t));
+      else
+         video_cb(surf->pixels + surf->pitchinpix * (spec.DisplayRect.y + first_sl) + (h_mask/2),
+            width - h_mask, last_sl - first_sl + 1, 704 * sizeof(uint32_t));
+   }
 
    int16_t *interbuf = (int16_t*)&IBuffer;
 
