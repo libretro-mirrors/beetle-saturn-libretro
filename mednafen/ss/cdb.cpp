@@ -845,7 +845,6 @@ static struct
  uint8 record[256];
  uint32 record_counter;
 
- uint32 finfo_read_start_offs;
  uint32 finfo_offs;
 } FLS;
 
@@ -1240,6 +1239,8 @@ void CDB_SetDisc(bool tray_open, CDIF *cdif)
    DriveCounter = (int64)1000 << 32;
   }
  }
+ else
+  Cur_CDIF->ReadTOC(&toc);
 }
 
 static INLINE void RecalcIRQOut(void)
@@ -1627,7 +1628,6 @@ static void Drive_Run(int64 clocks)
 	break;
 
     case DRIVEPHASE_STARTUP:
-	Cur_CDIF->ReadTOC(&toc);
 	TranslateTOC();
 	//
 	//
@@ -3636,4 +3636,238 @@ void CDB_Write_DBM(uint32 offset, uint16 DB, uint16 mask)
  }
 
  SS_SetEventNT(&events[SS_EVENT_CDB], nt);
+}
+
+void CDB_StateAction(StateMem* sm, const unsigned load, const bool data_only)
+{
+ SFORMAT StateRegs[] =
+ {
+  SFVAR(GetSecLen),
+  SFVAR(PutSecLen),
+
+  SFVAR(AuthDiscType),
+
+  SFVAR(HIRQ),
+  SFVAR(HIRQ_Mask),
+  SFARRAY16(CData, 4),
+  SFARRAY16(Results, 4),
+
+  SFVAR(CommandPending),
+
+  SFVAR(CDDevConn),
+  SFVAR(LastBufDest),
+
+  //
+  //
+  SFARRAY(Buffers->Data, 2352, NumBuffers, sizeof(BufferT)),
+  SFVAR(Buffers->Prev, NumBuffers, sizeof(BufferT)),
+  SFVAR(Buffers->Next, NumBuffers, sizeof(BufferT)),
+  //
+  //
+  SFVAR(Filters->Mode, 0x18, sizeof(FilterS)),
+  SFVAR(Filters->TrueConn, 0x18, sizeof(FilterS)),
+  SFVAR(Filters->FalseConn, 0x18, sizeof(FilterS)),
+
+  SFVAR(Filters->FAD, 0x18, sizeof(FilterS)),
+  SFVAR(Filters->Range, 0x18, sizeof(FilterS)),
+
+  SFVAR(Filters->Channel, 0x18, sizeof(FilterS)),
+  SFVAR(Filters->File, 0x18, sizeof(FilterS)),
+
+  SFVAR(Filters->SubMode, 0x18, sizeof(FilterS)),
+  SFVAR(Filters->SubModeMask, 0x18, sizeof(FilterS)),
+
+  SFVAR(Filters->CInfo, 0x18, sizeof(FilterS)),
+  SFVAR(Filters->CInfoMask, 0x18, sizeof(FilterS)),
+  //
+  //
+  SFVAR(Partitions->FirstBuf, 0x18, sizeof(*Partitions)),
+  SFVAR(Partitions->LastBuf, 0x18, sizeof(*Partitions)),
+  SFVAR(Partitions->Count, 0x18, sizeof(*Partitions)),
+
+  SFVAR(FirstFreeBuf),
+  SFVAR(FreeBufferCount),
+
+  SFVAR(FADSearch.fad),
+  SFVAR(FADSearch.spos),
+  SFVAR(FADSearch.pnum),
+
+  SFVAR(CalcedActualSize),
+
+  SFVAR(lastts),
+  SFVAR(CommandPhase),
+  //SFVAR(CommandYield),
+  SFVAR(CommandClockCounter),
+
+  SFVAR(CTR.Command),
+  SFARRAY16(CTR.CD, 4),
+
+  SFVAR(DT.Active),
+  SFVAR(DT.Writing),
+  SFVAR(DT.NeedBufFree),
+
+  SFVAR(DT.CurBufIndex),
+  SFVAR(DT.BufCount),
+
+  SFVAR(DT.InBufOffs),
+  SFVAR(DT.InBufCounter),
+
+  SFVAR(DT.TotalCounter),
+
+  SFVAR(DT.FNum),
+
+  SFARRAY16(DT.FIFO, 6),
+  SFVAR(DT.FIFO_RP),
+  SFVAR(DT.FIFO_WP),
+  SFVAR(DT.FIFO_In),
+
+  SFARRAY(DT.BufList, NumBuffers),
+
+  SFVAR(StandbyTime),
+  SFVAR(ECCEnable),
+  SFVAR(RetryCount),
+
+  SFVAR(ResultsRead),
+
+  SFVAR(SeekIndexPhase),
+  SFVAR(CurSector),
+  SFVAR(DrivePhase),
+
+  SFVAR(DriveCounter),
+  SFVAR(PeriodicIdleCounter),
+
+  SFVAR(PlayRepeatCounter),
+  SFVAR(CurPlayRepeat),
+
+  SFVAR(CurPlayStart),
+  SFVAR(CurPlayEnd),
+  SFVAR(PlayEndIRQType),
+  //static uint32 PlayEndIRQPending;
+
+  SFVAR(PlayCmdStartPos),
+  SFVAR(PlayCmdEndPos),
+  SFVAR(PlayCmdRepCnt),
+
+  SFARRAY16(&CDDABuf[0][0], CDDABuf_MaxCount * 2),
+  SFVAR(CDDABuf_RP),
+  SFVAR(CDDABuf_WP),
+  SFVAR(CDDABuf_Count),
+
+  SFARRAY(SecPreBuf, 2352 + 96),
+  SFVAR(SecPreBuf_In),
+
+  SFARRAY(TOC_Buffer, (99 + 3) * 4),
+
+  SFVAR(CurPosInfo.status),
+  SFVAR(CurPosInfo.fad),
+  SFVAR(CurPosInfo.rel_fad),
+  SFVAR(CurPosInfo.ctrl_adr),
+  SFVAR(CurPosInfo.idx),
+  SFVAR(CurPosInfo.tno),
+
+  SFVAR(CurPosInfo.is_cdrom),
+
+  SFARRAY(SubCodeQBuf, 10),
+  SFARRAY(SubCodeRWBuf, 24),
+
+  SFARRAY(SubQBuf, 0xC),
+  SFARRAY(SubQBuf_Safe, 0xC),
+  SFVAR(SubQBuf_Safe_Valid),
+
+  #define SFFIS(vs, tc)						\
+	SFARRAY((vs).fad_be, 4, tc, sizeof(FileInfoS)),		\
+	SFARRAY((vs).size_be, 4, tc, sizeof(FileInfoS)),	\
+	SFVAR((vs).unit_size, tc, sizeof(FileInfoS)),		\
+	SFVAR((vs).gap_size, tc, sizeof(FileInfoS)),		\
+	SFVAR((vs).fnum, tc, sizeof(FileInfoS)),		\
+	SFVAR((vs).attr, tc, sizeof(FileInfoS))
+
+  SFFIS(*FileInfo, 256),
+  SFVAR(FileInfoValid),
+
+  SFFIS(RootDirInfo, 1),
+  SFVAR(RootDirInfoValid),
+  #undef SFFIS
+
+  SFVAR(FLS.Active),
+  SFVAR(FLS.DoAuth),
+  SFVAR(FLS.Abort),
+  SFVAR(FLS.pnum),
+
+  SFVAR(FLS.CurDirFAD),
+
+  SFVAR(FLS.FileInfoValidCount),
+  SFVAR(FLS.FileInfoOffs),
+  SFVAR(FLS.FileInfoOnDiscCount),
+
+  SFVAR(FLS.Phase),
+
+  SFARRAY(FLS.pbuf, 2048),
+  SFVAR(FLS.pbuf_offs),
+  SFVAR(FLS.pbuf_read_i),
+
+  SFVAR(FLS.total_counter),
+  SFVAR(FLS.total_max),
+
+  SFARRAY(FLS.record, 256),
+  SFVAR(FLS.record_counter),
+
+  SFVAR(FLS.finfo_offs),
+
+  SFEND
+ };
+
+ MDFNSS_StateAction(sm, load, data_only, StateRegs, "CDB");
+
+ if(load)
+ {
+  // FIXME: Sanitizing!
+  //
+  //
+  //
+  bool need_reset_buffers = false;
+
+  for(unsigned i = 0; i < 0x18; i++)
+  {
+   auto& p = Partitions[i];
+
+   if(p.FirstBuf >= NumBuffers && p.FirstBuf != 0xFF)
+    need_reset_buffers = true;
+   else if(p.LastBuf >= NumBuffers && p.LastBuf != 0xFF)
+    need_reset_buffers = true;
+   //Partitions[i].Count = 0;
+  }
+
+  for(unsigned i = 0; i < NumBuffers; i++)
+  {
+   auto& b = Buffers[i];
+
+   if(b.Prev >= NumBuffers && b.Prev != 0xFF)
+    need_reset_buffers = true;
+   else if(b.Next >= NumBuffers && b.Next != 0xFF)
+    need_reset_buffers = true;
+  }
+
+  if(need_reset_buffers)
+  {
+   printf("need_reset_buffers!\n");
+   ResetBuffers();
+  }
+  //
+  //
+  //
+
+
+  DT.FNum %= 0x18;
+
+  DT.FIFO_WP %= sizeof(DT.FIFO) / sizeof(DT.FIFO[0]);
+  DT.FIFO_RP %= sizeof(DT.FIFO) / sizeof(DT.FIFO[0]);
+
+  CDDABuf_RP %= CDDABuf_MaxCount;
+  CDDABuf_WP %= CDDABuf_MaxCount;
+
+  FLS.pbuf_offs %= 2048;
+  //FLS.pbuf_read_i
+  FLS.finfo_offs %= 256 + 1;
+ }
 }

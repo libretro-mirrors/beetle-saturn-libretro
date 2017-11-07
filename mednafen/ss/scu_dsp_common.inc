@@ -38,8 +38,6 @@ enum { DSP_EndCCSubVal = 1000000 };
 
 void DSP_Init(void);
 
-struct DSP_ITS;
-
 union DSPR48
 {
 #ifdef MSB_FIRST

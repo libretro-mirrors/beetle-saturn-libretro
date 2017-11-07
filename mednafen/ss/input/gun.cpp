@@ -137,7 +137,7 @@ void IODevice_Gun::UpdateInput(const uint8* data, const int32 time_elapsed)
  nom_coord[0] = (int16)MDFN_de16lsb(&data[0]);
  nom_coord[1] = (int16)MDFN_de16lsb(&data[2]);
 
- state = ((((~data[4]) << 4) & 0x30) | 0x0C) | (state & 0x40);
+ state = ((((~(unsigned)data[4]) << 4) & 0x30) | 0x0C) | (state & 0x40);
 
  //
  //
@@ -176,6 +176,10 @@ void IODevice_Gun::StateAction(StateMem* sm, const unsigned load, const bool dat
  {
   SFVAR(state),
 
+  SFVAR(light_phase),
+  SFVAR(light_phase_counter),
+  SFVAR(NextEventTS),
+
   SFVAR(osshot_counter),
   SFVAR(prev_ossb),
 
@@ -190,11 +194,8 @@ void IODevice_Gun::StateAction(StateMem* sm, const unsigned load, const bool dat
   Power();
  else if(load)
  {
-  // TODO save state(or pointless?)
-  state |= 0x40;
-  light_phase = true;
-  light_phase_counter = 0x7FFFFFFF;
-  NextEventTS = SS_EVENT_DISABLED_TS;
+  //state |= 0x40;
+
  }
 }
 

@@ -1,8 +1,8 @@
 /******************************************************************************/
 /* Mednafen Sega Saturn Emulation Module                                      */
 /******************************************************************************/
-/* cdb.h:
-**  Copyright (C) 2015-2016 Mednafen Team
+/* ar4mp.h - Action Replay 4M Plus cart emulation
+**  Copyright (C) 2017 Mednafen Team
 **
 ** This program is free software; you can redistribute it and/or
 ** modify it under the terms of the GNU General Public License
@@ -19,30 +19,9 @@
 ** 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 */
 
-#ifndef __MDFN_SS_CDB_H
-#define __MDFN_SS_CDB_H
+#ifndef __MDFN_SS_CART_AR4MP_H
+#define __MDFN_SS_CART_AR4MP_H
 
-class CDIF;
-
-void CDB_Init(void) MDFN_COLD;
-void CDB_Kill(void) MDFN_COLD;
-void CDB_StateAction(StateMem* sm, const unsigned load, const bool data_only) MDFN_COLD;
-
-void CDB_SetDisc(bool tray_open, CDIF *cdif) MDFN_COLD;
-
-void CDB_Write_DBM(uint32 offset, uint16 DB, uint16 mask);
-uint16 CDB_Read(uint32 offset);
-
-void CDB_Reset(bool powering_up) MDFN_COLD;
-
-sscpu_timestamp_t CDB_Update(sscpu_timestamp_t timestamp);
-void CDB_ResetTS(void);
-
-void CDB_GetCDDA(uint16* outbuf);	// writes to outbuf[0] and outbuf[1]
-
-
-void CDB_SetClockRatio(uint32 ratio);
-void CDB_ResetCD(void);
-void CDB_SetCDActive(bool active);
+void CART_AR4MP_Init(CartInfo* c, Stream* str) MDFN_COLD;
 
 #endif

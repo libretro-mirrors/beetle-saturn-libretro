@@ -201,6 +201,10 @@ static bool Timer_Enable;
 
 static bool HB_FromVDP2, VB_FromVDP2;
 
+//
+//
+//
+
 static uint8 SCU_MSH2VectorFetch(void)
 {
  uint8 ret = IVec;
@@ -332,53 +336,6 @@ int32 SCU_SetHBVB(int32 pclocks, bool new_HB_FromVDP2, bool new_VB_FromVDP2)
  VB_FromVDP2 = new_VB_FromVDP2;
 
  return Timer1_Counter ? Timer1_Counter : 0x200;
-}
-
-static void SCU_Init(void)
-{
- SCU_DMA_TimeCounter = 0;
- SCU_DMA_RunUntil = 0;
- IAsserted = 0;
- HB_FromVDP2 = false;
- VB_FromVDP2 = false;
-
- DSP_Init();
-}
-
-void SCU_Reset(bool powering_up)
-{
- ILevel = IVec = 0;
- IMask = 0xBFFF;
- IPending = 0;
- ABusIProhibit = 0;
- RSEL = 0;
-
- if(powering_up)
-  memset(DMALevel, 0x00, sizeof(DMALevel));
-
- for(auto& d : DMALevel)
- {
-  d.ReadAdd = true;
-  d.WriteAdd = 0x1;
-
-  d.Enable = false;
-  d.GoGoGadget = false;
-  d.Active = false;
-
-  d.Indirect = false;
-  d.ReadUpdate = false;
-  d.WriteUpdate = false;
-  d.SF = 0;
- }
- SCU_DMA_ReadOverhead = 0;
-
- SCU_DMA_VDP1WriteIgnoreKludge = 0;
-
- RecalcDMAHalt();
-
- DSP_Reset(powering_up);
-
- RecalcMasterIntOut();
 }
 
 static void SCU_AdjustTS(const int32 delta)
@@ -1873,6 +1830,276 @@ extern void (*const DSP_DMAFuncTable[2][8][8])(void) =
 {
  #include "scu_dsp_dmatab.inc"
 };
+
+
+static void SCU_Init(void)
+{
+ SCU_DMA_TimeCounter = 0;
+ SCU_DMA_RunUntil = 0;
+ IAsserted = 0;
+ HB_FromVDP2 = false;
+ VB_FromVDP2 = false;
+
+ DSP_Init();
+}
+
+void SCU_Reset(bool powering_up)
+{
+ ILevel = IVec = 0;
+ IMask = 0xBFFF;
+ IPending = 0;
+ ABusIProhibit = 0;
+ RSEL = 0;
+
+ if(powering_up)
+  memset(DMALevel, 0x00, sizeof(DMALevel));
+
+ for(auto& d : DMALevel)
+ {
+  d.ReadAdd = true;
+  d.WriteAdd = 0x1;
+
+  d.Enable = false;
+  d.GoGoGadget = false;
+  d.Active = false;
+
+  d.Indirect = false;
+  d.ReadUpdate = false;
+  d.WriteUpdate = false;
+  d.SF = 0;
+
+  d.WATable = &dma_write_tab[0][0][0][0][0];
+  d.ReadFunc = rftab[0];
+  d.TableReadFunc = NULL;
+ }
+ //SCU_DMA_CycleCounter = 0;
+ SCU_DMA_ReadOverhead = 0;
+
+ SCU_DMA_VDP1WriteIgnoreKludge = 0;
+
+ RecalcDMAHalt();
+
+ DSP_Reset(powering_up);
+
+ RecalcMasterIntOut();
+}
+
+static MDFN_COLD void SCU_StateAction(StateMem* sm, const unsigned load, const bool data_only)
+{
+ uint32 DSP_ProgRAM[256];
+ uint32 DSP_NextInstr;
+ bool DSP_NextInstrLooped;
+ uint32 DMALevel_WATable[3];	
+ uint8 DMALevel_ReadFunc[3];		// rftab, don't allow NULL
+ uint8 DMALevel_TableReadFunc[3];	// rftab, also allow NULL
+
+ SFORMAT StateRegs[] =
+ {
+  SFVAR(DSP.LastTS),
+  SFVAR(DSP.CycleCounter),
+  SFVAR(DSP.T0_Until),
+  SFVAR(DSP.State),
+
+  SFVAR(DSP_NextInstr),
+  SFVAR(DSP_NextInstrLooped),
+
+  SFVAR(DSP.PC),
+  SFVAR(DSP.RA),
+
+  SFVAR(DSP.FlagZ),
+  SFVAR(DSP.FlagS),
+  SFVAR(DSP.FlagV),
+  SFVAR(DSP.FlagC),
+
+  SFVAR(DSP.FlagEnd),
+
+  SFVAR(DSP.TOP),
+  SFVAR(DSP.LOP),
+
+  SFVAR(DSP.AC.T),
+  SFVAR(DSP.P.T),
+
+  SFARRAY(DSP.CT, 4),
+
+  SFVAR(DSP.RX),
+  SFVAR(DSP.RY),
+
+  SFVAR(DSP.RAO),
+  SFVAR(DSP.WAO),
+
+  SFARRAY32(&DSP.DataRAM[0][0], 4 * 64),
+
+  SFARRAY32(DSP_ProgRAM, 256),
+
+  SFVAR(DMALevel->StartReadAddr, 3, sizeof(DMALevelS)),
+  SFVAR(DMALevel->StartWriteAddr, 3, sizeof(DMALevelS)),
+  SFVAR(DMALevel->StartByteCount, 3, sizeof(DMALevelS)),
+  SFVAR(DMALevel->ReadAdd, 3, sizeof(DMALevelS)),
+  SFVAR(DMALevel->WriteAdd, 3, sizeof(DMALevelS)),
+  SFVAR(DMALevel->Enable, 3, sizeof(DMALevelS)),
+  SFVAR(DMALevel->Active, 3, sizeof(DMALevelS)),
+  SFVAR(DMALevel->GoGoGadget, 3, sizeof(DMALevelS)),
+  SFVAR(DMALevel->Indirect, 3, sizeof(DMALevelS)),
+  SFVAR(DMALevel->ReadUpdate, 3, sizeof(DMALevelS)),
+  SFVAR(DMALevel->WriteUpdate, 3, sizeof(DMALevelS)),
+  SFVAR(DMALevel->SF, 3, sizeof(DMALevelS)),
+  SFVAR(DMALevel->FinishTime, 3, sizeof(DMALevelS)),
+  SFVAR(DMALevel->WriteBus, 3, sizeof(DMALevelS)),
+  SFVAR(DMALevel->CurReadBase, 3, sizeof(DMALevelS)),
+  SFVAR(DMALevel->CurReadSub, 3, sizeof(DMALevelS)),
+  SFVAR(DMALevel->CurWriteAddr, 3, sizeof(DMALevelS)),
+  SFVAR(DMALevel->CurByteCount, 3, sizeof(DMALevelS)),
+  SFVAR(DMALevel->Buffer, 3, sizeof(DMALevelS)),
+  SFARRAY32(DMALevel_WATable, 3),
+  SFARRAY(DMALevel_ReadFunc, 3),
+  SFARRAY(DMALevel_TableReadFunc, 3),
+  SFVAR(DMALevel->CurTableAddr, 3, sizeof(DMALevelS)),
+  SFVAR(DMALevel->FinalTransfer, 3, sizeof(DMALevelS)),
+
+  SFVAR(SCU_DMA_TimeCounter),
+  SFVAR(SCU_DMA_RunUntil),
+  SFVAR(SCU_DMA_ReadOverhead),
+
+  SFVAR(SCU_DMA_VDP1WriteIgnoreKludge),
+
+  SFVAR(IAsserted),
+  SFVAR(IPending),
+  SFVAR(IMask),
+
+  SFVAR(ABusIProhibit),
+  SFVAR(RSEL),
+
+  SFVAR(ILevel),
+  SFVAR(IVec),
+
+  SFVAR(Timer0_Counter),
+  SFVAR(Timer0_Compare),
+  SFVAR(Timer0_Met),
+
+  SFVAR(Timer1_Reload),
+  SFVAR(Timer1_Counter),
+  SFVAR(Timer1_Mode),
+  SFVAR(Timer1_Met),
+
+  SFVAR(Timer_Enable),
+
+  SFVAR(HB_FromVDP2),
+  SFVAR(VB_FromVDP2),
+
+  SFEND
+ };
+
+ //
+ // Do unconditionally, and not just if !load(in case some vars are missing from save state).
+ //
+ for(unsigned i = 0; i < 256; i++)
+  DSP_ProgRAM[i] = DSP.ProgRAM[i] >> 32;
+
+ DSP_NextInstr = DSP.NextInstr >> 32;
+ DSP_NextInstrLooped = (DSP.NextInstr == DSP_DecodeInstruction<true>(DSP.NextInstr >> 32));
+ //
+ //
+ const DMAWriteTabS* const dwt_ptrs[2] = { (const DMAWriteTabS*)dma_write_tab, (const DMAWriteTabS*)dma_write_tab_aciv1 };
+ const size_t dwt_counts[2] = { sizeof(dma_write_tab) / sizeof(DMAWriteTabS), sizeof(dma_write_tab_aciv1) / sizeof(DMAWriteTabS) };
+
+ for(unsigned level = 0; level < 3; level++)
+ {
+  const auto& d = DMALevel[level];
+
+  if(d.WATable >= dwt_ptrs[0] && d.WATable < (dwt_ptrs[0] + dwt_counts[0]))
+   DMALevel_WATable[level] = d.WATable - dwt_ptrs[0];
+  else if(d.WATable >= dwt_ptrs[1] && d.WATable < (dwt_ptrs[1] + dwt_counts[1]))
+   DMALevel_WATable[level] = 0x80000000 | (d.WATable - dwt_ptrs[1]);
+  else
+  {
+   //printf("%016llx - %016llx %08zx, %016llx %08zx\n", (unsigned long long)d.WATable, (unsigned long long)dwt_ptrs[0], dwt_counts[0], (unsigned long long)dwt_ptrs[1], dwt_counts[1]);
+   abort();	// FIXME: NULL pointer on init...
+  }
+
+  for(unsigned rb = 0; rb < 3 + 1; rb++)
+  {
+   if(rb >= 3)
+    abort();
+
+   if(d.ReadFunc == rftab[rb])
+   {
+    DMALevel_ReadFunc[level] = rb;
+    break;
+   }
+  }
+
+  DMALevel_TableReadFunc[level] = 0xFF;
+  for(unsigned trb = 0; trb < 3; trb++)
+  {
+   if(d.TableReadFunc == rftab[trb])
+   {
+    DMALevel_ReadFunc[level] = trb;
+    break;
+   }
+  }
+ }
+ //
+ //
+ //
+
+ MDFNSS_StateAction(sm, load, data_only, StateRegs, "SCU");
+
+ if(load)
+ {
+  for(unsigned i = 0; i < 256; i++)
+   DSP.ProgRAM[i] = DSP_DecodeInstruction(DSP_ProgRAM[i]);
+
+  if(DSP_NextInstrLooped)
+   DSP.NextInstr = DSP_DecodeInstruction<true>(DSP_NextInstr);
+  else
+   DSP.NextInstr = DSP_DecodeInstruction(DSP_NextInstr);
+
+  for(unsigned i = 0; i < 4; i++)
+   DSP.CT[i] &= 0x3F;
+
+  DSP.LOP &= 0xFFF;
+
+  //
+  //
+  for(unsigned level = 0; level < 3; level++)
+  {
+   auto& d = DMALevel[level];
+
+   d.StartReadAddr &= 0x07FFFFFF;
+   d.StartWriteAddr &= 0x07FFFFFF;
+   d.StartByteCount &= level ? 0x00000FFF : 0x000FFFFF;
+
+   d.ReadAdd &= 0x1;
+   d.WriteAdd &= 0x7;
+   
+   //
+   //
+   {
+    bool which = DMALevel_WATable[level] >> 31;
+    uint32 index = DMALevel_WATable[level] & 0x7FFFFFFF;
+
+    if(index >= dwt_counts[which]) // || !dwt_ptrs[which][index].write_size)
+     printf("bad watable %08x %zu %08x\n", DMALevel_WATable[level], dwt_counts[which], dwt_ptrs[which][index].write_size);
+    else
+     d.WATable = dwt_ptrs[which] + index;
+   }
+
+   if(DMALevel_ReadFunc[level] >= 3)
+    printf("bad readfunc: %02x\n", DMALevel_ReadFunc[level]);
+   else
+    d.ReadFunc = rftab[DMALevel_ReadFunc[level]];
+
+   if(DMALevel_TableReadFunc[level] == 0xFF)
+    d.TableReadFunc = NULL;
+   else if(DMALevel_TableReadFunc[level] < 3)
+    d.TableReadFunc = rftab[DMALevel_TableReadFunc[level]];
+   else
+    printf("bad tablereadfunc: %02x\n", DMALevel_TableReadFunc[level]);
+  }
+ }
+}
+
+
 
 //
 //

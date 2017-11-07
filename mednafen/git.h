@@ -103,15 +103,15 @@ struct InputDeviceInputInfoStruct
 	{
          struct
          {
-	  const IDIIS_SwitchPos* SwitchPos;
-	  uint32 SwitchNumPos;
-         };
+	  const IDIIS_SwitchPos* Pos;
+	  uint32 NumPos;
+         } Switch;
 
 	 struct
 	 {
-	  const IDIIS_StatusState* StatusStates;
-	  uint32 StatusNumStates;
-	 };
+	  const IDIIS_StatusState* States;
+	  uint32 NumStates;
+	 } Status;
 	};
 };
 
@@ -135,8 +135,8 @@ struct IDIIS_Switch : public InputDeviceInputInfoStruct
 
 	 ExcludeName = NULL;
 	 Flags = undoc_defpos ? IDIT_FLAG_AUX_SETTINGS_UNDOC : 0;
-	 SwitchPos = spn;
-	 SwitchNumPos = spn_num;
+	 Switch.Pos = spn;
+	 Switch.NumPos = spn_num;
 	}
 };
 
@@ -152,8 +152,8 @@ struct IDIIS_Status : public InputDeviceInputInfoStruct
 	 ExcludeName = NULL;
 	 RotateName[0] = RotateName[1] = RotateName[2] = NULL;
 	 Flags = 0;
-	 StatusStates = ss;
-	 StatusNumStates = ss_num;
+	 Status.States = ss;
+	 Status.NumStates = ss_num;
 	}
 };
 
@@ -359,7 +359,7 @@ typedef struct
 
    // Pointer to sound buffer, set by the driver code, that the emulation code should render sound to.
    // Guaranteed to be at least 500ms in length, but emulation code really shouldn't exceed 40ms or so.  Additionally, if emulation code
-   // generates >= 100ms, 
+   // generates >= 100ms,
    // DEPRECATED: Emulation code may set this pointer to a sound buffer internal to the emulation module.
    int16_t *SoundBuf;
 

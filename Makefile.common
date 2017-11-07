@@ -120,7 +120,8 @@ SOURCES_CXX += \
 					$(CORE_EMU_DIR)/cart/cs1ram.cpp \
 					$(CORE_EMU_DIR)/cart/debug.cpp \
 					$(CORE_EMU_DIR)/cart/extram.cpp \
-					$(CORE_EMU_DIR)/cart/rom.cpp
+					$(CORE_EMU_DIR)/cart/rom.cpp \
+					$(CORE_EMU_DIR)/cart/ar4mp.cpp
 
 SOURCES_CXX += $(MEDNAFEN_DIR)/hw_cpu/m68k/m68k.cpp
 

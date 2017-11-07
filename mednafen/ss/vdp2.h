@@ -32,6 +32,7 @@ uint16 Read16_DB(uint32 A);
 void Init(const bool IsPAL, const int sls, const int sle) MDFN_COLD;
 void FillVideoParams(MDFNGI* gi) MDFN_COLD;
 void Kill(void) MDFN_COLD;
+void StateAction(StateMem* sm, const unsigned load, const bool data_only) MDFN_COLD;
 
 void Reset(bool powering_up) MDFN_COLD;
 void SetLayerEnableMask(uint64 mask) MDFN_COLD;

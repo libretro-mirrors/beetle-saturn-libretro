@@ -2,6 +2,7 @@
 #define _STATE_H
 
 #include <retro_inline.h>
+#include <type_traits>
 
 typedef struct
 {
@@ -38,56 +39,118 @@ int MDFNSS_LoadSM(void *st, int, int);
 
 #define MDFNSTATE_BOOL		  0x08000000
 
-typedef struct {
-   void *v;		// Pointer to the variable/array
-   uint32_t size;		// Length, in bytes, of the data to be saved EXCEPT:
-   //  In the case of MDFNSTATE_BOOL, it is the number of bool elements to save(bool is not always 1-byte).
-   // If 0, the subchunk isn't saved.
-   uint32_t flags;	// Flags
-   const char *name;	// Name
-} SFORMAT;
+struct SFORMAT
+{
+	const char* name;	// Name;
+	void* data;		// Pointer to the variable/array
+	uint32 size;		// Length, in bytes, of the data to be saved EXCEPT:
+				//  In the case of 'bool' it is the number of bool elements to save(bool is not always 1-byte).
+				// If 0, the subchunk isn't saved.
+	uint32 type;		// Type/element size; 0(bool), 1, 2, 4, 8
+	uint32 repcount;
+	uint32 repstride;
+};
 
-INLINE bool SF_IS_BOOL(bool *) { return(1); }
-INLINE bool SF_IS_BOOL(void *) { return(0); }
+static INLINE bool* SF_FORCE_AB(bool* p) { return p; }
 
-INLINE uint32_t SF_FORCE_AB(bool *) { return(0); }
+static INLINE int8* SF_FORCE_A8(int8* p) { return p; }
+static INLINE uint8* SF_FORCE_A8(uint8* p) { return p; }
 
-INLINE uint32_t SF_FORCE_A8(int8_t *) { return(0); }
-INLINE uint32_t SF_FORCE_A8(uint8_t *) { return(0); }
+static INLINE int16* SF_FORCE_A16(int16* p) { return p; }
+static INLINE uint16* SF_FORCE_A16(uint16* p) { return p; }
 
-INLINE uint32_t SF_FORCE_A16(int16_t *) { return(0); }
-INLINE uint32_t SF_FORCE_A16(uint16_t *) { return(0); }
+static INLINE int32* SF_FORCE_A32(int32* p) { return p; }
+static INLINE uint32* SF_FORCE_A32(uint32* p) { return p; }
 
-INLINE uint32_t SF_FORCE_A32(int32_t *) { return(0); }
-INLINE uint32_t SF_FORCE_A32(uint32_t *) { return(0); }
+static INLINE int64* SF_FORCE_A64(int64* p) { return p; }
+static INLINE uint64* SF_FORCE_A64(uint64* p) { return p; }
 
-INLINE uint32_t SF_FORCE_A64(int64_t *) { return(0); }
-INLINE uint32_t SF_FORCE_A64(uint64_t *) { return(0); }
+static INLINE float* SF_FORCE_AF(float* p) { return p; }
+static INLINE double* SF_FORCE_AD(double* p) { return p; }
 
-INLINE uint32_t SF_FORCE_D(double *) { return(0); }
+template<typename T>
+static INLINE void SF_FORCE_ANY(T* p, typename std::enable_if<!std::is_enum<T>::value>::type* = nullptr)
+{
+ static_assert(	std::is_same<T, bool>::value ||
+		std::is_same<T, int8>::value || std::is_same<T, uint8>::value ||
+		std::is_same<T, int16>::value || std::is_same<T, uint16>::value ||
+		std::is_same<T, int32>::value || std::is_same<T, uint32>::value || std::is_same<T, float>::value ||
+		std::is_same<T, int64>::value || std::is_same<T, uint64>::value || std::is_same<T, double>::value, "Unsupported type");
+}
 
-#define SFVARN(x, n) { &(x), SF_IS_BOOL(&(x)) ? 1 : (uint32_t)sizeof(x), MDFNSTATE_RLSB | (SF_IS_BOOL(&(x)) ? MDFNSTATE_BOOL : 0), n }
-#define SFVAR(x) SFVARN((x), #x)
+template<typename T>
+static INLINE void SF_FORCE_ANY(T* p, typename std::enable_if<std::is_enum<T>::value>::type* = nullptr)
+{
+ SF_FORCE_ANY((typename std::underlying_type<T>::type*)p);
+}
 
-#define SFARRAYN(x, l, n) { (x), (uint32_t)(l), 0 | SF_FORCE_A8(x), n }
-#define SFARRAY(x, l) SFARRAYN((x), (l), #x)
+template<typename T>
+static INLINE SFORMAT SFBASE_(T* const v, const uint32 count, const uint32 totalcount, const size_t repstride, const char* const name)
+{
+ SF_FORCE_ANY(v);
+ //
+ //
+ SFORMAT ret;
 
-#define SFARRAYBN(x, l, n) { (x), (uint32_t)(l), MDFNSTATE_BOOL | SF_FORCE_AB(x), n }
-#define SFARRAYB(x, l) SFARRAYBN((x), (l), #x)
+ ret.data = v;
+ ret.name = name;
+ ret.repcount = totalcount - 1;
+ ret.repstride = repstride;
+ if(std::is_same<T, bool>::value)
+ {
+  ret.size = count;
+  ret.type = 0;
+ }
+ else
+ {
+  ret.size = sizeof(T) * count;
+  ret.type = sizeof(T);
+ }
 
-#define SFARRAY16N(x, l, n) { (x), (uint32_t)((l) * sizeof(uint16_t)), MDFNSTATE_RLSB16 | SF_FORCE_A16(x), n }
-#define SFARRAY16(x, l) SFARRAY16N((x), (l), #x)
+ return ret;
+}
 
-#define SFARRAY32N(x, l, n) { (x), (uint32_t)((l) * sizeof(uint32_t)), MDFNSTATE_RLSB32 | SF_FORCE_A32(x), n }
-#define SFARRAY32(x, l) SFARRAY32N((x), (l), #x)
+template<typename T>
+static INLINE SFORMAT SFBASE_(T* const v, const uint32 count, const char* const name)
+{
+ return SFBASE_(v, count, 1, 0, name);
+}
 
-#define SFARRAY64N(x, l, n) { (x), (uint32_t)((l) * sizeof(uint64_t)), MDFNSTATE_RLSB64 | SF_FORCE_A64(x), n }
-#define SFARRAY64(x, l) SFARRAY64N((x), (l), #x)
+#define SFVARN(x, ...)	SFBASE_(&(x), 1, __VA_ARGS__)
 
-#define SFARRAYDN(x, l, n) { (x), (uint32_t)((l) * 8), MDFNSTATE_RLSB64 | SF_FORCE_D(x), n }
-#define SFARRAYD(x, l) SFARRAYDN((x), (l), #x)
+#define SFVAR1_(x)	   SFVARN((x), #x)
+#define SFVAR3_(x, tc, rs) SFVARN((x), tc, rs, #x)
+#define SFVAR_(a, b, c, d, ...)	d
+#define SFVAR(...) 	SFVAR_(__VA_ARGS__, SFVAR3_, SFVAR2_, SFVAR1_, SFVAR0_)(__VA_ARGS__)
 
-#define SFEND { 0, 0, 0, 0 }
+#if SIZEOF_DOUBLE != 8
+ #error "sizeof(double) != 8"
+#endif
+
+#define SFARRAYN(x, ...)	SFBASE_(SF_FORCE_A8(x), __VA_ARGS__)
+#define SFARRAY(x, ...)		SFBASE_(SF_FORCE_A8(x), __VA_ARGS__, #x)
+
+#define SFARRAYBN(x, ...)	SFBASE_(SF_FORCE_AB(x), __VA_ARGS__)
+#define SFARRAYB(x, ...)	SFBASE_(SF_FORCE_AB(x), __VA_ARGS__, #x)
+
+#define SFARRAY16N(x, ...)	SFBASE_(SF_FORCE_A16(x), __VA_ARGS__)
+#define SFARRAY16(x, ...)	SFBASE_(SF_FORCE_A16(x), __VA_ARGS__, #x)
+
+#define SFARRAY32N(x, ...)	SFBASE_(SF_FORCE_A32(x), __VA_ARGS__)
+#define SFARRAY32(x, ...)	SFBASE_(SF_FORCE_A32(x), __VA_ARGS__, #x)
+
+#define SFARRAY64N(x, ...)	SFBASE_(SF_FORCE_A64(x), __VA_ARGS__)
+#define SFARRAY64(x, ...)	SFBASE_(SF_FORCE_A64(x), __VA_ARGS__, #x)
+
+#define SFARRAYFN(x, ...)	SFBASE_(SF_FORCE_AF(x), __VA_ARGS__)
+#define SFARRAYF(x, ...)	SFBASE_(SF_FORCE_AF(x), __VA_ARGS__, #x)
+
+#define SFARRAYDN(x, ...)	SFBASE_(SF_FORCE_AD(x), __VA_ARGS__)
+#define SFARRAYD(x, ...)	SFBASE_(SF_FORCE_AD(x), __VA_ARGS__, #x)
+
+#define SFLINK(x) { nullptr, (x), ~0U, 0, 0, 0 }
+
+#define SFEND { nullptr, nullptr, 0, 0, 0, 0 }
 
 #include <vector>
 

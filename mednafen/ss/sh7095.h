@@ -31,6 +31,8 @@ class SH7095 final
 
  void Init(void) MDFN_COLD;
 
+ void StateAction(StateMem* sm, const unsigned load, const bool data_only, const char* sname) MDFN_COLD;
+
  void ForceInternalEventUpdates(void);
  void AdjustTS(int32 delta, bool force_set = false);
 
@@ -241,7 +243,18 @@ class SH7095 final
  //
  //
  //
- uint16 BCR1, BCR1M;
+ struct
+ {
+  uint16 BCR1;
+  uint8 BCR2;
+  uint16 WCR;
+  uint16 MCR;
+
+  uint8 RTCSR;
+  uint8 RTCSRM;
+  uint8 RTCNT;
+  uint8 RTCOR;
+ } BSC;
 
  //
  //
@@ -309,12 +322,18 @@ class SH7095 final
  sscpu_timestamp_t DMA_Update(sscpu_timestamp_t);	// Takes/return external timestamp
  void DMA_StartSG(void);
 
+ void DMA_RecalcRunning(void);
+ void DMA_BusTimingKludge(void);
+
  const unsigned event_id_dma;
  sscpu_timestamp_t dma_lastts;	// External SH7095_mem_timestamp related.
 
  int32 DMA_ClockCounter;
  int32 DMA_SGCounter;	// When negative, smaller granularity scheduling for DMA_Update()
  bool DMA_RoundRobinRockinBoppin;
+
+ uint32 DMA_PenaltyKludgeAmount;
+ uint32 DMA_PenaltyKludgeAccum;
 
  struct
  {

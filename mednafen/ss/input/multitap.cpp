@@ -254,6 +254,7 @@ uint8 IODevice_Multitap::UpdateBus(const sscpu_timestamp_t timestamp, const uint
      sub_state[port_counter] = 0x60;
      UASB(timestamp);
     } while(++port_counter < 6);
+    port_counter = 0;	// Save state consistency.
 
     //
     //

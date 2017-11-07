@@ -3435,3 +3435,66 @@ void VDP2REND_Write16_DB(uint32 A, uint16 DB)
  //else
  // MemW<uint16>(A, DB);
 }
+
+void VDP2REND_StateAction(StateMem* sm, const unsigned load, const bool data_only, uint16 (&rr)[0x100], uint16 (&cr)[2048], uint16 (&vr)[262144])
+{
+ while(MDFN_UNLIKELY(WQ_InCount.load(std::memory_order_acquire) != 0))
+  retro_sleep(1);
+ //
+ //
+ //
+ SFORMAT StateRegs[] =
+ {
+  SFVAR(Clock28M),	// DUBIOUS
+
+  SFVAR(MosaicVCount),
+
+  SFARRAY32(VCLast, 2),
+
+  SFARRAY32(YCoordAccum, 2),
+  SFARRAY32(MosEff_YCoordAccum, 2),
+
+  SFARRAY32(CurXScrollIF, 2),
+  SFARRAY32(CurYScrollIF, 2),
+  SFARRAY16(CurXCoordInc, 2),
+  SFARRAY32(CurLSA, 2),
+
+  SFARRAY16(NBG23_YCounter, 2),
+  SFARRAY16(MosEff_NBG23_YCounter, 2),
+
+  SFVAR(CurBackTabAddr),
+  SFVAR(CurBackColor),
+
+  SFVAR(CurLCTabAddr),
+  SFVAR(CurLCColor),
+
+  // XStart and XEnd can be modified by line window processing.
+  SFVAR(Window->XStart, 2, sizeof(*Window)),
+  SFVAR(Window->XEnd, 2, sizeof(*Window)),
+  SFVAR(Window->YMet, 2, sizeof(*Window)),
+  SFVAR(Window->CurXStart, 2, sizeof(*Window)),
+  SFVAR(Window->CurXEnd, 2, sizeof(*Window)),
+  SFVAR(Window->CurLineWinAddr, 2, sizeof(*Window)),
+
+  SFEND
+ };
+
+ // Calls to RegsWrite() should go before MDFNSS_StateAction(), and before memcpy() to VRAM and CRAM.
+ if(load)
+ {
+  for(unsigned i = 0; i < 0x100; i++)
+  {
+   RegsWrite(i << 1, rr[i]);
+  }
+ }
+
+ MDFNSS_StateAction(sm, load, data_only, StateRegs, "VDP2REND");
+
+ if(load)
+ {
+  memcpy(VRAM, vr, sizeof(VRAM));
+  memcpy(CRAM, cr, sizeof(CRAM));
+
+  RecalcColorCache();
+ }
+}

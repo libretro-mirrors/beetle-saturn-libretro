@@ -25,6 +25,7 @@ typedef enum
 
 #define MDFNSF_SUPPRESS_DOC	   (1 << 19)
 #define MDFNSF_COMMON_TEMPLATE	(1 << 20)
+#define MDFNSF_NONPERSISTENT	(1 << 21) // Don't save setting in settings file.
 
 #define MDFNSF_REQUIRES_RELOAD	(1 << 24)
 #define MDFNSF_REQUIRES_RESTART	(1 << 25)

@@ -883,6 +883,86 @@ uint16 Read16_DB(uint32 A)
 }
 
 
+
+void StateAction(StateMem* sm, const unsigned load, const bool data_only)
+{
+ SFORMAT StateRegs[] =
+ {
+  SFARRAY16(VRAM, 0x40000),
+  SFARRAY16(&FB[0][0], 2 * 0x20000),
+  SFVAR(FBDrawWhich),
+
+  SFVAR(FBManualPending),
+
+  SFVAR(FBVBErasePending),
+  SFVAR(FBVBEraseActive),
+  SFVAR(FBVBEraseLastTS),
+
+  SFVAR(SysClipX),
+  SFVAR(SysClipY),
+  SFVAR(UserClipX0),
+  SFVAR(UserClipY0),
+  SFVAR(UserClipX1),
+  SFVAR(UserClipY1),
+  SFVAR(LocalX),
+  SFVAR(LocalY),
+
+  SFVAR(CurCommandAddr),
+  SFVAR(RetCommandAddr),
+  SFVAR(DrawingActive),
+
+  SFVAR(LOPR),
+
+  SFVAR(EWDR),
+  SFVAR(EWLR),
+  SFVAR(EWRR),	// Erase/Write Lower Right Coordinate
+
+  SFVAR(EraseParams.rot8),
+  // Recovered in if(load): SFVAR(EraseParams.fb_x_mask),
+
+  SFVAR(EraseParams.y_start),
+  SFVAR(EraseParams.x_start),
+
+  SFVAR(EraseParams.y_end),
+  SFVAR(EraseParams.x_bound),
+
+  SFVAR(EraseParams.fill_data),
+
+  SFVAR(EraseYCounter),
+
+  SFVAR(TVMR),
+  SFVAR(FBCR),
+  SFVAR(PTMR),
+  SFVAR(EDSR),
+
+  SFVAR(vb_status),
+  SFVAR(hb_status),
+  SFVAR(lastts),
+  SFVAR(CycleCounter),
+
+  SFVAR(vbcdpending),
+
+  SFEND
+ };
+
+ MDFNSS_StateAction(sm, load, data_only, StateRegs, "VDP1");
+
+ if(load)
+ {
+  CurCommandAddr &= 0x3FFFF;
+  if(RetCommandAddr >= 0)
+   RetCommandAddr &= 0x3FFFF;
+
+  EraseParams.fb_x_mask = EraseParams.rot8 ? 0xFF : 0x1FF;
+
+  EraseParams.y_start &= 0x1FF;
+  EraseParams.x_start &= 0x3F << 3;
+
+  EraseParams.y_end &= 0x1FF;
+  EraseParams.x_bound &= 0x7F << 3;
+ }
+}
+
 uint8 PeekVRAM(const uint32 addr)
 {
  return ne16_rbo_be<uint8>(VRAM, addr & 0x7FFFF);

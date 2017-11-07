@@ -20,7 +20,6 @@
 */
 
 #include "ss.h"
-#include "vdp1.h"
 #include "vdp1_common.h"
 
 //#pragma GCC optimize("Os,no-crossjumping")

@@ -57,10 +57,11 @@ static MDFN_COLD bool GetClearNVDirty(void)
  return ret;
 }
 
-static MDFN_COLD void GetNVInfo(const char** ext, void** nv_ptr, uint64* nv_size)
+static MDFN_COLD void GetNVInfo(const char** ext, void** nv_ptr, bool* nv16, uint64* nv_size)
 {
  *ext = "bcr";
  *nv_ptr = ExtBackupRAM;
+ *nv16 = false;
  *nv_size = sizeof(ExtBackupRAM);
 }
 
