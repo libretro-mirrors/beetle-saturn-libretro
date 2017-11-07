@@ -58,6 +58,13 @@ static unsigned image_crop = 0;
 
 static int astick_deadzone = 0;
 
+int h_mask = 0;
+int first_sl = 0;
+int last_sl = 239;
+int first_sl_pal = 0;
+int last_sl_pal = 287;
+bool is_pal = false;
+
 // Sets how often (in number of output frames/retro_run invocations)
 // the internal framerace counter should be updated if
 // display_internal_framerate is true.
@@ -1239,6 +1246,7 @@ static bool InitCommon(const unsigned cart_type, const unsigned smpc_area)
    //
    //
    const bool PAL = (smpc_area & SMPC_AREA__PAL_MASK);
+   is_pal = PAL;
    const int32 MasterClock = PAL ? 1734687500 : 1746818182;	// NTSC: 1746818181.8181818181, PAL: 1734687500-ish
    const char* biospath_sname;
    int sls = MDFN_GetSettingI(PAL ? "ss.slstartp" : "ss.slstart");
@@ -2377,32 +2385,39 @@ static void check_variables(bool startup)
           setting_smpc_autortc_lang = 5;
    }
 
+   var.key = "beetle_saturn_horizontal_overscan";
+
+   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+   {
+      h_mask = atoi(var.value);
+   }
+
    var.key = "beetle_saturn_initial_scanline";
 
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-      setting_initial_scanline = atoi(var.value);
+      first_sl = atoi(var.value);
    }
 
    var.key = "beetle_saturn_last_scanline";
 
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-      setting_last_scanline = atoi(var.value);
+      last_sl = atoi(var.value);
    }
 
    var.key = "beetle_saturn_initial_scanline_pal";
 
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-      setting_initial_scanline_pal = atoi(var.value);
+      first_sl_pal = atoi(var.value);
    }
 
    var.key = "beetle_saturn_last_scanline_pal";
 
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-      setting_last_scanline_pal = atoi(var.value);
+      last_sl_pal = atoi(var.value);
    }
 
    var.key = "beetle_saturn_analog_stick_deadzone";
@@ -3066,6 +3081,7 @@ void retro_run(void)
    }
    else
       PrevInterlaced = false;
+
 #endif
 
    unsigned width        = rects[0];
@@ -3074,7 +3090,14 @@ void retro_run(void)
    video_frames++;
    audio_frames += spec.SoundBufSize;
 
-   video_cb(surf->pixels + surf->pitchinpix * spec.DisplayRect.y, width, height, 704 * sizeof(uint32_t));
+   if (PrevInterlaced)
+      video_cb(surf->pixels + surf->pitchinpix * spec.DisplayRect.y, width, height, 704 * sizeof(uint32_t));
+   else if (is_pal)
+      video_cb(surf->pixels + surf->pitchinpix * (spec.DisplayRect.y + first_sl_pal) + (h_mask/2),
+         width - h_mask, (last_sl_pal - first_sl_pal), 704 * sizeof(uint32_t));
+   else
+      video_cb(surf->pixels + surf->pitchinpix * (spec.DisplayRect.y + first_sl) + (h_mask/2),
+         width - h_mask, last_sl - first_sl, 704 * sizeof(uint32_t));
 
    int16_t *interbuf = (int16_t*)&IBuffer;
 
@@ -3158,10 +3181,11 @@ void retro_set_environment(retro_environment_t cb)
       { "beetle_saturn_cdimagecache", "CD Image Cache (restart); disabled|enabled" },
       { "beetle_saturn_autortc", "Automatically set RTC on game load; enabled|disabled" },
       { "beetle_saturn_autortc_lang", "BIOS language; english|german|french|spanish|italian|japanese" },
-      { "beetle_saturn_initial_scanline", "Initial scanline (restart); 0|1|2|3|4|5|6|7|8|9|10|11|12|13|14|15|16|17|18|19|20|21|22|23|24|25|26|27|28|29|30|31|32|33|34|35|36|37|38|39|40" },
-      { "beetle_saturn_last_scanline", "Last scanline (restart); 239|210|211|212|213|214|215|216|217|218|219|220|221|222|223|224|225|226|227|228|229|230|231|232|233|234|235|236|237|238" },
-      { "beetle_saturn_initial_scanline_pal", "Initial scanline PAL (restart); 0|1|2|3|4|5|6|7|8|9|10|11|12|13|14|15|16|17|18|19|20|21|22|23|24|25|26|27|28|29|30|31|32|33|34|35|36|37|38|39|40" },
-      { "beetle_saturn_last_scanline_pal", "Last scanline PAL (restart); 287|260|261|262|263|264|265|266|267|268|269|270|271|272|273|274|275|276|277|278|279|280|281|282|283|284|285|286" },
+      { "beetle_saturn_horizontal_overscan", "Horizontal Overscan Mask; 0|2|4|6|8|10|12|14|16|18|20|22|24|26|28|30|32|34|36|38|40|42|44|46|48|50|52|54|56|58|60" },
+      { "beetle_saturn_initial_scanline", "Initial scanline; 0|1|2|3|4|5|6|7|8|9|10|11|12|13|14|15|16|17|18|19|20|21|22|23|24|25|26|27|28|29|30|31|32|33|34|35|36|37|38|39|40" },
+      { "beetle_saturn_last_scanline", "Last scanline; 239|210|211|212|213|214|215|216|217|218|219|220|221|222|223|224|225|226|227|228|229|230|231|232|233|234|235|236|237|238" },
+      { "beetle_saturn_initial_scanline_pal", "Initial scanline PAL; 0|1|2|3|4|5|6|7|8|9|10|11|12|13|14|15|16|17|18|19|20|21|22|23|24|25|26|27|28|29|30|31|32|33|34|35|36|37|38|39|40" },
+      { "beetle_saturn_last_scanline_pal", "Last scanline PAL; 287|260|261|262|263|264|265|266|267|268|269|270|271|272|273|274|275|276|277|278|279|280|281|282|283|284|285|286" },
       { "beetle_saturn_analog_stick_deadzone", "Analog Deadzone (percent); 15|20|25|30|0|5|10"},
       { NULL, NULL },
    };
