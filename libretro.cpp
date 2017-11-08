@@ -36,7 +36,7 @@
 #define MEDNAFEN_CORE_GEOMETRY_BASE_W 320
 #define MEDNAFEN_CORE_GEOMETRY_BASE_H 240
 #define MEDNAFEN_CORE_GEOMETRY_MAX_W 704
-#define MEDNAFEN_CORE_GEOMETRY_MAX_H 512
+#define MEDNAFEN_CORE_GEOMETRY_MAX_H 576
 #define MEDNAFEN_CORE_GEOMETRY_ASPECT_RATIO (4.0 / 3.0)
 
 struct retro_perf_callback perf_cb;
@@ -1251,12 +1251,6 @@ static bool InitCommon(const unsigned cart_type, const unsigned smpc_area)
    const char* biospath_sname;
    int sls = MDFN_GetSettingI(PAL ? "ss.slstartp" : "ss.slstart");
    int sle = MDFN_GetSettingI(PAL ? "ss.slendp" : "ss.slend");
-
-   if(PAL)
-   {
-      sls += 16;
-      sle += 16;
-   }
 
    if(sls > sle)
       std::swap(sls, sle);
@@ -3016,19 +3010,29 @@ static void update_input(void)
    }
 }
 
+void update_geometry(unsigned width, unsigned height)
+{
+   struct retro_system_av_info system_av_info;
+   system_av_info.geometry.base_width = width;
+   system_av_info.geometry.base_height = height;
+   system_av_info.geometry.aspect_ratio = MEDNAFEN_CORE_GEOMETRY_ASPECT_RATIO;
+   environ_cb(RETRO_ENVIRONMENT_SET_GEOMETRY, &system_av_info);
+}
+
 static uint64_t video_frames, audio_frames;
 #define SOUND_CHANNELS 2
 
 void retro_run(void)
 {
    bool updated = false;
+   bool resolution_changed = false;
+   static unsigned width, height, source_height;
 
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE_UPDATE, &updated) && updated)
    {
       check_variables(false);
-      struct retro_system_av_info new_av_info;
-      retro_get_system_av_info(&new_av_info);
-      environ_cb(RETRO_ENVIRONMENT_SET_GEOMETRY, &new_av_info);
+      update_geometry(width, height);
+      resolution_changed = true;
    }
 
    // Keep the counters at 0 so that they don't display a bogus
@@ -3084,30 +3088,51 @@ void retro_run(void)
 
 #endif
 
-   unsigned width        = rects[0];
-   unsigned height       = spec.DisplayRect.h;
+   if (width  != rects[0] - h_mask || source_height != spec.DisplayRect.h)
+      resolution_changed = true;
 
-   video_frames++;
-   audio_frames += spec.SoundBufSize;
+   source_height = spec.DisplayRect.h;
+   width = rects[0] - h_mask;
+
+   if (PrevInterlaced)
+   {
+      if (is_pal)
+         height = 2 * (last_sl_pal - first_sl_pal + 1);
+      else
+         height = 2 * (last_sl - first_sl + 1);
+   }
+   else
+   {
+      if (is_pal)
+         height = last_sl_pal - first_sl_pal + 1;
+      else
+         height = last_sl - first_sl + 1;
+   }
 
    if (PrevInterlaced)
    {
       if (is_pal)
          video_cb(surf->pixels + surf->pitchinpix * (spec.DisplayRect.y + 2*first_sl_pal) + (h_mask/2),
-            width - h_mask, 2*(last_sl_pal - first_sl_pal + 1), 704 * sizeof(uint32_t));
+            width, height, 704 * sizeof(uint32_t));
       else
          video_cb(surf->pixels + surf->pitchinpix * (spec.DisplayRect.y + 2*first_sl) + (h_mask/2),
-            width - h_mask, 2*(last_sl - first_sl + 1), 704 * sizeof(uint32_t));
+            width, height, 704 * sizeof(uint32_t));
    }
    else
    {
       if (is_pal)
          video_cb(surf->pixels + surf->pitchinpix * (spec.DisplayRect.y + first_sl_pal) + (h_mask/2),
-            width - h_mask, last_sl_pal - first_sl_pal + 1, 704 * sizeof(uint32_t));
+            width, height, 704 * sizeof(uint32_t));
       else
          video_cb(surf->pixels + surf->pitchinpix * (spec.DisplayRect.y + first_sl) + (h_mask/2),
-            width - h_mask, last_sl - first_sl + 1, 704 * sizeof(uint32_t));
+            width, height, 704 * sizeof(uint32_t));
    }
+
+   if (resolution_changed)
+      update_geometry(width, height);
+
+   video_frames++;
+   audio_frames += spec.SoundBufSize;
 
    int16_t *interbuf = (int16_t*)&IBuffer;
 
@@ -3194,8 +3219,8 @@ void retro_set_environment(retro_environment_t cb)
       { "beetle_saturn_horizontal_overscan", "Horizontal Overscan Mask; 0|2|4|6|8|10|12|14|16|18|20|22|24|26|28|30|32|34|36|38|40|42|44|46|48|50|52|54|56|58|60" },
       { "beetle_saturn_initial_scanline", "Initial scanline; 0|1|2|3|4|5|6|7|8|9|10|11|12|13|14|15|16|17|18|19|20|21|22|23|24|25|26|27|28|29|30|31|32|33|34|35|36|37|38|39|40" },
       { "beetle_saturn_last_scanline", "Last scanline; 239|210|211|212|213|214|215|216|217|218|219|220|221|222|223|224|225|226|227|228|229|230|231|232|233|234|235|236|237|238" },
-      { "beetle_saturn_initial_scanline_pal", "Initial scanline PAL; 0|1|2|3|4|5|6|7|8|9|10|11|12|13|14|15|16|17|18|19|20|21|22|23|24|25|26|27|28|29|30|31|32|33|34|35|36|37|38|39|40" },
-      { "beetle_saturn_last_scanline_pal", "Last scanline PAL; 287|260|261|262|263|264|265|266|267|268|269|270|271|272|273|274|275|276|277|278|279|280|281|282|283|284|285|286" },
+      { "beetle_saturn_initial_scanline_pal", "Initial scanline PAL; 16|17|18|19|20|21|22|23|24|25|26|27|28|29|30|31|32|33|34|35|36|37|38|39|40|41|42|43|44|45|46|47|48|49|50|51|52|53|54|55|56|57|58|59|60|0|1|2|3|4|5|6|7|8|9|10|11|12|13|14|15" },
+      { "beetle_saturn_last_scanline_pal", "Last scanline PAL; 271|272|273|274|275|276|277|278|279|280|281|282|283|284|285|286|287|230|231|232|233|234|235|236|237|238|239|240|241|242|243|244|245|246|247|248|249|250|251|252|253|254|255|256|257|258|259|260|261|262|263|264|265|266|267|268|269|270" },
       { "beetle_saturn_analog_stick_deadzone", "Analog Deadzone (percent); 15|20|25|30|0|5|10"},
       { NULL, NULL },
    };
