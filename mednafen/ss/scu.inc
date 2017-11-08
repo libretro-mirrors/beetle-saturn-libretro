@@ -91,7 +91,7 @@ static struct DMALevelS
  uint8 WriteAdd;
 
  bool Enable;
- int Active; /* -1, 0, 1 */
+ int8 Active; // -1, 0, 1
  bool GoGoGadget;
 
  bool Indirect;
@@ -347,13 +347,14 @@ static void SCU_AdjustTS(const int32 delta)
   if(d.Active < 0)
    d.FinishTime += delta;
  }
+
  //
  //
  //
  if(DSP.T0_Until > 0x10000000)
   DSP.T0_Until = 0x10000000;
 
-  DSP.LastTS += delta;
+ DSP.LastTS += delta;
  if(DSP.LastTS < 0)
  {
   // TODO: Fix properly.
@@ -895,9 +896,7 @@ static INLINE void ABusRW_DB(uint32 A, uint16* DB, int32* time_thing, int32* dma
     CART_CS01_Write16_DB(A, DB);
   }
   else
-  {
    CART_CS01_Read16_DB(A, DB);
-  }
 
   return;
  }
@@ -915,15 +914,12 @@ static INLINE void ABusRW_DB(uint32 A, uint16* DB, int32* time_thing, int32* dma
    *dma_time_thing -= 16;
   }
 
+#ifdef HAVE_DEBUG
   if(IsWrite)
-  {
-     if(sizeof(T) == 1)
-     CART_CS2_Write8_DB(A, DB);
-     else
-     CART_CS2_Write16_DB(A, DB);
-  }
+   SS_DBG(SS_DBG_WARNING | SS_DBG_SCU, "[A-Bus CSD] Unknown %zu-byte write to 0x%08x(DB=0x%04x)\n", sizeof(T), A, *DB);
   else
-     CART_CS2_Read16_DB(A, DB);
+   SS_DBG(SS_DBG_WARNING | SS_DBG_SCU, "[A-Bus CSD] Unknown %zu-byte read from 0x%08x\n", sizeof(T), A);
+#endif
 
   return;
  }
@@ -967,12 +963,15 @@ static INLINE void ABusRW_DB(uint32 A, uint16* DB, int32* time_thing, int32* dma
    return;
   }
 
-#ifdef HAVE_DEBUG
   if(IsWrite)
-   SS_DBG(SS_DBG_WARNING | SS_DBG_SCU, "[A-Bus CS2] Unknown %zu-byte write to 0x%08x(DB=0x%04x)\n", sizeof(T), A, *DB);
+  {
+   if(sizeof(T) == 1)
+    CART_CS2_Write8_DB(A, DB);
   else
-   SS_DBG(SS_DBG_WARNING | SS_DBG_SCU, "[A-Bus CS2] Unknown %zu-byte read from 0x%08x\n", sizeof(T), A);
-#endif
+    CART_CS2_Write16_DB(A, DB);
+  }
+  else
+   CART_CS2_Read16_DB(A, DB);
 
   return;
  }
@@ -1559,18 +1558,14 @@ sscpu_timestamp_t SCU_UpdateDMA(sscpu_timestamp_t timestamp)
 //
 static NO_INLINE void ForceDMAFinish(void)
 {
-
  for(int level = 2; level >= 0; level--)
  {
-  if(DMALevel[level].Active)
-  {
      if(!DMALevel[level].Active)
      continue;
 
 #ifdef HAVE_DEBUG
    SS_DBG(SS_DBG_WARNING | SS_DBG_SCU, "[SCU] Forcing hacky early DMA level %d completion.\n", level);
 #endif
-
 
    if(DMALevel[level].Active > 0)
   {
@@ -1586,7 +1581,6 @@ static NO_INLINE void ForceDMAFinish(void)
   SCU_DoDMAEnd(level);
 
   break;
-  }
  }
 
  SCU_DMA_TimeCounter = SCU_DMA_RunUntil;
@@ -1681,6 +1675,16 @@ static void DSP_Reset(bool powering_up)
 void DSP_Init(void)
 {
  DSP.LastTS = 0;
+ for(auto* f : DSP_GenFuncTable)
+  assert((uintptr_t)f == DSP_INSTR_BASE_UIPT + ((uintptr_t)(DSP_INSTR_RECOVER_TCAST)(uint32)((uintptr_t)f - DSP_INSTR_BASE_UIPT)));
+ for(auto* f : DSP_DMAFuncTable)
+  assert((uintptr_t)f == DSP_INSTR_BASE_UIPT + ((uintptr_t)(DSP_INSTR_RECOVER_TCAST)(uint32)((uintptr_t)f - DSP_INSTR_BASE_UIPT)));
+ for(auto* f : DSP_MVIFuncTable)
+  assert((uintptr_t)f == DSP_INSTR_BASE_UIPT + ((uintptr_t)(DSP_INSTR_RECOVER_TCAST)(uint32)((uintptr_t)f - DSP_INSTR_BASE_UIPT)));
+ for(auto* f : DSP_JMPFuncTable)
+  assert((uintptr_t)f == DSP_INSTR_BASE_UIPT + ((uintptr_t)(DSP_INSTR_RECOVER_TCAST)(uint32)((uintptr_t)f - DSP_INSTR_BASE_UIPT)));
+ for(auto* f : DSP_MiscFuncTable)
+  assert((uintptr_t)f == DSP_INSTR_BASE_UIPT + ((uintptr_t)(DSP_INSTR_RECOVER_TCAST)(uint32)((uintptr_t)f - DSP_INSTR_BASE_UIPT)));
 }
 
 template<bool looped, bool hold, bool format, bool dir, unsigned drw>
@@ -1831,6 +1835,9 @@ extern void (*const DSP_DMAFuncTable[2][8][8])(void) =
  #include "scu_dsp_dmatab.inc"
 };
 
+//
+//
+//
 
 static void SCU_Init(void)
 {

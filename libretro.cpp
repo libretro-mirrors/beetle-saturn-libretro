@@ -685,12 +685,13 @@ static INLINE bool EventHandler(const sscpu_timestamp_t timestamp)
 #ifdef MDFN_SS_DEV_BUILD
   const sscpu_timestamp_t etime = e->event_time;
 #endif
-  sscpu_timestamp_t nt = e->event_handler(e->event_time);
+  sscpu_timestamp_t nt;
+  nt = e->event_handler(e->event_time);
 
 #ifdef MDFN_SS_DEV_BUILD
   if(MDFN_UNLIKELY(nt <= etime))
   {
-   fprintf(stderr, "which=%d event_time=%d nt=%d timestamp=%d\n", e->which, etime, nt, timestamp);
+   fprintf(stderr, "which=%d event_time=%d nt=%d timestamp=%d\n", (int)(e - events), etime, nt, timestamp);
    assert(nt > etime);
   }
 #endif
@@ -1903,23 +1904,30 @@ INLINE bool EventsPacker::Restore(void)
  return true;
 }
 
-static MDFN_COLD void StateAction(StateMem* sm, const unsigned load, const bool data_only)
+MDFN_COLD int LibRetro_StateAction( StateMem* sm, const unsigned load, const bool data_only )
 {
- if(!data_only)
- {
-  sha256_digest sr_dig = BIOS_SHA256;
+	int success;
 
-  SFORMAT SRDStateRegs[] =
-  {
-   SFARRAY(sr_dig.data(), sr_dig.size()),
-   SFEND
-  };
+	if ( data_only == false )
+	{
+		sha256_digest sr_dig = BIOS_SHA256;
 
-  MDFNSS_StateAction(sm, load, data_only, SRDStateRegs, "BIOS_HASH", true);
+		SFORMAT SRDStateRegs[] =
+		{
+			SFARRAY( sr_dig.data(), sr_dig.size() ),
+			SFEND
+		};
 
-  if(load && sr_dig != BIOS_SHA256)
-   throw MDFN_Error(0, _("BIOS hash mismatch(save state created under a different BIOS)!"));
- }
+		success = MDFNSS_StateAction( sm, load, data_only, SRDStateRegs, "BIOS_HASH", true );
+		if ( success == 0 ) {
+			return 0;
+		}
+
+		if ( load && sr_dig != BIOS_SHA256 ) {
+			log_cb( RETRO_LOG_WARN, "BIOS hash mismatch(save state created under a different BIOS)!\n" );
+			return 0;
+		}
+	}
 
  EventsPacker ep;
  ep.Save();
@@ -1955,18 +1963,25 @@ static MDFN_COLD void StateAction(StateMem* sm, const unsigned load, const bool 
  SOUND_StateAction(sm, load, data_only);
  CART_StateAction(sm, load, data_only);
  //
- MDFNSS_StateAction(sm, load, data_only, StateRegs, "MAIN");
+	success = MDFNSS_StateAction(sm, load, data_only, StateRegs, "MAIN");
+	if ( success == 0 ) {
+		log_cb( RETRO_LOG_ERROR, "Failed to load MAIN state objects.\n" );
+		return 0;
+	}
 
- if(load)
- {
-  BackupRAM_Dirty = true;
+	if ( load )
+	{
+		BackupRAM_Dirty = true;
 
-  if(!ep.Restore())
-  {
-   printf("Bad state events data.");
-   InitEvents();
-  }
- }
+		if ( !ep.Restore() )
+		{
+			log_cb( RETRO_LOG_WARN, "Bad state events data.\n" );
+			InitEvents();
+		}
+	}
+
+	// Success!
+	return 1;
 }
 
 static MDFN_COLD bool SetMedia(uint32 drive_idx, uint32 state_idx, uint32 media_idx, uint32 orientation_idx)
@@ -1989,10 +2004,8 @@ static void DoSimpleCommand(int cmd)
 {
  switch(cmd)
  {
-    case MDFN_MSC_POWER:
-       SS_Reset(true);
-       break;
-       // MDFN_MSC_RESET is not handled here; special reset button handling in smpc.cpp.
+  case MDFN_MSC_POWER: SS_Reset(true); break;
+  // MDFN_MSC_RESET is not handled here; special reset button handling in smpc.cpp.
  }
 }
 
@@ -3354,20 +3367,26 @@ void retro_set_video_refresh(retro_video_refresh_t cb)
    video_cb = cb;
 }
 
-static size_t serialize_size;
+static size_t serialize_size = 0;
 
 size_t retro_serialize_size(void)
 {
-   StateMem st;
-   memset(&st, 0, sizeof(st));
+	// Don't know yet?
+	if ( serialize_size == 0 )
+	{
+		// Do a fake save to see.
+		StateMem st;
+		memset( &st, 0, sizeof(st) );
+		if ( MDFNSS_SaveSM( &st, 0, 0, NULL, NULL, NULL ) )
+		{
+			// Cache and tidy up.
+			serialize_size = st.len;
+			free( st.data );
+		}
+	}
 
-   if (!MDFNSS_SaveSM(&st, 0, 0, NULL, NULL, NULL))
-   {
-      return 0;
-   }
-
-   free(st.data);
-   return serialize_size = st.len;
+	// Return cached value.
+	return serialize_size;
 }
 
 bool retro_serialize(void *data, size_t size)

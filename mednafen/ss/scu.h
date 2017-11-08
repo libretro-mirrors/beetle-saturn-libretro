@@ -43,7 +43,7 @@ enum
  SCU_INT_VDP1,
 
  SCU_INT_EXT0	= 0x10,
- SCU_INT_EXTF	= 0x1F
+ SCU_INT_EXTF	= 0x1F,
 };
 
 void SCU_Reset(bool powering_up) MDFN_COLD;
@@ -82,7 +82,7 @@ enum
  SCU_GSREG_DSP_EXEC,
  SCU_GSREG_DSP_PAUSE,
  SCU_GSREG_DSP_PC,
- SCU_GSREG_DSP_END
+ SCU_GSREG_DSP_END,
 };
 
 uint32 SCU_GetRegister(const unsigned id, char* const special, const uint32 special_len) MDFN_COLD;
