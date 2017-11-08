@@ -1252,12 +1252,6 @@ static bool InitCommon(const unsigned cart_type, const unsigned smpc_area)
    int sls = MDFN_GetSettingI(PAL ? "ss.slstartp" : "ss.slstart");
    int sle = MDFN_GetSettingI(PAL ? "ss.slendp" : "ss.slend");
 
-   if(PAL)
-   {
-      sls += 16;
-      sle += 16;
-   }
-
    if(sls > sle)
       std::swap(sls, sle);
 
@@ -3225,8 +3219,8 @@ void retro_set_environment(retro_environment_t cb)
       { "beetle_saturn_horizontal_overscan", "Horizontal Overscan Mask; 0|2|4|6|8|10|12|14|16|18|20|22|24|26|28|30|32|34|36|38|40|42|44|46|48|50|52|54|56|58|60" },
       { "beetle_saturn_initial_scanline", "Initial scanline; 0|1|2|3|4|5|6|7|8|9|10|11|12|13|14|15|16|17|18|19|20|21|22|23|24|25|26|27|28|29|30|31|32|33|34|35|36|37|38|39|40" },
       { "beetle_saturn_last_scanline", "Last scanline; 239|210|211|212|213|214|215|216|217|218|219|220|221|222|223|224|225|226|227|228|229|230|231|232|233|234|235|236|237|238" },
-      { "beetle_saturn_initial_scanline_pal", "Initial scanline PAL; 0|1|2|3|4|5|6|7|8|9|10|11|12|13|14|15|16|17|18|19|20|21|22|23|24|25|26|27|28|29|30|31|32|33|34|35|36|37|38|39|40" },
-      { "beetle_saturn_last_scanline_pal", "Last scanline PAL; 287|260|261|262|263|264|265|266|267|268|269|270|271|272|273|274|275|276|277|278|279|280|281|282|283|284|285|286" },
+      { "beetle_saturn_initial_scanline_pal", "Initial scanline PAL; 0|1|2|3|4|5|6|7|8|9|10|11|12|13|14|15|16|17|18|19|20|21|22|23|24|25|26|27|28|29|30|31|32|33|34|35|36|37|38|39|40|41|42|43|44|45|46|47|48|49|50|51|52|53|54|55|56|57|58|59|60" },
+      { "beetle_saturn_last_scanline_pal", "Last scanline PAL; 287|230|231|232|233|234|235|236|237|238|239|240|241|242|243|244|245|246|247|248|249|250|251|252|253|254|255|256|257|258|259|260|261|262|263|264|265|266|267|268|269|270|271|272|273|274|275|276|277|278|279|280|281|282|283|284|285|286" },
       { "beetle_saturn_analog_stick_deadzone", "Analog Deadzone (percent); 15|20|25|30|0|5|10"},
       { NULL, NULL },
    };
