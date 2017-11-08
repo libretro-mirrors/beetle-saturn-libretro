@@ -30,7 +30,7 @@
 
 #define MEDNAFEN_CORE_NAME_MODULE "ss"
 #define MEDNAFEN_CORE_NAME "Mednafen Saturn"
-#define MEDNAFEN_CORE_VERSION "v0.9.46"
+#define MEDNAFEN_CORE_VERSION "v0.9.47"
 #define MEDNAFEN_CORE_EXTENSIONS "cue|ccd|chd"
 #define MEDNAFEN_CORE_TIMING_FPS 59.82
 #define MEDNAFEN_CORE_GEOMETRY_BASE_W 320
@@ -692,12 +692,13 @@ static INLINE bool EventHandler(const sscpu_timestamp_t timestamp)
 #ifdef MDFN_SS_DEV_BUILD
   const sscpu_timestamp_t etime = e->event_time;
 #endif
-  sscpu_timestamp_t nt = e->event_handler(e->event_time);
+  sscpu_timestamp_t nt;
+  nt = e->event_handler(e->event_time);
 
 #ifdef MDFN_SS_DEV_BUILD
   if(MDFN_UNLIKELY(nt <= etime))
   {
-   fprintf(stderr, "which=%d event_time=%d nt=%d timestamp=%d\n", e->which, etime, nt, timestamp);
+   fprintf(stderr, "which=%d event_time=%d nt=%d timestamp=%d\n", (int)(e - events), etime, nt, timestamp);
    assert(nt > etime);
   }
 #endif
@@ -753,6 +754,7 @@ static int32 NO_INLINE RunLoop(EmulateSpecStruct* espec)
 #endif
 
    CPU[0].Step<0, DebugMode>();
+   CPU[0].DMA_BusTimingKludge();
 
    while(MDFN_LIKELY(CPU[0].timestamp > CPU[1].timestamp))
    {
@@ -1737,9 +1739,10 @@ static MDFN_COLD void BackupCartNV(void)
 {
  const char* ext = nullptr;
  void* nv_ptr = nullptr;
+ bool nv16 = false;
  uint64 nv_size = 0;
 
- CART_GetNVInfo(&ext, &nv_ptr, &nv_size);
+ CART_GetNVInfo(&ext, &nv_ptr, &nv16, &nv_size);
 
  if(ext)
   MDFN_BackupSavFile(10, ext);
@@ -1749,15 +1752,27 @@ static MDFN_COLD void LoadCartNV(void)
 {
  const char* ext = nullptr;
  void* nv_ptr = nullptr;
+ bool nv16 = false;
  uint64 nv_size = 0;
 
- CART_GetNVInfo(&ext, &nv_ptr, &nv_size);
+ CART_GetNVInfo(&ext, &nv_ptr, &nv16, &nv_size);
 
  if(ext)
  {
   FileStream nvs(MDFN_MakeFName(MDFNMKF_SAV, 0, ext), MODE_READ);
 
   nvs.read(nv_ptr, nv_size);
+
+  if(nv16)
+  {
+   for(uint64 i = 0; i < nv_size; i += 2)
+   {
+    void* p = (uint8*)nv_ptr + i;
+
+    MDFN_ennsb<uint16_t>(p, MDFN_de16msb(p));
+   }
+  }
+
  }
 }
 
@@ -1765,15 +1780,23 @@ static MDFN_COLD void SaveCartNV(void)
 {
  const char* ext = nullptr;
  void* nv_ptr = nullptr;
+ bool nv16 = false;
  uint64 nv_size = 0;
 
- CART_GetNVInfo(&ext, &nv_ptr, &nv_size);
+ CART_GetNVInfo(&ext, &nv_ptr, &nv16, &nv_size);
 
  if(ext)
  {
   FileStream nvs(MDFN_MakeFName(MDFNMKF_SAV, 0, ext), MODE_WRITE_INPLACE);
 
-  nvs.write(nv_ptr, nv_size);
+  if(nv16)
+  {
+   // Slow...
+   for(uint64 i = 0; i < nv_size; i += 2)
+    nvs.put_BE<uint16>(MDFN_densb<uint16>((uint8*)nv_ptr + i));
+  }
+  else
+   nvs.write(nv_ptr, nv_size);
 
   nvs.close();
  }
@@ -1795,11 +1818,133 @@ static MDFN_COLD void LoadRTC(void)
  SMPC_LoadNV(&sds);
 }
 
-int StateAction(StateMem *sm, int load, int data_only)
+struct EventsPacker
 {
- SFORMAT StateRegs[] = 
+ enum : size_t { eventcopy_first = SS_EVENT__SYNFIRST + 1 };
+ enum : size_t { eventcopy_bound = SS_EVENT__SYNLAST };
+
+ bool Restore(void);
+ void Save(void);
+
+ int32 event_times[eventcopy_bound - eventcopy_first];
+ uint8 event_order[eventcopy_bound - eventcopy_first];
+};
+
+INLINE void EventsPacker::Save(void)
+{
+ event_list_entry* evt = events[SS_EVENT__SYNFIRST].next;
+
+ for(size_t i = eventcopy_first; i < eventcopy_bound; i++)
  {
-  // TODO: Events, or recalc?
+  event_times[i - eventcopy_first] = events[i].event_time;
+  event_order[i - eventcopy_first] = evt - events;
+  assert(event_order[i - eventcopy_first] >= eventcopy_first && event_order[i - eventcopy_first] < eventcopy_bound);
+  evt = evt->next;
+ }
+}
+
+INLINE bool EventsPacker::Restore(void)
+{
+ bool used[SS_EVENT__COUNT] = { 0 };
+ event_list_entry* evt = &events[SS_EVENT__SYNFIRST];
+ for(size_t i = eventcopy_first; i < eventcopy_bound; i++)
+ {
+  int32 et = event_times[i - eventcopy_first];
+  uint8 eo = event_order[i - eventcopy_first];
+
+  if(eo < eventcopy_first || eo >= eventcopy_bound)
+   return false;
+
+  if(used[eo])
+   return false;
+
+  used[eo] = true;
+
+  if(et < events[SS_EVENT__SYNFIRST].event_time)
+   return false;
+
+  events[i].event_time = et;
+
+  evt->next = &events[eo];
+  evt->next->prev = evt;
+  evt = evt->next;
+ }
+ evt->next = &events[SS_EVENT__SYNLAST];
+ evt->next->prev = evt;
+
+ for(size_t i = 0; i < SS_EVENT__COUNT; i++)
+ {
+  if(i == SS_EVENT__SYNLAST)
+  {
+   if(events[i].next != NULL)
+    return false;
+  }
+  else
+  {
+   if(events[i].next->prev != &events[i])
+    return false;
+
+   if(events[i].next->event_time < events[i].event_time)
+    return false;
+  }
+
+  if(i == SS_EVENT__SYNFIRST)
+  {
+   if(events[i].prev != NULL)
+    return false;
+  }
+  else
+  {
+   if(events[i].prev->next != &events[i])
+    return false;
+
+   if(events[i].prev->event_time > events[i].event_time)
+    return false;
+  }
+ }
+
+ return true;
+}
+
+MDFN_COLD int LibRetro_StateAction( StateMem* sm, const unsigned load, const bool data_only )
+{
+	int success;
+
+	if ( data_only == false )
+	{
+		sha256_digest sr_dig = BIOS_SHA256;
+
+		SFORMAT SRDStateRegs[] =
+		{
+			SFARRAY( sr_dig.data(), sr_dig.size() ),
+			SFEND
+		};
+
+		success = MDFNSS_StateAction( sm, load, data_only, SRDStateRegs, "BIOS_HASH", true );
+		if ( success == 0 ) {
+			return 0;
+		}
+
+		if ( load && sr_dig != BIOS_SHA256 ) {
+			log_cb( RETRO_LOG_WARN, "BIOS hash mismatch(save state created under a different BIOS)!\n" );
+			return 0;
+		}
+	}
+
+ EventsPacker ep;
+ ep.Save();
+
+ SFORMAT StateRegs[] =
+ {
+  // cur_clock_div
+  SFVAR(UpdateInputLastBigTS),
+
+  SFVAR(next_event_ts),
+  SFARRAY32N(ep.event_times, sizeof(ep.event_times) / sizeof(ep.event_times[0]), "event_times"),
+  SFARRAYN(ep.event_order, sizeof(ep.event_order) / sizeof(ep.event_order[0]), "event_order"),
+
+  SFVAR(SH7095_mem_timestamp),
+  SFVAR(SH7095_BusLock),
 
   SFARRAY16(WorkRAML, sizeof(WorkRAML) / sizeof(WorkRAML[0])),
   SFARRAY16(WorkRAMH, sizeof(WorkRAMH) / sizeof(WorkRAMH[0])),
@@ -1807,29 +1952,38 @@ int StateAction(StateMem *sm, int load, int data_only)
 
   SFEND
  };
- 
- MDFNSS_StateAction(sm, load, data_only, StateRegs, "MAIN");
 
- if(load)
- {
-  BackupRAM_Dirty = true;
- }
-
-/*
  CPU[0].StateAction(sm, load, data_only, "SH2-M");
  CPU[1].StateAction(sm, load, data_only, "SH2-S");
  SCU_StateAction(sm, load, data_only);
-*/
  SMPC_StateAction(sm, load, data_only);
-/*
+
  CDB_StateAction(sm, load, data_only);
  VDP1::StateAction(sm, load, data_only);
- VDP2_StateAction(sm, load, data_only);
-*/
+ VDP2::StateAction(sm, load, data_only);
 
  SOUND_StateAction(sm, load, data_only);
-   CART_StateAction(sm, load, data_only);
-   return 0;
+ CART_StateAction(sm, load, data_only);
+ //
+	success = MDFNSS_StateAction(sm, load, data_only, StateRegs, "MAIN");
+	if ( success == 0 ) {
+		log_cb( RETRO_LOG_ERROR, "Failed to load MAIN state objects.\n" );
+		return 0;
+	}
+
+	if ( load )
+	{
+		BackupRAM_Dirty = true;
+
+		if ( !ep.Restore() )
+		{
+			log_cb( RETRO_LOG_WARN, "Bad state events data.\n" );
+			InitEvents();
+		}
+	}
+
+	// Success!
+	return 1;
 }
 
 static MDFN_COLD bool SetMedia(uint32 drive_idx, uint32 state_idx, uint32 media_idx, uint32 orientation_idx)
@@ -1852,10 +2006,8 @@ static void DoSimpleCommand(int cmd)
 {
  switch(cmd)
  {
-    case MDFN_MSC_POWER:
-       SS_Reset(true);
-       break;
-       // MDFN_MSC_RESET is not handled here; special reset button handling in smpc.cpp.
+  case MDFN_MSC_POWER: SS_Reset(true); break;
+  // MDFN_MSC_RESET is not handled here; special reset button handling in smpc.cpp.
  }
 }
 
@@ -1908,6 +2060,7 @@ static const MDFNSetting_EnumList Cart_List[] =
  { "extram1", CART_EXTRAM_1M, "1MiB Extended RAM" },
  { "extram4", CART_EXTRAM_4M, "4MiB Extended RAM" },
  { "cs1ram16", CART_CS1RAM_16M, "16MiB RAM mapped in A-bus CS1" },
+ { "ar4mp", CART_AR4MP, NULL }, // Undocumented, unfinished. "Action Replay 4M Plus" },
  // { "nlmodem", CART_NLMODEM, "NetLink Modem" },
 
  { NULL, 0 },
@@ -1946,9 +2099,10 @@ static MDFNSetting SSSettings[] =
  { "ss.cart", MDFNSF_EMU_STATE | MDFNSF_UNTRUSTED_SAFE, "Expansion cart.", NULL, MDFNST_ENUM, "auto", NULL, NULL, NULL, NULL, Cart_List },
  { "ss.cart.kof95_path", MDFNSF_EMU_STATE, "Path to KoF 95 ROM image.", NULL, MDFNST_STRING, "mpr-18811-mx.ic1" },
  { "ss.cart.ultraman_path", MDFNSF_EMU_STATE, "Path to Ultraman ROM image.", NULL, MDFNST_STRING, "mpr-19367-mx.ic1" },
+ { "ss.cart.satar4mp_path", MDFNSF_EMU_STATE | MDFNSF_SUPPRESS_DOC | MDFNSF_NONPERSISTENT, "Path to Action Replay 4M Plus firmware image.", NULL, MDFNST_STRING, "satar4mp.bin" },
 
  // { "ss.cart.modem_port", MDFNSF_NOFLAGS, "TCP/IP port to use for modem emulation.", "A value of \"0\" disables network access.", MDFNST_UINT, "4920", "0", "65535" },
- 
+
  { "ss.bios_sanity", MDFNSF_NOFLAGS, "Enable BIOS ROM image sanity checks.", NULL, MDFNST_BOOL, "1" },
 
  { "ss.cd_sanity", MDFNSF_NOFLAGS, "Enable CD (image) sanity checks.", NULL, MDFNST_BOOL, "1" },
@@ -3272,20 +3426,26 @@ void retro_set_video_refresh(retro_video_refresh_t cb)
    video_cb = cb;
 }
 
-static size_t serialize_size;
+static size_t serialize_size = 0;
 
 size_t retro_serialize_size(void)
 {
-   StateMem st;
-   memset(&st, 0, sizeof(st));
+	// Don't know yet?
+	if ( serialize_size == 0 )
+	{
+		// Do a fake save to see.
+		StateMem st;
+		memset( &st, 0, sizeof(st) );
+		if ( MDFNSS_SaveSM( &st, 0, 0, NULL, NULL, NULL ) )
+		{
+			// Cache and tidy up.
+			serialize_size = st.len;
+			free( st.data );
+		}
+	}
 
-   if (!MDFNSS_SaveSM(&st, 0, 0, NULL, NULL, NULL))
-   {
-      return 0;
-   }
-
-   free(st.data);
-   return serialize_size = st.len;
+	// Return cached value.
+	return serialize_size;
 }
 
 bool retro_serialize(void *data, size_t size)

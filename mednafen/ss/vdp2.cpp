@@ -972,6 +972,99 @@ void SetLayerEnableMask(uint64 mask)
  VDP2REND_SetLayerEnableMask(mask);
 }
 
+void StateAction(StateMem* sm, const unsigned load, const bool data_only)
+{
+ SFORMAT StateRegs[] =
+ {
+  SFVAR(lastts),
+
+  SFARRAY16(RawRegs, 0x100),
+  SFVAR(DisplayOn),
+  SFVAR(BorderMode),
+  SFVAR(ExLatchEnable),
+  SFVAR(ExSyncEnable),
+  SFVAR(ExBGEnable),
+  SFVAR(DispAreaSelect),
+
+  SFVAR(VRAMSize),
+
+  SFVAR(HRes),
+  SFVAR(VRes),
+  SFVAR(InterlaceMode),
+
+  SFVAR(RAMCTL_Raw),
+  SFVAR(CRAM_Mode),
+
+  SFVAR(BGON),
+  SFARRAY(&VCPRegs[0][0], 4 * 8),
+  SFARRAY32(VRAMPenalty, 4),
+
+  SFVAR(RPTA),
+  SFARRAY(RPRCTL, 2),
+  SFARRAY(KTAOF, 2),
+
+  SFARRAY16(VRAM, 262144),
+  SFARRAY16(CRAM, 2048),
+
+  SFVAR(RotParams->Xst, 2, sizeof(*RotParams)),
+  SFVAR(RotParams->Yst, 2, sizeof(*RotParams)),
+  SFVAR(RotParams->Zst, 2, sizeof(*RotParams)),
+  SFVAR(RotParams->DXst, 2, sizeof(*RotParams)),
+  SFVAR(RotParams->DYst, 2, sizeof(*RotParams)),
+  SFVAR(RotParams->DX, 2, sizeof(*RotParams)),
+  SFVAR(RotParams->DY, 2, sizeof(*RotParams)),
+  SFARRAY32(RotParams->RotMatrix, 6, 2, sizeof(*RotParams)),
+  SFVAR(RotParams->Px, 2, sizeof(*RotParams)),
+  SFVAR(RotParams->Py, 2, sizeof(*RotParams)),
+  SFVAR(RotParams->Pz, 2, sizeof(*RotParams)),
+  SFVAR(RotParams->Cx, 2, sizeof(*RotParams)),
+  SFVAR(RotParams->Cy, 2, sizeof(*RotParams)),
+  SFVAR(RotParams->Cz, 2, sizeof(*RotParams)),
+  SFVAR(RotParams->Mx, 2, sizeof(*RotParams)),
+  SFVAR(RotParams->My, 2, sizeof(*RotParams)),
+  SFVAR(RotParams->kx, 2, sizeof(*RotParams)),
+  SFVAR(RotParams->ky, 2, sizeof(*RotParams)),
+  SFVAR(RotParams->KAst, 2, sizeof(*RotParams)),
+  SFVAR(RotParams->DKAst, 2, sizeof(*RotParams)),
+  SFVAR(RotParams->DKAx, 2, sizeof(*RotParams)),
+  SFVAR(RotParams->XstAccum, 2, sizeof(*RotParams)),
+  SFVAR(RotParams->YstAccum, 2, sizeof(*RotParams)),
+  SFVAR(RotParams->KAstAccum, 2, sizeof(*RotParams)),
+
+  SFVAR(Out_VB),
+
+  SFVAR(VPhase),
+  SFVAR(VCounter),
+  SFVAR(InternalVB),
+  SFVAR(Odd),
+
+  SFVAR(CRTLineCounter),
+  SFVAR(Clock28M),
+//
+  SFVAR(SurfInterlaceField),
+
+  SFVAR(HPhase),
+  SFVAR(HCounter),
+
+  SFVAR(Latched_VCNT),
+  SFVAR(Latched_HCNT),
+  SFVAR(HVIsExLatched),
+  SFVAR(ExLatchIn),
+  SFVAR(ExLatchPending),
+
+  SFEND
+ };
+
+ MDFNSS_StateAction(sm, load, data_only, StateRegs, "VDP2");
+
+ if(load)
+ {
+
+ }
+
+ VDP2REND_StateAction(sm, load, data_only, RawRegs, CRAM, VRAM);
+}
+
 #ifdef HAVE_DEBUG
 void MakeDump(const std::string& path)
 {

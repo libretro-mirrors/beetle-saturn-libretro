@@ -22,11 +22,14 @@
 #ifndef __MDFN_SS_VDP1_H
 #define __MDFN_SS_VDP1_H
 
+#include <mednafen/state.h>
+
 namespace VDP1
 {
 
 void Init(void) MDFN_COLD;
 void Kill(void) MDFN_COLD;
+void StateAction(StateMem* sm, const unsigned load, const bool data_only);
 
 void Reset(bool powering_up) MDFN_COLD;
 

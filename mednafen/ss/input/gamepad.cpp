@@ -22,7 +22,7 @@
 #include "common.h"
 #include "gamepad.h"
 
-IODevice_Gamepad::IODevice_Gamepad() : buttons(~3)
+IODevice_Gamepad::IODevice_Gamepad() : buttons(0xCFFF)
 {
 
 }
@@ -55,7 +55,7 @@ void IODevice_Gamepad::StateAction(StateMem* sm, const unsigned load, const bool
  if(!MDFNSS_StateAction(sm, load, data_only, StateRegs, section_name, true) && load)
   Power();
  else if(load)
-  buttons &= ~3;
+  buttons = (buttons | 0x4000) &~ 0x3000;
 }
 
 uint8 IODevice_Gamepad::UpdateBus(const sscpu_timestamp_t timestamp, const uint8 smpc_out, const uint8 smpc_out_asserted)

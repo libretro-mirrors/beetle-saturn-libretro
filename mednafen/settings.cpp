@@ -120,6 +120,8 @@ std::string MDFN_GetSettingS(const char *name)
       return std::string("mpr-18811-mx.ic1");
    if (!strcmp("ss.cart.ultraman_path", name))
       return std::string("mpr-19367-mx.ic1");
+   if (!strcmp("ss.cart.satar4mp_path", name))
+      return std::string("satar4mp.bin");
    /* FILESYS */
    if (!strcmp("filesys.path_firmware", name))
       return std::string(retro_base_directory);

@@ -31,6 +31,8 @@ void VDP2REND_EndFrame(void);
 void VDP2REND_Reset(bool powering_up) MDFN_COLD;
 void VDP2REND_SetLayerEnableMask(uint64 mask) MDFN_COLD;
 
+void VDP2REND_StateAction(StateMem* sm, const unsigned load, const bool data_only, uint16 (&rr)[0x100], uint16 (&cr)[2048], uint16 (&vr)[262144]) MDFN_COLD;
+
 struct VDP2Rend_LIB
 {
  struct

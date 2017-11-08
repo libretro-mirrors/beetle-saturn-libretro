@@ -568,6 +568,8 @@ void SMPC_StateAction(StateMem* sm, const unsigned load, const bool data_only)
   SFVAR(vb),
   SFVAR(vsync),
 
+  SFVAR(lastts),
+
   SFEND
  };
 

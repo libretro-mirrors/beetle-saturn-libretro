@@ -29,7 +29,7 @@ struct CartInfo
  void (*Reset)(bool powering_up);
  void (*Kill)(void);
 
- void (*GetNVInfo)(const char** ext, void** nv_ptr, uint64* nv_size);
+ void (*GetNVInfo)(const char** ext, void** nv_ptr, bool* nv16, uint64* nv_size);
  bool (*GetClearNVDirty)(void);
 
  void (*StateAction)(StateMem* sm, const unsigned load, const bool data_only);
@@ -79,6 +79,8 @@ enum
  CART_KOF95,
  CART_ULTRAMAN,
 
+ CART_AR4MP,
+
  CART_CS1RAM_16M,
 
  CART_NLMODEM,
@@ -92,7 +94,7 @@ static INLINE void CART_AdjustTS(const int32 delta) { extern CartInfo Cart; Cart
 static INLINE void CART_SetCPUClock(const int32 master_clock, const int32 cpu_divider) { extern CartInfo Cart; Cart.SetCPUClock(master_clock, cpu_divider); }
 static INLINE void CART_Kill(void) { extern CartInfo Cart; Cart.Kill(); }
 static INLINE void CART_StateAction(StateMem* sm, const unsigned load, const bool data_only) { extern CartInfo Cart; Cart.StateAction(sm, load, data_only); }
-static INLINE void CART_GetNVInfo(const char** ext, void** nv_ptr, uint64* nv_size) { extern CartInfo Cart; Cart.GetNVInfo(ext, nv_ptr, nv_size); }
+static INLINE void CART_GetNVInfo(const char** ext, void** nv_ptr, bool* nv16, uint64* nv_size) { extern CartInfo Cart; Cart.GetNVInfo(ext, nv_ptr, nv16, nv_size); }
 static INLINE bool CART_GetClearNVDirty(void) { extern CartInfo Cart; return Cart.GetClearNVDirty(); }
 static INLINE void CART_Reset(bool powering_up) { extern CartInfo Cart; Cart.Reset(powering_up); }
 

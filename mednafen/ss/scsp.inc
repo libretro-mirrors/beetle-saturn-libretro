@@ -1503,22 +1503,16 @@ void SS_SCSP::StateAction(StateMem* sm, const unsigned load, const bool data_onl
  {
   SFARRAY16N(&SlotRegs[0][0], 0x20 * 0x10, "SlotRegs"),
 
-  #define SFSLOT(n)			\
-	SFVAR(Slots[n].PhaseWhacker),	\
-	SFVAR(Slots[n].CurrentAddr),	\
-	SFVAR(Slots[n].InLoop),		\
-	SFVAR(Slots[n].LoopSub),	\
-	SFVAR(Slots[n].WFAllowAccess),	\
-	SFVAR(Slots[n].EnvLevel),	\
-	SFVAR(Slots[n].EnvPhase),	\
-	SFVAR(Slots[n].EnvGCBTPrev),	\
-	SFVAR(Slots[n].LFOCounter),	\
-	SFVAR(Slots[n].LFOTimeCounter)
-  SFSLOT(0x00), SFSLOT(0x01), SFSLOT(0x02), SFSLOT(0x03), SFSLOT(0x04), SFSLOT(0x05), SFSLOT(0x06), SFSLOT(0x07),
-  SFSLOT(0x08), SFSLOT(0x09), SFSLOT(0x0A), SFSLOT(0x0B), SFSLOT(0x0C), SFSLOT(0x0D), SFSLOT(0x0E), SFSLOT(0x0F),
-  SFSLOT(0x10), SFSLOT(0x11), SFSLOT(0x12), SFSLOT(0x13), SFSLOT(0x14), SFSLOT(0x15), SFSLOT(0x16), SFSLOT(0x17),
-  SFSLOT(0x18), SFSLOT(0x19), SFSLOT(0x1A), SFSLOT(0x1B), SFSLOT(0x1C), SFSLOT(0x1D), SFSLOT(0x1E), SFSLOT(0x1F),
-  #undef SFSLOT
+  SFVAR(Slots->PhaseWhacker, 32, sizeof(Slot)),
+  SFVAR(Slots->CurrentAddr, 32, sizeof(Slot)),
+  SFVAR(Slots->InLoop, 32, sizeof(Slot)),
+  SFVAR(Slots->LoopSub, 32, sizeof(Slot)),
+  SFVAR(Slots->WFAllowAccess, 32, sizeof(Slot)),
+  SFVAR(Slots->EnvLevel, 32, sizeof(Slot)),
+  SFVAR(Slots->EnvPhase, 32, sizeof(Slot)),
+  SFVAR(Slots->EnvGCBTPrev, 32, sizeof(Slot)),
+  SFVAR(Slots->LFOCounter, 32, sizeof(Slot)),
+  SFVAR(Slots->LFOTimeCounter, 32, sizeof(Slot)),
 
   SFARRAY16(EXTS, 2),
 
@@ -1555,15 +1549,10 @@ void SS_SCSP::StateAction(StateMem* sm, const unsigned load, const bool data_onl
 
   SFARRAY(SCILV, 3),
 
-  #define SFTIMER(n)			\
-	SFVAR(Timers[n].Control),	\
-	SFVAR(Timers[n].Counter),	\
-	SFVAR(Timers[n].PrevClockIn),	\
-	SFVAR(Timers[n].Reload)
-  SFTIMER(0),
-  SFTIMER(1),
-  SFTIMER(2),
-  #undef SFTIMER
+  SFVAR(Timers->Control, 3, sizeof(*Timers)),
+  SFVAR(Timers->Counter, 3, sizeof(*Timers)),
+  SFVAR(Timers->PrevClockIn, 3, sizeof(*Timers)),
+  SFVAR(Timers->Reload, 3, sizeof(*Timers)),
 
   SFVAR(DMEA),
   SFVAR(DRGA),

@@ -21,6 +21,8 @@
 
 /*
  Emulation implementation notes/deficiencies:
+	Cache multiple-way tag collisions (ostensibly an illegal condition) during reads/writes are not handled accurately.
+
 	Overall timing is extremely approximate.
 
 	DMA timing is very rough.  DMA burst mode probably isn't handled totally correctly, especially in
@@ -141,7 +143,7 @@ void SH7095::Init(void)
  FRT.FTCI = false;
  IRL = 0;
  NMILevel = false;
- BCR1 &= 0x7FFF; //MD5Level = false;
+ BSC.BCR1 &= 0x7FFF; //MD5Level = false;
  ExtHalt = false;
 
  TruePowerOn();
@@ -279,9 +281,12 @@ void SH7095::TruePowerOn(void)
  DMA_ClockCounter = 0;
  DMA_SGCounter = 0;
  DMA_RoundRobinRockinBoppin = 0;
+ DMA_PenaltyKludgeAmount = 0;
+ DMA_PenaltyKludgeAccum = 0;
  memset(DMACH, 0, sizeof(DMACH));
  DMAOR = 0;
  DMAORM = 0;
+ DMA_RecalcRunning();
  //
  //
  //
@@ -374,6 +379,7 @@ INLINE void SH7095::DMA_DoTransfer(unsigned ch)
 	 {
 	  DMAOR |= 4;
 	  DMAORM |= 4;
+	  DMA_RecalcRunning();
 	  SetPEX(PEX_DMAADDR);
 	 }
 
@@ -394,6 +400,7 @@ INLINE void SH7095::DMA_DoTransfer(unsigned ch)
 	 {
 	  DMAOR |= 4;
 	  DMAORM |= 4;
+          DMA_RecalcRunning();
 	  SetPEX(PEX_DMAADDR);
 	 }
 
@@ -411,6 +418,7 @@ INLINE void SH7095::DMA_DoTransfer(unsigned ch)
 	 {
 	  DMAOR |= 4;
 	  DMAORM |= 4;
+	  DMA_RecalcRunning();
 	  SetPEX(PEX_DMAADDR);
 	 }
 
@@ -439,6 +447,7 @@ INLINE void SH7095::DMA_DoTransfer(unsigned ch)
 
   DMACH[ch].CHCR |= 2;
   DMACH[ch].CHCRM |= 2;
+  DMA_RecalcRunning();
  }
 
  DMACH[ch].SAR = sar;
@@ -527,6 +536,21 @@ void SH7095::DMA_StartSG(void)
  SS_SetEventNT(&events[event_id_dma], SH7095_mem_timestamp + 32);	// fixed + 32, don't evaluate DMA_SGCounter here.
 
  DMA_CheckEnterBurstHack();
+}
+
+// Must be called after DMACH[0].CHCR or DMACH[1].CHCR or DMAOR changes.
+INLINE void SH7095::DMA_RecalcRunning(void)
+{
+ DMA_PenaltyKludgeAmount = 0;
+
+ if(DMA_RunCond(0) || DMA_RunCond(1))
+  DMA_PenaltyKludgeAmount = 18;
+}
+
+INLINE void SH7095::DMA_BusTimingKludge(void)
+{
+ timestamp += DMA_PenaltyKludgeAccum;
+ DMA_PenaltyKludgeAccum = 0;
 }
 
 
@@ -1018,6 +1042,7 @@ NO_INLINE void SH7095::OnChipRegWrite(uint32 A, uint32 V)
 	  SS_DBG(SS_DBG_WARNING | SS_DBG_SH2, "[%s] Unhandled CHCR on DMA channel %u: 0x%08x\n", cpu_name, ch, DMACH[ch].CHCR);
 	 }
 	}
+	DMA_RecalcRunning();
 	DMA_StartSG();
 	RecalcPendingIntPEX();
 	break;
@@ -1030,6 +1055,7 @@ NO_INLINE void SH7095::OnChipRegWrite(uint32 A, uint32 V)
    case 0xB0:
 	DMA_Update(SH7095_mem_timestamp);
 	DMAOR = (V & 0x9) | (DMAOR & (V | DMAORM) & 0x6);
+	DMA_RecalcRunning();
 	DMA_StartSG();
 	break;
 
@@ -1037,9 +1063,84 @@ NO_INLINE void SH7095::OnChipRegWrite(uint32 A, uint32 V)
    // BSC registers
    //
    case 0xE0:	// BCR1
-   case 0xE2:
-	BCR1 = (BCR1 &~ BCR1M) | (V & BCR1M);	// Not sure if this is right, TODO: test somehow.
-	BCR1M = 0;
+	if(sizeof(T) == 4 && (V & 0xFFFF0000) == 0xA55A0000)
+	{
+ 	 BSC.BCR1 = (BSC.BCR1 & 0x8000) | (V & 0x1FF7);
+
+	 if((BSC.BCR1 & 0x7FFF) != 0x3F1)
+	 {
+	  SS_DBG(SS_DBG_WARNING | SS_DBG_SH2, "[%s] Unusual BCR1 register value: 0x%04x\n", cpu_name, BSC.BCR1);
+	 }
+	}
+	break;
+
+   case 0xE4:	// BCR2
+	if(sizeof(T) == 4 && (V & 0xFFFF0000) == 0xA55A0000)
+	{
+ 	 BSC.BCR2 = V & 0xFC;
+
+	 if(BSC.BCR2 != 0xFC)
+	 {
+	  SS_DBG(SS_DBG_WARNING | SS_DBG_SH2, "[%s] Unusual BCR2 register value: 0x%02x\n", cpu_name, BSC.BCR2);
+	 }
+	}
+	break;
+
+   case 0xE8:	// WCR
+	if(sizeof(T) == 4 && (V & 0xFFFF0000) == 0xA55A0000)
+	{
+ 	 BSC.WCR = V & 0xFFFF;
+
+	 if(BSC.WCR != 0x5555)
+	 {
+	  SS_DBG(SS_DBG_WARNING | SS_DBG_SH2, "[%s] Unusual WCR register value: 0x%04x\n", cpu_name, BSC.WCR);
+	 }
+	}
+	break;
+
+   case 0xEC:	// MCR
+	if(sizeof(T) == 4 && (V & 0xFFFF0000) == 0xA55A0000)
+	{
+ 	 BSC.MCR = V & 0xFEFC;
+
+	 if(BSC.MCR != 0x0078 && BSC.MCR != 0x0070)
+	 {
+	  SS_DBG(SS_DBG_WARNING | SS_DBG_SH2, "[%s] Unusual MCR register value: 0x%04x\n", cpu_name, BSC.MCR);
+	 }
+	}
+	break;
+
+   case 0xF0:	// RTCSR
+	if(sizeof(T) == 4 && (V & 0xFFFF0000) == 0xA55A0000)
+	{
+ 	 BSC.RTCSR = (V & 0x78) | (BSC.RTCSR & 0x80 & (V | ~BSC.RTCSRM));
+
+	 if((BSC.RTCSR & 0x78) != 0x08)
+	 {
+	  SS_DBG(SS_DBG_WARNING | SS_DBG_SH2, "[%s] Unusual RTCSR register value: 0x%02x\n", cpu_name, BSC.RTCSR);
+	 }
+	}
+	break;
+
+   case 0xF4:	// RTCNT
+	if(sizeof(T) == 4 && (V & 0xFFFF0000) == 0xA55A0000)
+	{
+ 	 BSC.RTCNT = V & 0xFF;
+
+	 SS_DBG(SS_DBG_WARNING | SS_DBG_SH2, "[%s] RTCNT written with: 0x%02x\n", cpu_name, BSC.RTCNT);
+	}
+	break;
+
+   case 0xF8: // RTCOR
+	if(sizeof(T) == 4 && (V & 0xFFFF0000) == 0xA55A0000)
+	{
+ 	 BSC.RTCOR = V & 0xFF;
+
+	 if(BSC.RTCOR != 0x36)
+	 {
+	  SS_DBG(SS_DBG_WARNING | SS_DBG_SH2, "[%s] Unusual RTCOR register value: 0x%02x\n", cpu_name, BSC.RTCOR);
+	 }
+	}
 	break;
   }
  }
@@ -1475,7 +1576,42 @@ INLINE T SH7095::OnChipRegRead(uint32 A)
    //
    case 0xE0:	// BCR1
    case 0xE2:
-	ret = BCR1;
+	ret = BSC.BCR1;
+	break;
+
+   case 0xE4:	// BCR2
+   case 0xE6:
+	ret = BSC.BCR2;
+	break;
+
+   case 0xE8:	// WCR
+   case 0xEA:
+	ret = BSC.WCR;
+	break;
+
+   case 0xEC:	// MCR
+   case 0xEE:
+	ret = BSC.MCR;
+	break;
+
+   case 0xF0:	// RTCSR
+   case 0xF2:
+	ret = BSC.RTCSR;
+	BSC.RTCSRM = BSC.RTCSR & 0x80;
+
+	SS_DBG(SS_DBG_WARNING | SS_DBG_SH2, "[%s] Read from RTCSR\n", cpu_name);
+	break;
+
+   case 0xF4:	// RTCNT
+   case 0xF6:
+	ret = BSC.RTCNT;
+
+	SS_DBG(SS_DBG_WARNING | SS_DBG_SH2, "[%s] Read from RTCNT\n", cpu_name);
+	break;
+
+   case 0xF8:	// RTCOR
+   case 0xFA:
+	ret = BSC.RTCOR;
 	break;
   }
 
@@ -1716,6 +1852,13 @@ INLINE T SH7095::ExtBusRead(uint32 A)
  if(timestamp > SH7095_mem_timestamp)
   SH7095_mem_timestamp = timestamp;
 
+ //
+ if(!BurstHax)
+ {
+  DMA_PenaltyKludgeAccum += DMA_PenaltyKludgeAmount;
+ }
+ //
+
  ret = SH7095_BusRead<T>(A, BurstHax, NULL);
 
  return ret;
@@ -1728,6 +1871,12 @@ INLINE void SH7095::ExtBusWrite(uint32 A, T V)
 
  if(timestamp > SH7095_mem_timestamp)
   SH7095_mem_timestamp = timestamp;
+
+ //
+ {
+  DMA_PenaltyKludgeAccum += DMA_PenaltyKludgeAmount;
+ }
+ //
 
  SH7095_BusWrite<T>(A, V, false, NULL);
 
@@ -2132,8 +2281,15 @@ void NO_INLINE SH7095::Reset(bool power_on_reset, bool from_internal_wdt)
  //
  if(power_on_reset)
  {
-  BCR1 = (BCR1 & 0x8000) | 0x03F0;
-  BCR1M = 0x1FF7;
+  BSC.BCR1 = (BSC.BCR1 & 0x8000) | 0x03F0;
+  BSC.BCR2 = 0xFC;
+  BSC.WCR = 0xAAFF;
+  BSC.MCR = 0x0000;
+
+  BSC.RTCSR = 0x00;
+  BSC.RTCSRM = 0x00;
+  BSC.RTCNT = 0x00;
+  BSC.RTCOR = 0x00;
  }
  //
  for(unsigned ch = 0; ch < 2; ch++)
@@ -2143,6 +2299,7 @@ void NO_INLINE SH7095::Reset(bool power_on_reset, bool from_internal_wdt)
   DMACH[ch].DRCR = 0x00;
  }
  DMAOR = 0x00;
+ DMA_RecalcRunning();
  RecalcPendingIntPEX();
  //
  INTC_Reset();
@@ -2194,14 +2351,17 @@ void SH7095::SetNMI(bool level)
    FRT_WDT_Recalc_NET();
   }
   else
+  {
    DMAOR |= 0x02;	// TODO: NMIF; set always, or only when DMA was active?
+   DMA_RecalcRunning();
+  }
  }
  NMILevel = level;
 }
 
 void SH7095::SetMD5(bool level)
 {
- BCR1 = (BCR1 & 0x7FFF) | (level << 15);
+ BSC.BCR1 = (BSC.BCR1 & 0x7FFF) | (level << 15);
 }
 
 void SH7095::SetIRL(unsigned level)
@@ -4305,6 +4465,7 @@ INLINE void SH7095::Step(void)
 	  DMACH[ch].CHCRM = 0x00;
 	 }
 	 DMAOR = 0x00;
+	 DMA_RecalcRunning();
 	 RecalcPendingIntPEX();
 	 //
 	 //
@@ -4606,6 +4767,143 @@ INLINE void SH7095::Step(void)
  }
 
  PC += 2;
+}
+
+
+void SH7095::StateAction(StateMem* sm, const unsigned load, const bool data_only, const char* sname)
+{
+ SFORMAT StateRegs[] =
+ {
+  SFARRAY32(R, 16),
+  SFVAR(PC),
+  SFARRAY32(CtrlRegs, 3),
+
+  SFVAR(timestamp),
+  SFVAR(MA_until),
+  SFVAR(MM_until),
+  SFVAR(write_finish_timestamp),
+#if 0
+ sscpu_timestamp_t WB_until[16];
+#endif
+  SFARRAY32(SysRegs, 3),
+
+  SFVAR(EPending),
+  SFVAR(Pipe_ID),
+  SFVAR(Pipe_IF),
+
+  SFVAR(IBuffer),
+
+  SFARRAY32(Cache->Tag, 4, 64, sizeof(*Cache)),
+  SFVAR(Cache->LRU, 64, sizeof(*Cache)),
+  SFARRAY32((uint32*)Cache->Data, 16, 64, sizeof(*Cache)),	// Cast because it's stored as native-endian 32-bit.
+
+  SFVAR(CCR),
+
+  SFVAR(NMILevel),
+  SFVAR(IRL),
+
+  SFVAR(IPRA),
+  SFVAR(IPRB),
+  SFVAR(VCRWDT),
+  SFVAR(VCRA),
+  SFVAR(VCRB),
+  SFVAR(VCRC),
+  SFVAR(VCRD),
+  SFVAR(ICR),
+
+ //
+ //
+ //
+  SFVAR(BSC.BCR1),
+  SFVAR(BSC.BCR2),
+  SFVAR(BSC.WCR),
+  SFVAR(BSC.MCR),
+  SFVAR(BSC.RTCSR),
+  SFVAR(BSC.RTCSRM),
+  SFVAR(BSC.RTCNT),
+  SFVAR(BSC.RTCOR),
+
+  SFVAR(SBYCR),
+  SFVAR(Standby),
+
+  SFVAR(FRT.lastts),
+  SFVAR(FRT.FTI),
+  SFVAR(FRT.FTCI),
+  SFVAR(FRT.FRC),
+  SFARRAY16(FRT.OCR, 2),
+  SFVAR(FRT.FICR),
+  SFVAR(FRT.TIER),
+  SFVAR(FRT.FTCSR),
+  SFVAR(FRT.FTCSRM),
+  SFVAR(FRT.TCR),
+  SFVAR(FRT.TOCR),
+  SFVAR(FRT.RW_Temp),
+
+  SFVAR(FRT_WDT_ClockDivider),
+
+  SFVAR(FRT_WDT_NextTS),
+
+  SFVAR(WDT.WTCSR),
+  SFVAR(WDT.WTCSRM),
+  SFVAR(WDT.WTCNT),
+  SFVAR(WDT.RSTCSR),
+  SFVAR(WDT.RSTCSRM),
+
+  SFVAR(dma_lastts),
+
+  SFVAR(DMA_ClockCounter),
+  SFVAR(DMA_SGCounter),
+  SFVAR(DMA_RoundRobinRockinBoppin),
+
+  SFVAR(DMA_PenaltyKludgeAmount),
+  SFVAR(DMA_PenaltyKludgeAccum),
+
+  SFVAR(DMACH->SAR, 2, sizeof(*DMACH)),
+  SFVAR(DMACH->DAR, 2, sizeof(*DMACH)),
+  SFVAR(DMACH->TCR, 2, sizeof(*DMACH)),
+  SFVAR(DMACH->CHCR, 2, sizeof(*DMACH)),
+  SFVAR(DMACH->CHCRM, 2, sizeof(*DMACH)),
+  SFVAR(DMACH->VCR, 2, sizeof(*DMACH)),
+  SFVAR(DMACH->DRCR, 2, sizeof(*DMACH)),
+
+  SFVAR(DMAOR),
+  SFVAR(DMAORM),
+
+  SFVAR(divide_finish_timestamp),
+  SFVAR(DVSR),
+  SFVAR(DVDNT),
+  SFVAR(DVDNTH),
+  SFVAR(DVDNTL),
+  SFVAR(DVDNTH_Shadow),
+  SFVAR(DVDNTL_Shadow),
+  SFVAR(VCRDIV),
+  SFVAR(DVCR),
+
+  SFVAR(SCI.SMR),
+  SFVAR(SCI.BRR),
+  SFVAR(SCI.SCR),
+  SFVAR(SCI.TDR),
+  SFVAR(SCI.SSR),
+  SFVAR(SCI.SSRM),
+  SFVAR(SCI.RDR),
+
+  SFVAR(SCI.RSR),
+  SFVAR(SCI.TSR),
+
+  SFVAR(ExtHalt),
+
+  SFVAR(PC_IF),
+  SFVAR(PC_ID),
+
+  SFEND
+ };
+
+ MDFNSS_StateAction(sm, load, data_only, StateRegs, sname);
+
+ if(load)
+ {
+  SetCCR(CCR);
+ }
 }
 
 //
