@@ -3016,19 +3016,29 @@ static void update_input(void)
    }
 }
 
+void update_geometry(unsigned width, unsigned height)
+{
+   struct retro_system_av_info system_av_info;
+   system_av_info.geometry.base_width = width;
+   system_av_info.geometry.base_height = height;
+   system_av_info.geometry.aspect_ratio = MEDNAFEN_CORE_GEOMETRY_ASPECT_RATIO;
+   environ_cb(RETRO_ENVIRONMENT_SET_GEOMETRY, &system_av_info);
+}
+
 static uint64_t video_frames, audio_frames;
 #define SOUND_CHANNELS 2
 
 void retro_run(void)
 {
    bool updated = false;
+   bool resolution_changed = false;
+   static unsigned width, height, source_height;
 
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE_UPDATE, &updated) && updated)
    {
       check_variables(false);
-      struct retro_system_av_info new_av_info;
-      retro_get_system_av_info(&new_av_info);
-      environ_cb(RETRO_ENVIRONMENT_SET_GEOMETRY, &new_av_info);
+      update_geometry(width, height);
+      resolution_changed = true;
    }
 
    // Keep the counters at 0 so that they don't display a bogus
@@ -3084,30 +3094,51 @@ void retro_run(void)
 
 #endif
 
-   unsigned width        = rects[0];
-   unsigned height       = spec.DisplayRect.h;
+   if (width  != rects[0] - h_mask || source_height != spec.DisplayRect.h)
+      resolution_changed = true;
 
-   video_frames++;
-   audio_frames += spec.SoundBufSize;
+   source_height = spec.DisplayRect.h;
+   width = rects[0] - h_mask;
+
+   if (PrevInterlaced)
+   {
+      if (is_pal)
+         height = 2 * (last_sl_pal - first_sl_pal + 1);
+      else
+         height = 2 * (last_sl - first_sl + 1);
+   }
+   else
+   {
+      if (is_pal)
+         height = last_sl_pal - first_sl_pal + 1;
+      else
+         height = last_sl - first_sl + 1;
+   }
 
    if (PrevInterlaced)
    {
       if (is_pal)
          video_cb(surf->pixels + surf->pitchinpix * (spec.DisplayRect.y + 2*first_sl_pal) + (h_mask/2),
-            width - h_mask, 2*(last_sl_pal - first_sl_pal + 1), 704 * sizeof(uint32_t));
+            width, height, 704 * sizeof(uint32_t));
       else
          video_cb(surf->pixels + surf->pitchinpix * (spec.DisplayRect.y + 2*first_sl) + (h_mask/2),
-            width - h_mask, 2*(last_sl - first_sl + 1), 704 * sizeof(uint32_t));
+            width, height, 704 * sizeof(uint32_t));
    }
    else
    {
       if (is_pal)
          video_cb(surf->pixels + surf->pitchinpix * (spec.DisplayRect.y + first_sl_pal) + (h_mask/2),
-            width - h_mask, last_sl_pal - first_sl_pal + 1, 704 * sizeof(uint32_t));
+            width, height, 704 * sizeof(uint32_t));
       else
          video_cb(surf->pixels + surf->pitchinpix * (spec.DisplayRect.y + first_sl) + (h_mask/2),
-            width - h_mask, last_sl - first_sl + 1, 704 * sizeof(uint32_t));
+            width, height, 704 * sizeof(uint32_t));
    }
+
+   if (resolution_changed)
+      update_geometry(width, height);
+
+   video_frames++;
+   audio_frames += spec.SoundBufSize;
 
    int16_t *interbuf = (int16_t*)&IBuffer;
 
