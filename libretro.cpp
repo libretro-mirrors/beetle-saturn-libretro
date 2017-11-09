@@ -97,39 +97,6 @@ MDFNGI *MDFNGameInfo = NULL;
 #include "mednafen/ss/cart.h"
 #include "mednafen/ss/db.h"
 
-void MDFN_BackupSavFile(const uint8 max_backup_count, const char* sav_ext)
-{
-#if 0
- FileStream cts(MDFN_MakeFName(MDFNMKF_SAVBACK, -1, sav_ext), MODE_READ_WRITE, true);
- std::unique_ptr<MemoryStream> tmp;
- uint8 counter = max_backup_count - 1;
-
- cts.read(&counter, 1, false);
-
- tmp.reset(new MemoryStream(new FileStream(MDFN_MakeFName(MDFNMKF_SAV, 0, sav_ext), MODE_READ)));
- MemoryStream oldbks(new FileStream(MDFN_MakeFName(MDFNMKF_SAVBACK, counter, sav_ext), MODE_READ));
-
- if(oldbks.size() == tmp->size() && !memcmp(oldbks.map(), tmp->map(), oldbks.size()))
- {
-    //puts("Skipped backup.");
-    return;
- }
-
- counter = (counter + 1) % max_backup_count;
- FileStream bks(MDFN_MakeFName(MDFNMKF_SAVBACK, counter, sav_ext), MODE_WRITE, 9);
-
- bks.write(tmp->map(), tmp->size());
-
- bks.close();
-
- //
- //
- cts.rewind();
- cts.write(&counter, 1);
- cts.close();
-#endif
-}
-
 static int64 UpdateInputLastBigTS;
 
 static EmulateSpecStruct* espec;
@@ -200,11 +167,37 @@ static void INLINE SH7095_BusWrite(uint32 A, T V, const bool BurstHax, int32* SH
 template<typename T>
 static T INLINE SH7095_BusRead(uint32 A, const bool BurstHax, int32* SH2DMAHax);
 
-// SH-2 region 
-//  0: 0x00000000-0x01FFFFFF
-//  1: 0x02000000-0x03FFFFFF
-//  2: 0x04000000-0x05FFFFFF
-//  3: 0x06000000-0x07FFFFFF
+/*
+ SH-2 external bus address map:
+  CS0: 0x00000000...0x01FFFFFF (16-bit)
+	0x00000000...0x000FFFFF: BIOS ROM (R)
+	0x00100000...0x0017FFFF: SMPC (R/W; 8-bit mapped as 16-bit)
+	0x00180000...0x001FFFFF: Backup RAM(32KiB) (R/W; 8-bit mapped as 16-bit)
+	0x00200000...0x003FFFFF: Low RAM(1MiB) (R/W)
+	0x01000000...0x017FFFFF: Slave FRT Input Capture Trigger (W)
+	0x01800000...0x01FFFFFF: Master FRT Input Capture Trigger (W)
+
+  CS1: 0x02000000...0x03FFFFFF (SCU managed)
+	0x02000000...0x03FFFFFF: A-bus CS0 (R/W)
+
+  CS2: 0x04000000...0x05FFFFFF (SCU managed)
+	0x04000000...0x04FFFFFF: A-bus CS1 (R/W)
+	0x05000000...0x057FFFFF: A-bus Dummy
+	0x05800000...0x058FFFFF: A-bus CS2 (R/W)
+	0x05A00000...0x05AFFFFF: SCSP RAM (R/W)
+	0x05B00000...0x05BFFFFF: SCSP Registers (R/W)
+	0x05C00000...0x05C7FFFF: VDP1 VRAM (R/W)
+	0x05C80000...0x05CFFFFF: VDP1 FB RAM (R/W; swappable between two framebuffers, but may be temporarily unreadable at swap time)
+	0x05D00000...0x05D7FFFF: VDP1 Registers (R/W)
+	0x05E00000...0x05EFFFFF: VDP2 VRAM (R/W)
+	0x05F00000...0x05F7FFFF: VDP2 CRAM (R/W; 8-bit writes are illegal)
+	0x05F80000...0x05FBFFFF: VDP2 Registers (R/W; 8-bit writes are illegal)
+	0x05FE0000...0x05FEFFFF: SCU Registers (R/W)
+	0x05FF0000...0x05FFFFFF: SCU Debug/Test Registers (R/W)
+
+  CS3: 0x06000000...0x07FFFFFF
+	0x06000000...0x07FFFFFF: High RAM/SDRAM(1MiB) (R/W)
+*/
 //
 // Never add anything to SH7095_mem_timestamp when DMAHax is true.
 //
@@ -1707,6 +1700,11 @@ static MDFN_COLD void CloseGame(void)
  SaveRTC();
 
  Cleanup();
+}
+
+void MDFN_BackupSavFile(const uint8 max_backup_count, const char* sav_ext)
+{
+	// stub for libretro port
 }
 
 static MDFN_COLD void SaveBackupRAM(void)
