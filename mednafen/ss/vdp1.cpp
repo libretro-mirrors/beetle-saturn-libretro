@@ -153,24 +153,23 @@ void Reset(bool powering_up)
   memset(&LineSetup, 0, sizeof(LineSetup));
 
   //
-  //
+  // Registers with somewhat undefined state on power-on:
   //
   EWDR = 0;
   EWLR = 0;
   EWRR = 0;
 
+  UserClipX0 = 0;
+  UserClipY0 = 0;
+  UserClipX1 = 0;
+  UserClipY1 = 0;
+
+  SysClipX = 0;
+  SysClipY = 0;
+
+  LocalX = 0;
+  LocalY = 0;
  }
-
- UserClipX0 = 0;
- UserClipY0 = 0;
- UserClipX1 = 0;
- UserClipY1 = 0;
-
- SysClipX = 0;
- SysClipY = 0;
- 
- LocalX = 0;
- LocalY = 0;
 
  FBDrawWhich = 0;
  //SS_SetPhysMemMap(0x05C80000, 0x05CFFFFF, FB[FBDrawWhich], sizeof(FB[0]), true);
@@ -185,7 +184,7 @@ void Reset(bool powering_up)
  DrawingActive = false;
 
  //
- // Begin confirmed.
+ // Begin registers/variables confirmed to be initialized on reset.
  TVMR = 0;
  FBCR = 0;
  PTMR = 0;
@@ -244,11 +243,11 @@ static uint32 TexFetch(uint32 x)
 
 	if(!ECD && rtd == 0xF)
 	{
-	 LineSetup.ec_count--;	
+	 LineSetup.ec_count--;
 	 return -1;
 	}
 	ret_or = LineSetup.cb_or;
-	
+
 	if(!SPD) ret_or |= (int32)(rtd - 1) >> 31;
 
 	return rtd | ret_or;
@@ -377,7 +376,7 @@ sscpu_timestamp_t Update(sscpu_timestamp_t timestamp)
   timestamp = lastts;
  }
  //
- // 
+ //
  //
  int32 cycles = timestamp - lastts;
  lastts = timestamp;
@@ -961,16 +960,6 @@ void StateAction(StateMem* sm, const unsigned load, const bool data_only)
   EraseParams.y_end &= 0x1FF;
   EraseParams.x_bound &= 0x7F << 3;
  }
-}
-
-uint8 PeekVRAM(const uint32 addr)
-{
- return ne16_rbo_be<uint8>(VRAM, addr & 0x7FFFF);
-}
-
-void PokeVRAM(const uint32 addr, const uint8 val)
-{
- ne16_wbo_be<uint8>(VRAM, addr & 0x7FFFF, val);
 }
 
 void MakeDump(const std::string& path)
