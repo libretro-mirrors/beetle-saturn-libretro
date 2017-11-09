@@ -3185,7 +3185,6 @@ void retro_run(void)
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE_UPDATE, &updated) && updated)
    {
       check_variables(false);
-      update_geometry(width, height);
       resolution_changed = true;
    }
 
@@ -3242,44 +3241,46 @@ void retro_run(void)
 
 #endif
 
-   if (width  != rects[0] - h_mask || source_height != spec.DisplayRect.h)
+   if (!PrevInterlaced && (width  != rects[0] - h_mask || source_height != spec.DisplayRect.h))
+      resolution_changed = true;
+   if (PrevInterlaced && (width  != 704 || source_height != spec.DisplayRect.h))
       resolution_changed = true;
 
    source_height = spec.DisplayRect.h;
-   width = rects[0] - h_mask;
 
    if (PrevInterlaced)
    {
+      width = 704;
+
       if (is_pal)
+      {
          height = 2 * (last_sl_pal - first_sl_pal + 1);
+         video_cb(surf->pixels + surf->pitchinpix * (spec.DisplayRect.y + 2*first_sl_pal),
+            width, height, 704 * sizeof(uint32_t));
+      }
       else
+      {
          height = 2 * (last_sl - first_sl + 1);
+         video_cb(surf->pixels + surf->pitchinpix * (spec.DisplayRect.y + 2*first_sl),
+            width, height, 704 * sizeof(uint32_t));
+      }
    }
    else
    {
-      if (is_pal)
-         height = last_sl_pal - first_sl_pal + 1;
-      else
-         height = last_sl - first_sl + 1;
-   }
+      width = rects[0] - h_mask;
 
-   if (PrevInterlaced)
-   {
       if (is_pal)
-         video_cb(surf->pixels + surf->pitchinpix * (spec.DisplayRect.y + 2*first_sl_pal) + (h_mask/2),
-            width, height, 704 * sizeof(uint32_t));
-      else
-         video_cb(surf->pixels + surf->pitchinpix * (spec.DisplayRect.y + 2*first_sl) + (h_mask/2),
-            width, height, 704 * sizeof(uint32_t));
-   }
-   else
-   {
-      if (is_pal)
+      {
+         height = last_sl_pal - first_sl_pal + 1;
          video_cb(surf->pixels + surf->pitchinpix * (spec.DisplayRect.y + first_sl_pal) + (h_mask/2),
             width, height, 704 * sizeof(uint32_t));
+      }
       else
+      {
+         height = last_sl - first_sl + 1;
          video_cb(surf->pixels + surf->pitchinpix * (spec.DisplayRect.y + first_sl) + (h_mask/2),
             width, height, 704 * sizeof(uint32_t));
+      }
    }
 
    if (resolution_changed)
