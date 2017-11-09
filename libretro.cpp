@@ -435,11 +435,7 @@ static MDFN_COLD uint8 CheatMemRead(uint32 A)
 {
  A &= (1U << 27) - 1;
 
- #ifdef MSB_FIRST
- return *(uint8*)(SH7095_FastMap[A >> SH7095_EXT_MAP_GRAN_BITS] + (A ^ 0));
- #else
- return *(uint8*)(SH7095_FastMap[A >> SH7095_EXT_MAP_GRAN_BITS] + (A ^ 1));
- #endif
+ return ne16_rbo_be<uint8>(SH7095_FastMap[A >> SH7095_EXT_MAP_GRAN_BITS], A);
 }
 
 static MDFN_COLD void CheatMemWrite(uint32 A, uint8 V)
@@ -448,11 +444,7 @@ static MDFN_COLD void CheatMemWrite(uint32 A, uint8 V)
 
  if(FMIsWriteable[A >> SH7095_EXT_MAP_GRAN_BITS])
  {
-  #ifdef MSB_FIRST
-  *(uint8*)(SH7095_FastMap[A >> SH7095_EXT_MAP_GRAN_BITS] + (A ^ 0)) = V;
-  #else
-  *(uint8*)(SH7095_FastMap[A >> SH7095_EXT_MAP_GRAN_BITS] + (A ^ 1)) = V;
-  #endif
+  ne16_wbo_be<uint8>(SH7095_FastMap[A >> SH7095_EXT_MAP_GRAN_BITS], A, V);
 
   for(unsigned c = 0; c < 2; c++)
   {
