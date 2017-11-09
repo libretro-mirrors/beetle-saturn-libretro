@@ -20,6 +20,8 @@
 #include <mednafen/mempatcher.h>
 #include <mednafen/hash/sha256.h>
 #include "mednafen/hash/md5.h"
+#include "mednafen/ss/ss.h"
+#include "mednafen/ss/debug.inc"
 
 #include <ctype.h>
 #include <time.h>
@@ -103,6 +105,7 @@ static sscpu_timestamp_t MidSync(const sscpu_timestamp_t timestamp);
 #ifdef MDFN_SS_DEV_BUILD
 uint32 ss_dbg_mask;
 #endif
+static bool NeedEmuICache;
 static const uint8 BRAM_Init_Data[0x10] = { 0x42, 0x61, 0x63, 0x6b, 0x55, 0x70, 0x52, 0x61, 0x6d, 0x20, 0x46, 0x6f, 0x72, 0x6d, 0x61, 0x74 };
 
 static void SaveBackupRAM(void);
@@ -137,6 +140,7 @@ static uintptr_t SH7095_FastMap[1U << (32 - SH7095_EXT_MAP_GRAN_BITS)];
 
 int32 SH7095_mem_timestamp;
 uint32 SH7095_BusLock;
+static uint32 SH7095_DB;
 
 #include "mednafen/ss/scu.inc"
 #ifdef HAVE_DEBUG
@@ -759,7 +763,6 @@ static int32 NO_INLINE RunLoop(EmulateSpecStruct* espec)
 #pragma GCC pop_options
 
 // Must not be called within an event or read/write handler.
-
 void SS_Reset(bool powering_up)
 {
  SH7095_BusLock = 0;
@@ -819,7 +822,7 @@ static sscpu_timestamp_t MidSync(const sscpu_timestamp_t timestamp)
        espec->MasterCycles = timestamp * cur_clock_div;
     }
     //printf("%d\n", espec->SoundBufSize);
-    
+
     SMPC_UpdateOutput();
     //
     //
@@ -867,6 +870,7 @@ static void Emulate(EmulateSpecStruct* espec_arg)
  SMPC_EndFrame(espec, end_ts);
  //
  //
+ //
  RebaseTS(end_ts);
 
  CDB_ResetTS();
@@ -892,7 +896,7 @@ static void Emulate(EmulateSpecStruct* espec_arg)
  espec->MasterCycles = end_ts * cur_clock_div;
  espec->SoundBufSize += SOUND_FlushOutput();
  espec->NeedSoundReverse = false;
- 
+
  SMPC_UpdateOutput();
  //
  //
@@ -1222,7 +1226,7 @@ static bool InitCommon(const unsigned cart_type, const unsigned smpc_area)
 
    //
    // Initialize backup memory.
-   // 
+   //
    memset(BackupRAM, 0x00, sizeof(BackupRAM));
    for(i = 0; i < 0x40; i++)
       BackupRAM[i] = BRAM_Init_Data[i & 0x0F];
@@ -1301,7 +1305,7 @@ static bool InitCommon(const unsigned cart_type, const unsigned smpc_area)
             }
             else if(fn == dbe.fn)	// Discourage people from renaming files instead of changing settings.
             {
-               log_cb(RETRO_LOG_ERROR, 
+               log_cb(RETRO_LOG_ERROR,
                      "BIOS hash does not match that as expected by filename.\n");
                return false;
             }
@@ -1370,7 +1374,7 @@ static bool InitCommon(const unsigned cart_type, const unsigned smpc_area)
 
       snprintf(buf, sizeof(buf), "ss.input.port%u.gun_chairs", vp + 1);
       sv = MDFN_GetSettingUI(buf);
-      SMPC_SetCrosshairsColor(vp, sv);  
+      SMPC_SetCrosshairsColor(vp, sv);
    }
    //
    //
@@ -1396,14 +1400,14 @@ static bool InitCommon(const unsigned cart_type, const unsigned smpc_area)
 
       if((ut = time(NULL)) == (time_t)-1)
       {
-         log_cb(RETRO_LOG_ERROR, 
+         log_cb(RETRO_LOG_ERROR,
                "AutoRTC error #1\n");
          return false;
       }
 
       if((ht = localtime(&ut)) == NULL)
       {
-         log_cb(RETRO_LOG_ERROR, 
+         log_cb(RETRO_LOG_ERROR,
                "AutoRTC error #2\n");
          return false;
       }
@@ -1426,7 +1430,7 @@ static bool TestMagic(MDFNFILE* fp)
 static MDFN_COLD bool Load(MDFNFILE* fp)
 {
 #if 0
-   // cat regiondb.inc | sort | uniq --all-repeated=separate -w 102 
+   // cat regiondb.inc | sort | uniq --all-repeated=separate -w 102
    {
       FileStream rdbfp("/tmp/regiondb.inc", MODE_WRITE);
       Stream* s = fp->stream();
@@ -1442,7 +1446,7 @@ static MDFN_COLD bool Load(MDFNFILE* fp)
          int m = iface->ReadSector(sbuf, 0, 16, true);
          std::string fb;
 
-         assert(m == 0x1); 
+         assert(m == 0x1);
          assert(IsSaturnDisc(&sbuf[0]) == true);
          //
          uint8 dummytmp[16] = { 0 };
@@ -1590,7 +1594,7 @@ static bool DiscSanityChecks(void)
 
             if(!(*cdifs)[i]->ReadRawSectorPWOnly(pwbuf, lba, false))
             {
-               log_cb(RETRO_LOG_ERROR, 
+               log_cb(RETRO_LOG_ERROR,
                      "Disc %zu of %zu: Error reading sector at lba=%d in DiscSanityChecks().\n", i + 1, cdifs->size(), lba);
                return false;
             }
@@ -1612,7 +1616,7 @@ static bool DiscSanityChecks(void)
 
                if(lm != qm || ls != qs || lf != qf)
                {
-                  log_cb(RETRO_LOG_ERROR, 
+                  log_cb(RETRO_LOG_ERROR,
                   "Disc %zu of %zu: Time mismatch at lba=%d(%02x:%02x:%02x); Q subchannel: %02x:%02x:%02x\n",
                         i + 1, cdifs->size(),
                         lba,
@@ -1625,7 +1629,7 @@ static bool DiscSanityChecks(void)
 
          if(!any_subq_curpos)
          {
-            log_cb(RETRO_LOG_ERROR, 
+            log_cb(RETRO_LOG_ERROR,
                   "Disc %zu of %zu: No valid Q subchannel ADR_CURPOS data present at lba %d-%d?!\n", i + 1, cdifs->size(), start_lba, end_lba);
             return false;
          }
@@ -1673,7 +1677,7 @@ static MDFN_COLD bool LoadCD(std::vector<CDIF *>* CDInterfaces)
    }
    else
    {
-      log_cb(RETRO_LOG_WARN, 
+      log_cb(RETRO_LOG_WARN,
             "WARNING: CD (image) sanity checks disabled.\n");
     }
 
@@ -1762,10 +1766,9 @@ static MDFN_COLD void LoadCartNV(void)
    {
     void* p = (uint8*)nv_ptr + i;
 
-    MDFN_ennsb<uint16_t>(p, MDFN_de16msb(p));
+    MDFN_ennsb<uint16>(p, MDFN_de16msb(p));
    }
   }
-
  }
 }
 
@@ -1938,6 +1941,7 @@ MDFN_COLD int LibRetro_StateAction( StateMem* sm, const unsigned load, const boo
 
   SFVAR(SH7095_mem_timestamp),
   SFVAR(SH7095_BusLock),
+  SFVAR(SH7095_DB),
 
   SFARRAY16(WorkRAML, sizeof(WorkRAML) / sizeof(WorkRAML[0])),
   SFARRAY16(WorkRAMH, sizeof(WorkRAMH) / sizeof(WorkRAMH[0])),
@@ -2499,7 +2503,7 @@ static void check_variables(bool startup)
    }
 
    var.key = "beetle_saturn_autortc";
-   
+
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
       if (strcmp(var.value, "enabled") == 0)
@@ -3331,7 +3335,7 @@ unsigned retro_api_version(void)
 
 void retro_set_controller_port_device(unsigned in_port, unsigned device)
 {
-   // Store input type 
+   // Store input type
    input_type[in_port] = device;
 
    switch (device)
