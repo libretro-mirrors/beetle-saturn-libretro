@@ -49,6 +49,28 @@
  (writes often take longer on the Saturn if the DMA write address doesn't increment).
 */
 
+static const char* IntNames[0x20] =
+{
+ "VBIN",
+ "VBOUT",
+ "HBIN",
+ "TIMER0",
+ "TIMER1",
+ "DSP",
+ "SCSP",
+ "SMPC",
+ "PAD",
+ "L2DMA",
+ "L1DMA",
+ "L0DMA",
+ "DMA_ILL",
+ "VDP1",
+ nullptr,
+ nullptr,
+
+ "EXT0", "EXT1", "EXT2", "EXT3", "EXT4", "EXT5", "EXT6", "EXT7", "EXT8", "EXT9", "EXTA", "EXTB", "EXTC", "EXTD", "EXTE", "EXTF"
+};
+
 #include <compat/intrinsics.h>
 #include "scu_dsp_common.inc"
 #include "ss_endian.h"
@@ -181,7 +203,9 @@ static INLINE void RecalcMasterIntOut(void)
    IVec = ovec;
 
    IPending &= ~(1U << bpos);
-   //SS_DBGTI(SS_DBG_ERROR, "[SCU] Interrupt level=0x%02x, vector=0x%02x --- IPending=0x%04x", ILevel, IVec, IPending);
+#ifdef HAVE_DEBUG
+   SS_DBGTI(SS_DBG_SCU_INT, "[SCU] Interrupt %d/%s(level=0x%02x, vector=0x%02x) --- IPending=0x%04x", bpos, IntNames[bpos], ILevel, IVec, IPending);
+#endif
   }
  }
 
@@ -209,12 +233,14 @@ static uint8 SCU_MSH2VectorFetch(void)
 {
  uint8 ret = IVec;
 
- //SS_DBGTI(SS_DBG_ERROR, "[SCU]   Interrupt cleared.");
-
 #ifdef HAVE_DEBUG
  if(MDFN_UNLIKELY(ILevel == 0))
  {
   SS_DBG(SS_DBG_WARNING | SS_DBG_SCU, "[SCU] [MSH2] [BUG] SCU_MSH2VectorFetch() called when ILevel == 0\n");
+ }
+ else
+ {
+  SS_DBGTI(SS_DBG_SCU_INT, "[SCU] Interrupt level=0x%02x cleared via vector fetch.", ILevel);
  }
 #endif
 
@@ -262,6 +288,11 @@ static INLINE void SetInt(unsigned which, bool active)
  {
   if((old_IAsserted ^ IAsserted) & IAsserted)
   {
+#ifdef HAVE_DEBUG
+   if(!(IPending & (1U << which)))
+    SS_DBGTI(SS_DBG_SCU_INT, "[SCU] Interrupt %d/%s pending.", which, IntNames[which]);
+#endif
+
    IPending |= 1U << which;
    CheckDMASFByInt(which);
    RecalcMasterIntOut();
@@ -424,11 +455,17 @@ static INLINE void SCU_RegRW_DB(uint32 A, uint32* DB)
 	break;
 
    case 0xA0:
+#ifdef HAVE_DEBUG
+	SS_DBGTI(SS_DBG_SCU_INT, "[SCU] Write to IMS: 0x%04x --- ILevel=0x%02x, vector=0x%02x IPending=0x%04x", *DB, ILevel, IVec, IPending);
+#endif
 	IMask = (IMask &~ mask) | (*DB & mask & 0xBFFF);
 	RecalcMasterIntOut();
 	break;
 
    case 0xA4:
+#ifdef HAVE_DEBUG
+	SS_DBGTI(SS_DBG_SCU_INT, "[SCU] Write to IST: 0x%04x --- ILevel=0x%02x, vector=0x%02x IPending=0x%04x", *DB, ILevel, IVec, IPending);
+#endif
 	IPending &= *DB | ~mask;
 	RecalcMasterIntOut();
 	break;
@@ -1695,7 +1732,15 @@ static NO_INLINE void DMAInstr(void)
  uint8 count;	// 0 = 256
 
  if(DSP.T0_Until < DSP.CycleCounter)
+ {
+#ifdef HAVE_DEBUG
+  // TODO: Rework how DSP DMA is handled if this condition occurs with the same data RAM bank in any games.
+  if(format)
+   SS_DBG(SS_DBG_WARNING | SS_DBG_SCU_DSP, "[SCU] Executing DSP DMA instruction 0x%08x before previous DMA has finished!\n", instr);
+#endif
+
   DSP.CycleCounter = DSP.T0_Until &~ 1;
+ }
 
  DSP.T0_Until = DSP.CycleCounter;
 
@@ -1711,7 +1756,9 @@ static NO_INLINE void DMAInstr(void)
   count = instr & 0xFF;
 
  //printf("%02x %08x Count: %u\n", DSP.PC, instr, count);
- //SS_DBG(SS_DBG_WARNING | SS_DBG_SCU, "[SCU] DSP DMA; looped=%u, add_mode=0x%01x, hold=%u, format=%u, dir=%u, drw=0x%02x -- count=%u, RAO=0x%08x, WAO=0x%08x\n", looped, add_mode, hold, format, dir, drw, count, DSP.RAO, DSP.WAO);
+#ifdef HAVE_DEBUG
+ SS_DBG(SS_DBG_SCU_DSP, "[SCU] DSP DMA; looped=%u, add_mode=0x%01x, hold=%u, format=%u, dir=%u, drw=0x%02x -- count=%u, RAO<<2=0x%08x, WAO<<2=0x%08x\n", looped, add_mode, hold, format, dir, drw, count, DSP.RAO << 2, DSP.WAO << 2);
+#endif
 
  if(dir)
  {
@@ -1721,7 +1768,7 @@ static NO_INLINE void DMAInstr(void)
 
   if(MDFN_UNLIKELY(WriteBus == -1))
   {
-   SS_DBG(SS_DBG_WARNING | SS_DBG_SCU, "[SCU] Bad DSP DMA to 0x%08x --- Instr=0x%08x, Next_Instr=0x%08x, PC=0x%02x\n", addr, instr, (unsigned)(DSP.NextInstr >> 32), DSP.PC);
+   SS_DBG(SS_DBG_WARNING | SS_DBG_SCU | SS_DBG_SCU_DSP, "[SCU] Bad DSP DMA to 0x%08x --- Instr=0x%08x, Next_Instr=0x%08x, PC=0x%02x\n", addr, instr, (unsigned)(DSP.NextInstr >> 32), DSP.PC);
    return;
   }
 
@@ -1777,13 +1824,13 @@ static NO_INLINE void DMAInstr(void)
 
   if(MDFN_UNLIKELY(ReadBus == -1))
   {
-   SS_DBG(SS_DBG_WARNING | SS_DBG_SCU, "[SCU] Bad DSP DMA from 0x%08x --- Instr=0x%08x, Next_Instr=0x%08x, PC=0x%02x\n", addr, instr, (unsigned)(DSP.NextInstr >> 32), DSP.PC);
+   SS_DBG(SS_DBG_WARNING | SS_DBG_SCU | SS_DBG_SCU_DSP, "[SCU] Bad DSP DMA from 0x%08x --- Instr=0x%08x, Next_Instr=0x%08x, PC=0x%02x\n", addr, instr, (unsigned)(DSP.NextInstr >> 32), DSP.PC);
    return;
   }
 
 #ifdef HAVE_DEBUG
   if(drw & 0x4)
-   SS_DBG(SS_DBG_WARNING | SS_DBG_SCU, "[SCU] DSP DMA from 0x%08x to %s --- Instr=0x%08x, Next_Instr=0x%08x, PC=0x%02x\n", addr, ((drw == 0x4) ? "program RAM" : "unknown"), instr, (unsigned)(DSP.NextInstr >> 32), DSP.PC);
+   SS_DBG(SS_DBG_WARNING | SS_DBG_SCU | SS_DBG_SCU_DSP, "[SCU] DSP DMA from 0x%08x to %s --- Instr=0x%08x, Next_Instr=0x%08x, PC=0x%02x\n", addr, ((drw == 0x4) ? "program RAM" : "unknown"), instr, (unsigned)(DSP.NextInstr >> 32), DSP.PC);
 #endif
 
   // Read from external bus, write to data RAM or program RAM
@@ -1795,6 +1842,8 @@ static NO_INLINE void DMAInstr(void)
    {
     DB = ne16_rbo_be<uint32>(WorkRAMH, addr & 0xFFFFF);
     DSP.T0_Until -= 2;
+
+    addr += addr_add_amount;
    }
    else if(ReadBus == 1)
    {
@@ -1805,11 +1854,15 @@ static NO_INLINE void DMAInstr(void)
 
     BBusRW_DB<uint16, false, true>(addr | 2, &tmp, NULL, &DSP.T0_Until);
     DB |= tmp << 0;
-   }
+ 
+    addr += 4;
+  }
    else if(ReadBus == 0)
+   {
     DB = ABus_Read(addr, NULL, &DSP.T0_Until);
 
-   addr += addr_add_amount;
+    addr += addr_add_amount;
+   }
 
    if(drw & 0x4)
    {

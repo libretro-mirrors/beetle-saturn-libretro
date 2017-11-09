@@ -250,4 +250,212 @@ static inline uint32_t MDFN_de32msb(const uint8_t *morp)
  return(morp[3]|(morp[2]<<8)|(morp[1]<<16)|(morp[0]<<24));
 }
 
+//
+//
+//
+//
+//
+//
+#if defined(__cplusplus)
+
+template<typename T, typename X>
+static INLINE uintptr_t neX_ptr_be(uintptr_t const base, const size_t byte_offset)
+{
+#ifdef MSB_FIRST
+ return base + (byte_offset &~ (sizeof(T) - 1));
+#else
+ return base + (((byte_offset &~ (sizeof(T) - 1)) ^ (sizeof(X) - std::min<size_t>(sizeof(X), sizeof(T)))));
+#endif
+}
+
+template<typename T, typename X>
+static INLINE uintptr_t neX_ptr_le(uintptr_t const base, const size_t byte_offset)
+{
+#ifdef LSB_FIRST
+ return base + (byte_offset &~ (sizeof(T) - 1));
+#else
+ return base + (((byte_offset &~ (sizeof(T) - 1)) ^ (sizeof(X) - std::min<size_t>(sizeof(X), sizeof(T)))));
+#endif
+}
+
+template<typename T, typename BT>
+static INLINE void ne16_wbo_be(BT base, const size_t byte_offset, const T value)
+{
+ static_assert(sizeof(T) == 1 || sizeof(T) == 2 || sizeof(T) == 4, "Unsupported type size");
+ static_assert(std::is_same<BT, uintptr_t>::value || std::is_convertible<BT, uint16*>::value, "Wrong base type");
+
+ uintptr_t const ptr = neX_ptr_be<T, uint16>((uintptr_t)base, byte_offset);
+
+ if(sizeof(T) == 4)
+ {
+  uint16* const ptr16 = (uint16*)ptr;
+
+  ptr16[0] = value >> 16;
+  ptr16[1] = value;
+ }
+ else
+  *(T*)ptr = value;
+}
+
+template<typename T, typename BT>
+static INLINE T ne16_rbo_be(BT base, const size_t byte_offset)
+{
+ static_assert(sizeof(T) == 1 || sizeof(T) == 2 || sizeof(T) == 4, "Unsupported type size");
+ static_assert(std::is_same<BT, uintptr_t>::value || std::is_convertible<BT, const uint16*>::value, "Wrong base type");
+
+ uintptr_t const ptr = neX_ptr_be<T, uint16>((uintptr_t)base, byte_offset);
+
+ if(sizeof(T) == 4)
+ {
+  uint16* const ptr16 = (uint16*)ptr;
+  T tmp;
+
+  tmp  = ptr16[0] << 16;
+  tmp |= ptr16[1];
+
+  return tmp;
+ }
+ else
+  return *(T*)ptr;
+}
+
+template<typename T, bool IsWrite, typename BT>
+static INLINE void ne16_rwbo_be(BT base, const size_t byte_offset, T* value)
+{
+ if(IsWrite)
+  ne16_wbo_be<T>(base, byte_offset, *value);
+ else
+  *value = ne16_rbo_be<T>(base, byte_offset);
+}
+
+//
+//
+//
+
+template<typename T, typename BT>
+static INLINE void ne16_wbo_le(BT base, const size_t byte_offset, const T value)
+{
+ static_assert(sizeof(T) == 1 || sizeof(T) == 2 || sizeof(T) == 4, "Unsupported type size");
+ static_assert(std::is_same<BT, uintptr_t>::value || std::is_convertible<BT, uint16*>::value, "Wrong base type");
+
+ uintptr_t const ptr = neX_ptr_le<T, uint16>((uintptr_t)base, byte_offset);
+
+ if(sizeof(T) == 4)
+ {
+  uint16* const ptr16 = (uint16*)ptr;
+
+  ptr16[0] = value;
+  ptr16[1] = value >> 16;
+ }
+ else
+  *(T*)ptr = value;
+}
+
+template<typename T, typename BT>
+static INLINE T ne16_rbo_le(BT base, const size_t byte_offset)
+{
+ static_assert(sizeof(T) == 1 || sizeof(T) == 2 || sizeof(T) == 4, "Unsupported type size");
+ static_assert(std::is_same<BT, uintptr_t>::value || std::is_convertible<BT, const uint16*>::value, "Wrong base type");
+
+ uintptr_t const ptr = neX_ptr_le<T, uint16>((uintptr_t)base, byte_offset);
+
+ if(sizeof(T) == 4)
+ {
+  uint16* const ptr16 = (uint16*)ptr;
+  T tmp;
+
+  tmp  = ptr16[0];
+  tmp |= ptr16[1] << 16;
+
+  return tmp;
+ }
+ else
+  return *(T*)ptr;
+}
+
+
+template<typename T, bool IsWrite, typename BT>
+static INLINE void ne16_rwbo_le(BT base, const size_t byte_offset, T* value)
+{
+ if(IsWrite)
+  ne16_wbo_le<T>(base, byte_offset, *value);
+ else
+  *value = ne16_rbo_le<T>(base, byte_offset);
+}
+
+//
+//
+//
+template<typename T, typename BT>
+static INLINE void ne64_wbo_be(BT base, const size_t byte_offset, const T value)
+{
+ static_assert(sizeof(T) == 1 || sizeof(T) == 2 || sizeof(T) == 4 || sizeof(T) == 8, "Unsupported type size");
+ static_assert(std::is_same<BT, uintptr_t>::value || std::is_convertible<BT, uint64*>::value, "Wrong base type");
+
+ uintptr_t const ptr = neX_ptr_be<T, uint64>((uintptr_t)base, byte_offset);
+
+ memcpy(MDFN_ASSUME_ALIGNED((void*)ptr, alignof(T)), &value, sizeof(T));
+}
+
+template<typename T, typename BT>
+static INLINE T ne64_rbo_be(BT base, const size_t byte_offset)
+{
+ static_assert(sizeof(T) == 1 || sizeof(T) == 2 || sizeof(T) == 4 || sizeof(T) == 8, "Unsupported type size");
+ static_assert(std::is_same<BT, uintptr_t>::value || std::is_convertible<BT, const uint64*>::value, "Wrong base type");
+
+ uintptr_t const ptr = neX_ptr_be<T, uint64>((uintptr_t)base, byte_offset);
+ T ret;
+
+ memcpy(&ret, MDFN_ASSUME_ALIGNED((void*)ptr, alignof(T)), sizeof(T));
+
+ return ret;
+}
+
+template<typename T, bool IsWrite, typename BT>
+static INLINE void ne64_rwbo_be(BT base, const size_t byte_offset, T* value)
+{
+ if(IsWrite)
+  ne64_wbo_be<T>(base, byte_offset, *value);
+ else
+  *value = ne64_rbo_be<T>(base, byte_offset);
+}
+//
+//
+//
+template<typename T, typename BT>
+static INLINE void ne64_wbo_le(BT base, const size_t byte_offset, const T value)
+{
+ static_assert(sizeof(T) == 1 || sizeof(T) == 2 || sizeof(T) == 4 || sizeof(T) == 8, "Unsupported type size");
+ static_assert(std::is_same<BT, uintptr_t>::value || std::is_convertible<BT, uint64*>::value, "Wrong base type");
+
+ uintptr_t const ptr = neX_ptr_le<T, uint64>((uintptr_t)base, byte_offset);
+
+ memcpy(MDFN_ASSUME_ALIGNED((void*)ptr, alignof(T)), &value, sizeof(T));
+}
+
+template<typename T, typename BT>
+static INLINE T ne64_rbo_le(BT base, const size_t byte_offset)
+{
+ static_assert(sizeof(T) == 1 || sizeof(T) == 2 || sizeof(T) == 4 || sizeof(T) == 8, "Unsupported type size");
+ static_assert(std::is_same<BT, uintptr_t>::value || std::is_convertible<BT, const uint64*>::value, "Wrong base type");
+
+ uintptr_t const ptr = neX_ptr_le<T, uint64>((uintptr_t)base, byte_offset);
+ T ret;
+
+ memcpy(&ret, MDFN_ASSUME_ALIGNED((void*)ptr, alignof(T)), sizeof(T));
+
+ return ret;
+}
+
+template<typename T, bool IsWrite, typename BT>
+static INLINE void ne64_rwbo_le(BT base, const size_t byte_offset, T* value)
+{
+ if(IsWrite)
+  ne64_wbo_le<T>(base, byte_offset, *value);
+ else
+  *value = ne64_rbo_le<T>(base, byte_offset);
+}
+
+#endif /* C++ only */
+
 #endif
