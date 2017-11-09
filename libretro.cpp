@@ -1646,37 +1646,32 @@ static bool DiscSanityChecks(void)
 
 static MDFN_COLD bool LoadCD(std::vector<CDIF *>* CDInterfaces)
 {
-   unsigned region = setting_region;
+   const int ss_cart_setting = MDFN_GetSettingI("ss.cart");
+   unsigned region;
    int cart_type;
+   unsigned cpucache_emumode;
    uint8 fd_id[16];
-   char sgid[16 + 1];
+   char sgid[16 + 1] = { 0 };
    cdifs = CDInterfaces;
-
-   log_cb(RETRO_LOG_INFO, "Calculating game ID...\n");
    CalcGameID(MDFNGameInfo->MD5, fd_id, sgid);
-   log_cb(RETRO_LOG_INFO, "Game ID is now: %s\n", sgid);
 
-	// auto-detect?
-	if ( region == 0 )
-	{
-		region = SMPC_AREA_NA; /* most likely */
-		log_cb(RETRO_LOG_INFO, "Trying to autodetect region...\n");
-		if ( !DB_LookupRegionDB( fd_id, &region ) )
-		{
-			log_cb(RETRO_LOG_INFO, "[Mednafen]: Could not find region inside DB.\n");
-			DetectRegion(&region);
-		}
-	}
+   log_cb(RETRO_LOG_INFO, "Game ID is: %s\n", sgid);
 
-   //
-   //
-   if((cart_type = MDFN_GetSettingI("ss.cart")) == CART__RESERVED)
-   {
-      log_cb(RETRO_LOG_INFO, "Trying to lookup cartridge from DB...\n");
-      cart_type = CART_BACKUP_MEM;
-      DB_LookupCartDB(sgid, fd_id, &cart_type);
+   region = setting_region;
+   cart_type = CART_BACKUP_MEM;
+   cpucache_emumode = CPUCACHE_EMUMODE_DATA;
+
+   DetectRegion(&region);
+   DB_Lookup(nullptr, sgid, fd_id, &region, &cart_type, &cpucache_emumode);
+
+   // forced region setting?
+   if ( setting_region != 0 ) {
+	   region = setting_region;
    }
 
+  if(ss_cart_setting != CART__RESERVED)
+   cart_type = ss_cart_setting;
+  //
    if(MDFN_GetSettingB("ss.cd_sanity"))
    {
       log_cb(RETRO_LOG_INFO, "Trying to do CD sanity checks...\n");
