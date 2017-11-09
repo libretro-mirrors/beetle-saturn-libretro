@@ -97,20 +97,6 @@ MDFNGI *MDFNGameInfo = NULL;
 #include "mednafen/ss/cart.h"
 #include "mednafen/ss/db.h"
 
-static int64 UpdateInputLastBigTS;
-
-static EmulateSpecStruct* espec;
-static bool AllowMidSync   = false;
-static int32 cur_clock_div = 0;
-
-static INLINE void UpdateSMPCInput(const sscpu_timestamp_t timestamp)
-{
-int32 elapsed_time = (((int64)timestamp * cur_clock_div * 1000 * 1000) - UpdateInputLastBigTS) / (EmulatedSS.MasterClock / MDFN_MASTERCLOCK_FIXED(1));
-
- UpdateInputLastBigTS += (int64)elapsed_time * (EmulatedSS.MasterClock / MDFN_MASTERCLOCK_FIXED(1));
-
- SMPC_UpdateInput(elapsed_time);
-}
 
 static sscpu_timestamp_t MidSync(const sscpu_timestamp_t timestamp);
 
@@ -803,6 +789,20 @@ void SS_Reset(bool powering_up)
  SOUND_Reset(powering_up);
 
  CART_Reset(powering_up);
+}
+
+static EmulateSpecStruct* espec;
+static bool AllowMidSync;
+static int32 cur_clock_div;
+
+static int64 UpdateInputLastBigTS;
+static INLINE void UpdateSMPCInput(const sscpu_timestamp_t timestamp)
+{
+ int32 elapsed_time = (((int64)timestamp * cur_clock_div * 1000 * 1000) - UpdateInputLastBigTS) / (EmulatedSS.MasterClock / MDFN_MASTERCLOCK_FIXED(1));
+
+ UpdateInputLastBigTS += (int64)elapsed_time * (EmulatedSS.MasterClock / MDFN_MASTERCLOCK_FIXED(1));
+
+ SMPC_UpdateInput(elapsed_time);
 }
 
 static sscpu_timestamp_t MidSync(const sscpu_timestamp_t timestamp)
