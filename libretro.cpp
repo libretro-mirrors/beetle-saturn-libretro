@@ -258,7 +258,7 @@ static INLINE void BusRW(uint32 A, T& V, const bool BurstHax, int32* SH2DMAHax)
   }
 
   //
-  // Low(and kinda slow) work RAM 
+  // Low(and kinda slow) work RAM
   //
   if(A >= 0x00200000 && A <= 0x003FFFFF)
   {
@@ -282,7 +282,7 @@ static INLINE void BusRW(uint32 A, T& V, const bool BurstHax, int32* SH2DMAHax)
    else
     *SH2DMAHax -= 8;
 
-   if(!IsWrite) 
+   if(!IsWrite)
     V = ne16_rbo_be<T>(BIOSROM, A & 0x7FFFF);
 
    return;
@@ -340,7 +340,7 @@ static INLINE void BusRW(uint32 A, T& V, const bool BurstHax, int32* SH2DMAHax)
     }
    }
    else
-    V = ((BackupRAM[(A >> 1) & 0x7FFF] << 0) | (0xFF << 8)) >> (((A & 1) ^ (sizeof(T) & 1)) << 3);  
+    V = ((BackupRAM[(A >> 1) & 0x7FFF] << 0) | (0xFF << 8)) >> (((A & 1) ^ (sizeof(T) & 1)) << 3);
 
    return;
   }
@@ -401,14 +401,14 @@ static INLINE void BusRW(uint32 A, T& V, const bool BurstHax, int32* SH2DMAHax)
   uint32 DB;
 
   if(IsWrite)
-   DB = V << (((A & 3) ^ (4 - sizeof(T))) << 3); 
+   DB = V << (((A & 3) ^ (4 - sizeof(T))) << 3);
   else
    DB = 0;
 
   SCU_FromSH2_BusRW_DB<T, IsWrite>(A, &DB, SH2DMAHax);
 
   if(!IsWrite)
-   V = DB >> (((A & 3) ^ (4 - sizeof(T))) << 3); 
+   V = DB >> (((A & 3) ^ (4 - sizeof(T))) << 3);
  }
 }
 
@@ -712,7 +712,7 @@ void SS_RequestMLExit(void)
 #else
  #pragma GCC optimize("O2,no-unroll-loops,no-peel-loops,no-crossjumping")
 #endif
-template<bool DebugMode>
+template<bool EmulateICache, bool DebugMode>
 static int32 NO_INLINE RunLoop(EmulateSpecStruct* espec)
 {
  sscpu_timestamp_t eff_ts = 0;
@@ -728,7 +728,7 @@ static int32 NO_INLINE RunLoop(EmulateSpecStruct* espec)
     DBG_CPUHandler<0>(eff_ts);
 #endif
 
-   CPU[0].Step<0, DebugMode>();
+   CPU[0].Step<0, EmulateICache, DebugMode>();
    CPU[0].DMA_BusTimingKludge();
 
    while(MDFN_LIKELY(CPU[0].timestamp > CPU[1].timestamp))
@@ -738,7 +738,7 @@ static int32 NO_INLINE RunLoop(EmulateSpecStruct* espec)
      DBG_CPUHandler<1>(eff_ts);
 #endif
 
-    CPU[1].Step<1, DebugMode>();
+    CPU[1].Step<1, EmulateICache, DebugMode>();
    }
 
    eff_ts = CPU[0].timestamp;
@@ -851,11 +851,18 @@ static void Emulate(EmulateSpecStruct* espec_arg)
  ForceEventUpdates(0);
 
 #ifdef WANT_DEBUGGER
- if(DBG_NeedCPUHooks())
-  end_ts = RunLoop<true>(espec);
- else
+ #define RLTDAT true
+#else
+ #define RLTDAT false
 #endif
-  end_ts = RunLoop<false>(espec);
+ static int32 (*const rltab[2][2])(EmulateSpecStruct*) =
+ {
+  //     DebugMode=false        DebugMode=true
+  { RunLoop<false, false>, RunLoop<false, RLTDAT> },	// EmulateICache=false
+  { RunLoop<true,  false>, RunLoop<true,  RLTDAT> },	// EmulateICache=true
+ };
+#undef RLTDAT
+ end_ts = rltab[NeedEmuICache][DBG_NeedCPUHooks()](espec);
 
  ForceEventUpdates(end_ts);
  //
@@ -1174,14 +1181,45 @@ typedef struct
    const char *name;
 } CartName;
 
-static bool InitCommon(const unsigned cart_type, const unsigned smpc_area)
+static bool InitCommon(const unsigned cpucache_emumode, const unsigned cart_type, const unsigned smpc_area)
 {
+#ifdef MDFN_SS_DEV_BUILD
+ ss_dbg_mask = SS_DBG_ERROR;
+ {
+  std::vector<uint64> dms = MDFN_GetSettingMultiUI("ss.dbg_mask");
+
+  for(uint64 dmse : dms)
+   ss_dbg_mask |= dmse;
+ }
+#endif
+ //
 
    unsigned i;
-#ifdef MDFN_SS_DEV_BUILD
-   ss_dbg_mask = MDFN_GetSettingUI("ss.dbg_mask");
-#endif
+ //
+ {
+  const struct
+  {
+   unsigned mode;
+   const char* name;
+  } CPUCacheEmuModes[] =
+  {
+   { CPUCACHE_EMUMODE_DATA_CB,	_("Data only, with high-level bypass") },
+   { CPUCACHE_EMUMODE_DATA,	_("Data only") },
+   { CPUCACHE_EMUMODE_FULL,	_("Full") },
+  };
+  const char* cem = _("Unknown");
 
+  for(auto const& ceme : CPUCacheEmuModes)
+  {
+   if(ceme.mode == cpucache_emumode)
+   {
+    cem = ceme.name;
+    break;
+   }
+  }
+  log_cb(RETRO_LOG_INFO, "[Mednafen]: CPU Cache Emulation Mode: %s\n", cem);
+ }
+ //
    {
       log_cb(RETRO_LOG_INFO, "[Mednafen]: Region: 0x%01x.\n", smpc_area);
       const CartName CartNames[] =
@@ -1210,9 +1248,10 @@ static bool InitCommon(const unsigned cart_type, const unsigned smpc_area)
    }
    //
 
+   NeedEmuICache = (cpucache_emumode == CPUCACHE_EMUMODE_FULL);
    for(i = 0; i < 2; i++)
    {
-      CPU[i].Init();
+      CPU[i].Init(cpucache_emumode == CPUCACHE_EMUMODE_DATA_CB);
       CPU[i].SetMD5((bool)i);
    }
 
@@ -1515,7 +1554,7 @@ static MDFN_COLD bool Load(MDFNFILE* fp)
    }
 #endif
 
-   if (!InitCommon(CART_MDFN_DEBUG, MDFN_GetSettingUI("ss.region_default")))
+   if (!InitCommon(CPUCACHE_EMUMODE_DATA, CART_MDFN_DEBUG, MDFN_GetSettingUI("ss.region_default")))
       return false;
 
    // 0x25FE00C4 = 0x1;
@@ -1676,7 +1715,7 @@ static MDFN_COLD bool LoadCD(std::vector<CDIF *>* CDInterfaces)
    // TODO: auth ID calc
 
 
-   if (!InitCommon(cart_type, region))
+   if (!InitCommon(cpucache_emumode, cart_type, region))
       return false;
 
    return true;
