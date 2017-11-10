@@ -61,12 +61,12 @@ static unsigned image_crop = 0;
 
 static int astick_deadzone = 0;
 
-int h_mask = 0;
-int first_sl = 0;
-int last_sl = 239;
-int first_sl_pal = 0;
-int last_sl_pal = 287;
-bool is_pal = false;
+static unsigned h_mask = 0;
+static unsigned first_sl = 0;
+static unsigned last_sl = 239;
+static unsigned first_sl_pal = 0;
+static unsigned last_sl_pal = 287;
+static bool is_pal = false;
 
 // Sets how often (in number of output frames/retro_run invocations)
 // the internal framerace counter should be updated if
