@@ -2,7 +2,7 @@
 /* Mednafen Sega Saturn Emulation Module                                      */
 /******************************************************************************/
 /* sh7095.h:
-**  Copyright (C) 2015-2016 Mednafen Team
+**  Copyright (C) 2015-2017 Mednafen Team
 **
 ** This program is free software; you can redistribute it and/or
 ** modify it under the terms of the GNU General Public License
@@ -29,7 +29,7 @@ class SH7095 final
  SH7095(const char* const name_arg, const unsigned dma_event_id_arg, uint8 (*exivecfn_arg)(void)) MDFN_COLD;
  ~SH7095() MDFN_COLD;
 
- void Init(void) MDFN_COLD;
+ void Init(const bool CacheBypassHack) MDFN_COLD;
 
  void StateAction(StateMem* sm, const unsigned load, const bool data_only, const char* sname) MDFN_COLD;
 
@@ -53,7 +53,7 @@ class SH7095 final
    SetPEX(PEX_PSEUDO_EXTHALT);	// Only SetPEX() here, ClearPEX() is called in the pseudo exception handling code as necessary.
  }
 
- template<unsigned which, bool DebugMode>
+ template<unsigned which, bool EmulateICache, bool DebugMode>
  void Step(void);
 
 
@@ -77,6 +77,9 @@ class SH7095 final
  sscpu_timestamp_t MA_until;
  sscpu_timestamp_t MM_until;
  sscpu_timestamp_t write_finish_timestamp;
+#if 0
+ sscpu_timestamp_t WB_until[16];
+#endif
 
  INLINE void SetT(bool new_value) { SR &= ~1; SR |= new_value; }
  INLINE bool GetT(void) { return SR & 1; }
@@ -146,7 +149,7 @@ class SH7095 final
   EXCEPTION_NMI,	// NMI
   EXCEPTION_BREAK,	// User break
   EXCEPTION_TRAP,	// Trap instruction
-  EXCEPTION_INT	// Interrupt
+  EXCEPTION_INT,	// Interrupt
  };
 
  enum
@@ -161,7 +164,7 @@ class SH7095 final
   VECNUM_BREAK     = 12,	// User break
 
   VECNUM_TRAP_BASE = 32,	// Trap instruction
-  VECNUM_INT_BASE  = 64	// Interrupt
+  VECNUM_INT_BASE  = 64,	// Interrupt
  };
 
  enum
@@ -394,10 +397,10 @@ class SH7095 final
  uint8 GetPendingInt(uint8*);
  void RecalcPendingIntPEX(void);
 
- template<bool DebugMode>
+ template<bool EmulateICache, bool DebugMode>
  INLINE void FetchIF(bool ForceIBufferFill);
 
- template<bool DebugMode, bool DelaySlot, bool IntPreventNext, bool SkipFetchIF>
+ template<bool EmulateICache, bool DebugMode, bool DelaySlot, bool IntPreventNext, bool SkipFetchIF>
  void DoIDIF_Real(void);
 
  template<typename T, bool BurstHax>
@@ -412,7 +415,7 @@ class SH7095 final
  template<typename T>
  T OnChipRegRead(uint32 A);
 
- template<typename T, unsigned region, bool CacheEnabled, bool TwoWayMode, bool IsInstr>
+ template<typename T, unsigned region, bool CacheEnabled, bool TwoWayMode, bool IsInstr, bool CacheBypassHack>
  T MemReadRT(uint32 A);
 
  template<typename T>
@@ -424,17 +427,20 @@ class SH7095 final
  template<typename T>
  void MemWrite(uint32 A, T V);
 
- template<unsigned which, int DebugMode, bool delayed>
+
+ template<unsigned which, bool EmulateICache, int DebugMode, bool delayed>
  INLINE void Branch(uint32 target);
 
- template<unsigned which, int DebugMode, bool delayed>
+ template<unsigned which, bool EmulateICache, int DebugMode, bool delayed>
  INLINE void CondRelBranch(bool cond, uint32 disp);
 
- template<unsigned which, int DebugMode>
+
+ template<unsigned which, bool EmulateICache, int DebugMode>
  INLINE void UCDelayBranch(uint32 target);
 
- template<unsigned which, int DebugMode>
+ template<unsigned which, bool EmulateICache, int DebugMode>
  INLINE void UCRelDelayBranch(uint32 disp);
+
 
  //
  //
@@ -532,7 +538,7 @@ class SH7095 final
   GSREG_FTCSRM,
   GSREG_TCR,
   GSREG_TOCR,
-  GSREG_RWT
+  GSREG_RWT,
  };
 
  uint32 GetRegister(const unsigned id, char* const special, const uint32 special_len);
@@ -541,6 +547,7 @@ class SH7095 final
  void CheckRWBreakpoints(void (*MRead)(unsigned len, uint32 addr), void (*MWrite)(unsigned len, uint32 addr)) const;
  static void Disassemble(const uint16 instr, const uint32 PC, char* buffer, uint16 (*DisPeek16)(uint32), uint32 (*DisPeek32)(uint32));
  private:
+ bool CBH_Setting;
  uint32 PC_IF, PC_ID;	// Debug-related variables.
 };
 
