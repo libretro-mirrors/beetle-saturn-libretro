@@ -20,6 +20,8 @@
 #include <mednafen/mempatcher.h>
 #include <mednafen/hash/sha256.h>
 #include "mednafen/hash/md5.h"
+#include "mednafen/ss/ss.h"
+#include "mednafen/ss/debug.inc"
 
 #include <ctype.h>
 #include <time.h>
@@ -30,7 +32,7 @@
 
 #define MEDNAFEN_CORE_NAME_MODULE "ss"
 #define MEDNAFEN_CORE_NAME "Mednafen Saturn"
-#define MEDNAFEN_CORE_VERSION "v0.9.47"
+#define MEDNAFEN_CORE_VERSION "v0.9.48"
 #define MEDNAFEN_CORE_EXTENSIONS "cue|ccd|chd"
 #define MEDNAFEN_CORE_TIMING_FPS 59.82
 #define MEDNAFEN_CORE_GEOMETRY_BASE_W 320
@@ -97,59 +99,13 @@ MDFNGI *MDFNGameInfo = NULL;
 #include "mednafen/ss/cart.h"
 #include "mednafen/ss/db.h"
 
-void MDFN_BackupSavFile(const uint8 max_backup_count, const char* sav_ext)
-{
-#if 0
- FileStream cts(MDFN_MakeFName(MDFNMKF_SAVBACK, -1, sav_ext), MODE_READ_WRITE, true);
- std::unique_ptr<MemoryStream> tmp;
- uint8 counter = max_backup_count - 1;
-
- cts.read(&counter, 1, false);
-
- tmp.reset(new MemoryStream(new FileStream(MDFN_MakeFName(MDFNMKF_SAV, 0, sav_ext), MODE_READ)));
- MemoryStream oldbks(new FileStream(MDFN_MakeFName(MDFNMKF_SAVBACK, counter, sav_ext), MODE_READ));
-
- if(oldbks.size() == tmp->size() && !memcmp(oldbks.map(), tmp->map(), oldbks.size()))
- {
-    //puts("Skipped backup.");
-    return;
- }
-
- counter = (counter + 1) % max_backup_count;
- FileStream bks(MDFN_MakeFName(MDFNMKF_SAVBACK, counter, sav_ext), MODE_WRITE, 9);
-
- bks.write(tmp->map(), tmp->size());
-
- bks.close();
-
- //
- //
- cts.rewind();
- cts.write(&counter, 1);
- cts.close();
-#endif
-}
-
-static int64 UpdateInputLastBigTS;
-
-static EmulateSpecStruct* espec;
-static bool AllowMidSync   = false;
-static int32 cur_clock_div = 0;
-
-static INLINE void UpdateSMPCInput(const sscpu_timestamp_t timestamp)
-{
-int32 elapsed_time = (((int64)timestamp * cur_clock_div * 1000 * 1000) - UpdateInputLastBigTS) / (EmulatedSS.MasterClock / MDFN_MASTERCLOCK_FIXED(1));
-
- UpdateInputLastBigTS += (int64)elapsed_time * (EmulatedSS.MasterClock / MDFN_MASTERCLOCK_FIXED(1));
-
- SMPC_UpdateInput(elapsed_time);
-}
 
 static sscpu_timestamp_t MidSync(const sscpu_timestamp_t timestamp);
 
 #ifdef MDFN_SS_DEV_BUILD
 uint32 ss_dbg_mask;
 #endif
+static bool NeedEmuICache;
 static const uint8 BRAM_Init_Data[0x10] = { 0x42, 0x61, 0x63, 0x6b, 0x55, 0x70, 0x52, 0x61, 0x6d, 0x20, 0x46, 0x6f, 0x72, 0x6d, 0x61, 0x74 };
 
 static void SaveBackupRAM(void);
@@ -184,6 +140,7 @@ static uintptr_t SH7095_FastMap[1U << (32 - SH7095_EXT_MAP_GRAN_BITS)];
 
 int32 SH7095_mem_timestamp;
 uint32 SH7095_BusLock;
+static uint32 SH7095_DB;
 
 #include "mednafen/ss/scu.inc"
 #ifdef HAVE_DEBUG
@@ -200,248 +157,292 @@ static void INLINE SH7095_BusWrite(uint32 A, T V, const bool BurstHax, int32* SH
 template<typename T>
 static T INLINE SH7095_BusRead(uint32 A, const bool BurstHax, int32* SH2DMAHax);
 
-// SH-2 region 
-//  0: 0x00000000-0x01FFFFFF
-//  1: 0x02000000-0x03FFFFFF
-//  2: 0x04000000-0x05FFFFFF
-//  3: 0x06000000-0x07FFFFFF
+/*
+ SH-2 external bus address map:
+  CS0: 0x00000000...0x01FFFFFF (16-bit)
+	0x00000000...0x000FFFFF: BIOS ROM (R)
+	0x00100000...0x0017FFFF: SMPC (R/W; 8-bit mapped as 16-bit)
+	0x00180000...0x001FFFFF: Backup RAM(32KiB) (R/W; 8-bit mapped as 16-bit)
+	0x00200000...0x003FFFFF: Low RAM(1MiB) (R/W)
+	0x01000000...0x017FFFFF: Slave FRT Input Capture Trigger (W)
+	0x01800000...0x01FFFFFF: Master FRT Input Capture Trigger (W)
+
+  CS1: 0x02000000...0x03FFFFFF (SCU managed)
+	0x02000000...0x03FFFFFF: A-bus CS0 (R/W)
+
+  CS2: 0x04000000...0x05FFFFFF (SCU managed)
+	0x04000000...0x04FFFFFF: A-bus CS1 (R/W)
+	0x05000000...0x057FFFFF: A-bus Dummy
+	0x05800000...0x058FFFFF: A-bus CS2 (R/W)
+	0x05A00000...0x05AFFFFF: SCSP RAM (R/W)
+	0x05B00000...0x05BFFFFF: SCSP Registers (R/W)
+	0x05C00000...0x05C7FFFF: VDP1 VRAM (R/W)
+	0x05C80000...0x05CFFFFF: VDP1 FB RAM (R/W; swappable between two framebuffers, but may be temporarily unreadable at swap time)
+	0x05D00000...0x05D7FFFF: VDP1 Registers (R/W)
+	0x05E00000...0x05EFFFFF: VDP2 VRAM (R/W)
+	0x05F00000...0x05F7FFFF: VDP2 CRAM (R/W; 8-bit writes are illegal)
+	0x05F80000...0x05FBFFFF: VDP2 Registers (R/W; 8-bit writes are illegal)
+	0x05FE0000...0x05FEFFFF: SCU Registers (R/W)
+	0x05FF0000...0x05FFFFFF: SCU Debug/Test Registers (R/W)
+
+  CS3: 0x06000000...0x07FFFFFF
+	0x06000000...0x07FFFFFF: High RAM/SDRAM(1MiB) (R/W)
+*/
 //
 // Never add anything to SH7095_mem_timestamp when DMAHax is true.
 //
 // When BurstHax is true and we're accessing high work RAM, don't add anything.
 //
 template<typename T, bool IsWrite>
-static INLINE void BusRW(uint32 A, T& V, const bool BurstHax, int32* SH2DMAHax)
+static INLINE void BusRW_DB_CS0(const uint32 A, uint32& DB, const bool BurstHax, int32* SH2DMAHax)
 {
  //
- // High work RAM
+ // Low(and kinda slow) work RAM
  //
- if(A >= 0x06000000 && A <= 0x07FFFFFF)
+ if(A >= 0x00200000 && A <= 0x003FFFFF)
  {
-  ne16_rwbo_be<T, IsWrite>(WorkRAMH, A & 0xFFFFF, &V);
+  if(IsWrite)
+   ne16_wbo_be<T>(WorkRAML, A & 0xFFFFF, DB >> (((A & 1) ^ (2 - sizeof(T))) << 3));
+  else
+   DB = (DB & 0xFFFF0000) | ne16_rbo_be<uint16>(WorkRAML, A & 0xFFFFE);
+
+  if(!SH2DMAHax)
+   SH7095_mem_timestamp += 7;
+  else
+   *SH2DMAHax -= 7;
+
+  return;
+ }
+
+ //
+ // BIOS ROM
+ //
+ if(A >= 0x00000000 && A <= 0x000FFFFF)
+ {
+  if(!SH2DMAHax)
+   SH7095_mem_timestamp += 8;
+  else
+   *SH2DMAHax -= 8;
+
+  if(!IsWrite)
+   DB = (DB & 0xFFFF0000) | ne16_rbo_be<uint16>(BIOSROM, A & 0x7FFFE);
+
+  return;
+ }
+
+ //
+ // SMPC
+ //
+ if(A >= 0x00100000 && A <= 0x0017FFFF)
+ {
+  const uint32 SMPC_A = (A & 0x7F) >> 1;
+
+  if(!SH2DMAHax)
+  {
+   // SH7095_mem_timestamp += 2;
+   CheckEventsByMemTS();
+  }
+
+  if(IsWrite)
+  {
+   if(sizeof(T) == 2 || (A & 1))
+    SMPC_Write(SH7095_mem_timestamp, SMPC_A, DB);
+  }
+  else
+   DB = (DB & 0xFFFF0000) | 0xFF00 | SMPC_Read(SH7095_mem_timestamp, SMPC_A);
+
+  return;
+ }
+
+ //
+ // Backup RAM
+ //
+ if(A >= 0x00180000 && A <= 0x001FFFFF)
+ {
+  if(!SH2DMAHax)
+   SH7095_mem_timestamp += 8;
+  else
+   *SH2DMAHax -= 8;
+
+  if(IsWrite)
+  {
+   if(sizeof(T) != 1 || (A & 1))
+   {
+    BackupRAM[(A >> 1) & 0x7FFF] = DB;
+    BackupRAM_Dirty = true;
+   }
+  }
+  else
+   DB = (DB & 0xFFFF0000) | 0xFF00 | BackupRAM[(A >> 1) & 0x7FFF];
+
+  return;
+ }
+
+ //
+ // FRT trigger region
+ //
+ if(A >= 0x01000000 && A <= 0x01FFFFFF)
+ {
+  if(!SH2DMAHax)
+   SH7095_mem_timestamp += 8;
+  else
+   *SH2DMAHax -= 8;
+
+  //printf("FT FRT%08x %zu %08x %04x %d %d\n", A, sizeof(T), A, V, SMPC_IsSlaveOn(), SH7095_mem_timestamp);
+  if(IsWrite)
+  {
+   if(sizeof(T) != 1)
+   {
+    const unsigned c = ((A >> 23) & 1) ^ 1;
+
+    if(!c || SMPC_IsSlaveOn())
+    {
+     CPU[c].SetFTI(true);
+     CPU[c].SetFTI(false);
+    }
+   }
+  }
+  return;
+ }
+
+ //
+ //
+ //
+ if(!SH2DMAHax)
+  SH7095_mem_timestamp += 4;
+ else
+  *SH2DMAHax -= 4;
+
+ if(IsWrite)
+  SS_DBG(SS_DBG_WARNING, "[SH2 BUS] Unknown %zu-byte write of 0x%08x to 0x%08x\n", sizeof(T), DB >> (((A & 1) ^ (2 - sizeof(T))) << 3), A);
+ else
+  SS_DBG(SS_DBG_WARNING, "[SH2 BUS] Unknown %zu-byte read from 0x%08x\n", sizeof(T), A);
+}
+
+template<typename T, bool IsWrite>
+static INLINE void BusRW_DB_CS123(const uint32 A, uint32& DB, const bool BurstHax, int32* SH2DMAHax)
+{
+ //
+ // CS3: High work RAM/SDRAM, 0x06000000 ... 0x07FFFFFF
+ //
+ if(A >= 0x06000000)
+ {
+  if(!IsWrite || sizeof(T) == 4)
+   ne16_rwbo_be<uint32, IsWrite>(WorkRAMH, A & 0xFFFFC, &DB);
+  else
+   ne16_wbo_be<T>(WorkRAMH, A & 0xFFFFF, DB >> (((A & 3) ^ (4 - sizeof(T))) << 3));
 
   if(!BurstHax)
   {
-     if(!SH2DMAHax)
-     {
-        if(IsWrite)
-        {
-           SH7095_mem_timestamp = (SH7095_mem_timestamp + 4) &~ 3;
-        }
-        else
-        {
-           SH7095_mem_timestamp += 7;
-        }
-     }
-     else
-        *SH2DMAHax -= IsWrite ? 3 : 6;
-  }
-
-  return;
- }
-
- //
- //
- // SH-2 region 0
- //
- //  Note: 0x00400000 - 0x01FFFFFF: Open bus for accesses to 0x00000000-0x01FFFFFF(SH-2 area 0)
- //
- if(A < 0x02000000)
- {
-  if(sizeof(T) == 4)
-  {
-   if(IsWrite)
-   {
-    uint16 tmp;
-
-    tmp = V >> 16;
-    BusRW<uint16, true>(A, tmp, BurstHax, SH2DMAHax);
-
-    tmp = V >> 0;
-    BusRW<uint16, true>(A | 2, tmp, BurstHax, SH2DMAHax);
-   }
-   else
-   {
-    uint16 tmp = 0;
-
-    BusRW<uint16, false>(A | 2, tmp, BurstHax, SH2DMAHax);
-    V = tmp << 0;
-
-    BusRW<uint16, false>(A, tmp, BurstHax, SH2DMAHax);
-    V |= tmp << 16;
-   }
-
-   return;
-  }
-
-  //
-  // Low(and kinda slow) work RAM 
-  //
-  if(A >= 0x00200000 && A <= 0x003FFFFF)
-  {
-   ne16_rwbo_be<T, IsWrite>(WorkRAML, A & 0xFFFFF, &V);
-
    if(!SH2DMAHax)
-    SH7095_mem_timestamp += 7;
-   else
-    *SH2DMAHax -= 7;
-
-   return;
-  }
-
-  //
-  // BIOS ROM
-  //
-  if(A >= 0x00000000 && A <= 0x000FFFFF)
-  {
-   if(!SH2DMAHax)
-    SH7095_mem_timestamp += 8;
-   else
-    *SH2DMAHax -= 8;
-
-   if(!IsWrite) 
-    V = ne16_rbo_be<T>(BIOSROM, A & 0x7FFFF);
-
-   return;
-  }
-
-  //
-  // SMPC
-  //
-  if(A >= 0x00100000 && A <= 0x0017FFFF)
-  {
-   const uint32 SMPC_A = (A & 0x7F) >> 1;
-
-    if(!SH2DMAHax)
-   // SH7095_mem_timestamp += 2;
    {
-   //
-    // SH7095_mem_timestamp += 2;
-    CheckEventsByMemTS();
-   }
-
-   if(IsWrite)
-   {
-    if(sizeof(T) == 2 || (A & 1))
-     SMPC_Write(SH7095_mem_timestamp, SMPC_A, V);
-   }
-   else
-   {
-    if(sizeof(T) == 2)
-     V = 0xFF00 | SMPC_Read(SH7095_mem_timestamp, SMPC_A);
-    else if(sizeof(T) == 1 && (A & 1))
-     V = SMPC_Read(SH7095_mem_timestamp, SMPC_A);
+    if(IsWrite)
+    {
+     SH7095_mem_timestamp = (SH7095_mem_timestamp + 4) &~ 3;
+    }
     else
-     V = 0xFF;
-   }
-
-   return;
-  }
-
-  //
-  // Backup RAM
-  //
-  if(A >= 0x00180000 && A <= 0x001FFFFF)
-  {
-   if(!SH2DMAHax)
-    SH7095_mem_timestamp += 8;
-   else
-    *SH2DMAHax -= 8;
-
-   if(IsWrite)
-   {
-    if(sizeof(T) != 1 || (A & 1))
     {
-     BackupRAM[(A >> 1) & 0x7FFF] = V;
-     BackupRAM_Dirty = true;
+     SH7095_mem_timestamp += 7;
     }
    }
    else
-    V = ((BackupRAM[(A >> 1) & 0x7FFF] << 0) | (0xFF << 8)) >> (((A & 1) ^ (sizeof(T) & 1)) << 3);  
-
-   return;
+    *SH2DMAHax -= IsWrite ? 3 : 6;
   }
-
-  //
-  // FRT trigger region
-  //
-  if(A >= 0x01000000 && A <= 0x01FFFFFF)
-  {
-   if(!SH2DMAHax)
-    SH7095_mem_timestamp += 8;
-   else
-    *SH2DMAHax -= 8;
-
-   //printf("FT FRT%08x %zu %08x %04x %d %d\n", A, sizeof(T), A, V, SMPC_IsSlaveOn(), SH7095_mem_timestamp);
-
-   if(IsWrite)
-   {
-    if(sizeof(T) != 1)
-    {
-     const unsigned c = ((A >> 23) & 1) ^ 1;
-
-     if(!c || SMPC_IsSlaveOn())
-     {
-      CPU[c].SetFTI(true);
-      CPU[c].SetFTI(false);
-     }
-    }
-   }
-   return;
-  }
-
-
-  //
-  //
-  //
-   if(!SH2DMAHax)
-    SH7095_mem_timestamp += 4;
-   else
-    *SH2DMAHax -= 4;
-
-  if(IsWrite)
-   SS_DBG(SS_DBG_WARNING, "[SH2 BUS] Unknown %zu-byte write of 0x%08x to 0x%08x\n", sizeof(T), V, A);
-  else
-  {
-   SS_DBG(SS_DBG_WARNING, "[SH2 BUS] Unknown %zu-byte read from 0x%08x\n", sizeof(T), A);
-
-   V = 0;
-  }
-
   return;
  }
 
  //
- // SCU
+ // CS1 and CS2: SCU
  //
- {
-  uint32 DB;
+ if(!IsWrite)
+  DB = 0;
 
-  if(IsWrite)
-   DB = V << (((A & 3) ^ (4 - sizeof(T))) << 3); 
-  else
-   DB = 0;
-
-  SCU_FromSH2_BusRW_DB<T, IsWrite>(A, &DB, SH2DMAHax);
-
-  if(!IsWrite)
-   V = DB >> (((A & 3) ^ (4 - sizeof(T))) << 3); 
- }
+ SCU_FromSH2_BusRW_DB<T, IsWrite>(A, &DB, SH2DMAHax);
 }
 
 template<typename T>
 static void INLINE SH7095_BusWrite(uint32 A, T V, const bool BurstHax, int32* SH2DMAHax)
 {
- BusRW<T, true>(A, V, BurstHax, SH2DMAHax);
+ uint32 DB = SH7095_DB;
+
+ if(A < 0x02000000)	// CS0, configured as 16-bit
+ {
+  if(sizeof(T) == 4)
+  {
+   // TODO/FIXME: Don't allow DMA transfers to occur between the two 16-bit accesses.
+   //if(!SH2DMAHax)
+   // SH7095_BusLock++;
+
+   DB = (DB & 0xFFFF0000) | (V >> 16);
+   BusRW_DB_CS0<uint16, true>(A, DB, BurstHax, SH2DMAHax);
+
+   DB = (DB & 0xFFFF0000) | (uint16)V;
+   BusRW_DB_CS0<uint16, true>(A | 2, DB, BurstHax, SH2DMAHax);
+
+   //if(!SH2DMAHax)
+   // SH7095_BusLock--;
+  }
+  else
+  {
+   const uint32 shift = ((A & 1) ^ (2 - sizeof(T))) << 3;
+   const uint32 mask = (0xFFFF >> ((2 - sizeof(T)) * 8)) << shift;
+
+   DB = (DB & ~mask) | (V << shift);
+   BusRW_DB_CS0<T, true>(A, DB, BurstHax, SH2DMAHax);
+  }
+ }
+ else	// CS1, CS2, CS3; 32-bit
+ {
+  const uint32 shift = ((A & 3) ^ (4 - sizeof(T))) << 3;
+  const uint32 mask = (0xFFFFFFFF >> ((4 - sizeof(T)) * 8)) << shift;
+
+  DB = (DB & ~mask) | (V << shift); // //ne32_wbo_be<T>(&DB, A & 0x3, V);
+  BusRW_DB_CS123<T, true>(A, DB, BurstHax, SH2DMAHax);
+ }
+
+ SH7095_DB = DB;
 }
 
 template<typename T>
 static T INLINE SH7095_BusRead(uint32 A, const bool BurstHax, int32* SH2DMAHax)
 {
- T ret = 0;
+ uint32 DB = SH7095_DB;
+ T ret;
 
- BusRW<T, false>(A, ret, BurstHax, SH2DMAHax);
+ if(A < 0x02000000)	// CS0, configured as 16-bit
+ {
+  if(sizeof(T) == 4)
+  {
+   // TODO/FIXME: Don't allow DMA transfers to occur between the two 16-bit accesses.
+   //if(!SH2DMAHax)
+   // SH7095_BusLock++;
 
+   BusRW_DB_CS0<uint16, false>(A, DB, BurstHax, SH2DMAHax);
+   ret = DB << 16;
+
+   BusRW_DB_CS0<uint16, false>(A | 2, DB, BurstHax, SH2DMAHax);
+   ret |= (uint16)DB;
+
+   //if(!SH2DMAHax)
+   // SH7095_BusLock--;
+  }
+  else
+  {
+   BusRW_DB_CS0<T, false>(A, DB, BurstHax, SH2DMAHax);
+   ret = DB >> (((A & 1) ^ (2 - sizeof(T))) << 3);
+  }
+ }
+ else	// CS1, CS2, CS3; 32-bit
+ {
+  BusRW_DB_CS123<T, false>(A, DB, BurstHax, SH2DMAHax);
+  ret = DB >> (((A & 3) ^ (4 - sizeof(T))) << 3);
+
+  // SDRAM leaves data bus in a weird state after read...
+  //if(A >= 0x06000000)
+  // DB = 0;
+ }
+
+ SH7095_DB = DB;
  return ret;
 }
 
@@ -452,11 +453,7 @@ static MDFN_COLD uint8 CheatMemRead(uint32 A)
 {
  A &= (1U << 27) - 1;
 
- #ifdef MSB_FIRST
- return *(uint8*)(SH7095_FastMap[A >> SH7095_EXT_MAP_GRAN_BITS] + (A ^ 0));
- #else
- return *(uint8*)(SH7095_FastMap[A >> SH7095_EXT_MAP_GRAN_BITS] + (A ^ 1));
- #endif
+ return ne16_rbo_be<uint8>(SH7095_FastMap[A >> SH7095_EXT_MAP_GRAN_BITS], A);
 }
 
 static MDFN_COLD void CheatMemWrite(uint32 A, uint8 V)
@@ -465,11 +462,7 @@ static MDFN_COLD void CheatMemWrite(uint32 A, uint8 V)
 
  if(FMIsWriteable[A >> SH7095_EXT_MAP_GRAN_BITS])
  {
-  #ifdef MSB_FIRST
-  *(uint8*)(SH7095_FastMap[A >> SH7095_EXT_MAP_GRAN_BITS] + (A ^ 0)) = V;
-  #else
-  *(uint8*)(SH7095_FastMap[A >> SH7095_EXT_MAP_GRAN_BITS] + (A ^ 1)) = V;
-  #endif
+  ne16_wbo_be<uint8>(SH7095_FastMap[A >> SH7095_EXT_MAP_GRAN_BITS], A, V);
 
   for(unsigned c = 0; c < 2; c++)
   {
@@ -737,7 +730,7 @@ void SS_RequestMLExit(void)
 #else
  #pragma GCC optimize("O2,no-unroll-loops,no-peel-loops,no-crossjumping")
 #endif
-template<bool DebugMode>
+template<bool EmulateICache, bool DebugMode>
 static int32 NO_INLINE RunLoop(EmulateSpecStruct* espec)
 {
  sscpu_timestamp_t eff_ts = 0;
@@ -753,7 +746,7 @@ static int32 NO_INLINE RunLoop(EmulateSpecStruct* espec)
     DBG_CPUHandler<0>(eff_ts);
 #endif
 
-   CPU[0].Step<0, DebugMode>();
+   CPU[0].Step<0, EmulateICache, DebugMode>();
    CPU[0].DMA_BusTimingKludge();
 
    while(MDFN_LIKELY(CPU[0].timestamp > CPU[1].timestamp))
@@ -763,7 +756,7 @@ static int32 NO_INLINE RunLoop(EmulateSpecStruct* espec)
      DBG_CPUHandler<1>(eff_ts);
 #endif
 
-    CPU[1].Step<1, DebugMode>();
+    CPU[1].Step<1, EmulateICache, DebugMode>();
    }
 
    eff_ts = CPU[0].timestamp;
@@ -780,7 +773,6 @@ static int32 NO_INLINE RunLoop(EmulateSpecStruct* espec)
 #pragma GCC pop_options
 
 // Must not be called within an event or read/write handler.
-
 void SS_Reset(bool powering_up)
 {
  SH7095_BusLock = 0;
@@ -812,6 +804,20 @@ void SS_Reset(bool powering_up)
  CART_Reset(powering_up);
 }
 
+static EmulateSpecStruct* espec;
+static bool AllowMidSync;
+static int32 cur_clock_div;
+
+static int64 UpdateInputLastBigTS;
+static INLINE void UpdateSMPCInput(const sscpu_timestamp_t timestamp)
+{
+ int32 elapsed_time = (((int64)timestamp * cur_clock_div * 1000 * 1000) - UpdateInputLastBigTS) / (EmulatedSS.MasterClock / MDFN_MASTERCLOCK_FIXED(1));
+
+ UpdateInputLastBigTS += (int64)elapsed_time * (EmulatedSS.MasterClock / MDFN_MASTERCLOCK_FIXED(1));
+
+ SMPC_UpdateInput(elapsed_time);
+}
+
 static sscpu_timestamp_t MidSync(const sscpu_timestamp_t timestamp)
 {
  if(AllowMidSync)
@@ -826,7 +832,7 @@ static sscpu_timestamp_t MidSync(const sscpu_timestamp_t timestamp)
        espec->MasterCycles = timestamp * cur_clock_div;
     }
     //printf("%d\n", espec->SoundBufSize);
-    
+
     SMPC_UpdateOutput();
     //
     //
@@ -863,15 +869,23 @@ static void Emulate(EmulateSpecStruct* espec_arg)
  ForceEventUpdates(0);
 
 #ifdef WANT_DEBUGGER
- if(DBG_NeedCPUHooks())
-  end_ts = RunLoop<true>(espec);
- else
+ #define RLTDAT true
+#else
+ #define RLTDAT false
 #endif
-  end_ts = RunLoop<false>(espec);
+ static int32 (*const rltab[2][2])(EmulateSpecStruct*) =
+ {
+  //     DebugMode=false        DebugMode=true
+  { RunLoop<false, false>, RunLoop<false, RLTDAT> },	// EmulateICache=false
+  { RunLoop<true,  false>, RunLoop<true,  RLTDAT> },	// EmulateICache=true
+ };
+#undef RLTDAT
+ end_ts = rltab[NeedEmuICache][DBG_NeedCPUHooks()](espec);
 
  ForceEventUpdates(end_ts);
  //
  SMPC_EndFrame(espec, end_ts);
+ //
  //
  //
  RebaseTS(end_ts);
@@ -899,7 +913,7 @@ static void Emulate(EmulateSpecStruct* espec_arg)
  espec->MasterCycles = end_ts * cur_clock_div;
  espec->SoundBufSize += SOUND_FlushOutput();
  espec->NeedSoundReverse = false;
- 
+
  SMPC_UpdateOutput();
  //
  //
@@ -1185,14 +1199,45 @@ typedef struct
    const char *name;
 } CartName;
 
-static bool InitCommon(const unsigned cart_type, const unsigned smpc_area)
+static bool InitCommon(const unsigned cpucache_emumode, const unsigned cart_type, const unsigned smpc_area)
 {
+#ifdef MDFN_SS_DEV_BUILD
+ ss_dbg_mask = SS_DBG_ERROR;
+ {
+  std::vector<uint64> dms = MDFN_GetSettingMultiUI("ss.dbg_mask");
+
+  for(uint64 dmse : dms)
+   ss_dbg_mask |= dmse;
+ }
+#endif
+ //
 
    unsigned i;
-#ifdef MDFN_SS_DEV_BUILD
-   ss_dbg_mask = MDFN_GetSettingUI("ss.dbg_mask");
-#endif
+ //
+ {
+  const struct
+  {
+   unsigned mode;
+   const char* name;
+  } CPUCacheEmuModes[] =
+  {
+   { CPUCACHE_EMUMODE_DATA_CB,	_("Data only, with high-level bypass") },
+   { CPUCACHE_EMUMODE_DATA,	_("Data only") },
+   { CPUCACHE_EMUMODE_FULL,	_("Full") },
+  };
+  const char* cem = _("Unknown");
 
+  for(auto const& ceme : CPUCacheEmuModes)
+  {
+   if(ceme.mode == cpucache_emumode)
+   {
+    cem = ceme.name;
+    break;
+   }
+  }
+  log_cb(RETRO_LOG_INFO, "[Mednafen]: CPU Cache Emulation Mode: %s\n", cem);
+ }
+ //
    {
       log_cb(RETRO_LOG_INFO, "[Mednafen]: Region: 0x%01x.\n", smpc_area);
       const CartName CartNames[] =
@@ -1221,15 +1266,16 @@ static bool InitCommon(const unsigned cart_type, const unsigned smpc_area)
    }
    //
 
+   NeedEmuICache = (cpucache_emumode == CPUCACHE_EMUMODE_FULL);
    for(i = 0; i < 2; i++)
    {
-      CPU[i].Init();
+      CPU[i].Init(cpucache_emumode == CPUCACHE_EMUMODE_DATA_CB);
       CPU[i].SetMD5((bool)i);
    }
 
    //
    // Initialize backup memory.
-   // 
+   //
    memset(BackupRAM, 0x00, sizeof(BackupRAM));
    for(i = 0; i < 0x40; i++)
       BackupRAM[i] = BRAM_Init_Data[i & 0x0F];
@@ -1308,7 +1354,7 @@ static bool InitCommon(const unsigned cart_type, const unsigned smpc_area)
             }
             else if(fn == dbe.fn)	// Discourage people from renaming files instead of changing settings.
             {
-               log_cb(RETRO_LOG_ERROR, 
+               log_cb(RETRO_LOG_ERROR,
                      "BIOS hash does not match that as expected by filename.\n");
                return false;
             }
@@ -1377,7 +1423,7 @@ static bool InitCommon(const unsigned cart_type, const unsigned smpc_area)
 
       snprintf(buf, sizeof(buf), "ss.input.port%u.gun_chairs", vp + 1);
       sv = MDFN_GetSettingUI(buf);
-      SMPC_SetCrosshairsColor(vp, sv);  
+      SMPC_SetCrosshairsColor(vp, sv);
    }
    //
    //
@@ -1403,14 +1449,14 @@ static bool InitCommon(const unsigned cart_type, const unsigned smpc_area)
 
       if((ut = time(NULL)) == (time_t)-1)
       {
-         log_cb(RETRO_LOG_ERROR, 
+         log_cb(RETRO_LOG_ERROR,
                "AutoRTC error #1\n");
          return false;
       }
 
       if((ht = localtime(&ut)) == NULL)
       {
-         log_cb(RETRO_LOG_ERROR, 
+         log_cb(RETRO_LOG_ERROR,
                "AutoRTC error #2\n");
          return false;
       }
@@ -1433,7 +1479,7 @@ static bool TestMagic(MDFNFILE* fp)
 static MDFN_COLD bool Load(MDFNFILE* fp)
 {
 #if 0
-   // cat regiondb.inc | sort | uniq --all-repeated=separate -w 102 
+   // cat regiondb.inc | sort | uniq --all-repeated=separate -w 102
    {
       FileStream rdbfp("/tmp/regiondb.inc", MODE_WRITE);
       Stream* s = fp->stream();
@@ -1449,7 +1495,7 @@ static MDFN_COLD bool Load(MDFNFILE* fp)
          int m = iface->ReadSector(sbuf, 0, 16, true);
          std::string fb;
 
-         assert(m == 0x1); 
+         assert(m == 0x1);
          assert(IsSaturnDisc(&sbuf[0]) == true);
          //
          uint8 dummytmp[16] = { 0 };
@@ -1526,7 +1572,7 @@ static MDFN_COLD bool Load(MDFNFILE* fp)
    }
 #endif
 
-   if (!InitCommon(CART_MDFN_DEBUG, MDFN_GetSettingUI("ss.region_default")))
+   if (!InitCommon(CPUCACHE_EMUMODE_DATA, CART_MDFN_DEBUG, MDFN_GetSettingUI("ss.region_default")))
       return false;
 
    // 0x25FE00C4 = 0x1;
@@ -1597,7 +1643,7 @@ static bool DiscSanityChecks(void)
 
             if(!(*cdifs)[i]->ReadRawSectorPWOnly(pwbuf, lba, false))
             {
-               log_cb(RETRO_LOG_ERROR, 
+               log_cb(RETRO_LOG_ERROR,
                      "Disc %zu of %zu: Error reading sector at lba=%d in DiscSanityChecks().\n", i + 1, cdifs->size(), lba);
                return false;
             }
@@ -1619,7 +1665,7 @@ static bool DiscSanityChecks(void)
 
                if(lm != qm || ls != qs || lf != qf)
                {
-                  log_cb(RETRO_LOG_ERROR, 
+                  log_cb(RETRO_LOG_ERROR,
                   "Disc %zu of %zu: Time mismatch at lba=%d(%02x:%02x:%02x); Q subchannel: %02x:%02x:%02x\n",
                         i + 1, cdifs->size(),
                         lba,
@@ -1632,7 +1678,7 @@ static bool DiscSanityChecks(void)
 
          if(!any_subq_curpos)
          {
-            log_cb(RETRO_LOG_ERROR, 
+            log_cb(RETRO_LOG_ERROR,
                   "Disc %zu of %zu: No valid Q subchannel ADR_CURPOS data present at lba %d-%d?!\n", i + 1, cdifs->size(), start_lba, end_lba);
             return false;
          }
@@ -1646,37 +1692,32 @@ static bool DiscSanityChecks(void)
 
 static MDFN_COLD bool LoadCD(std::vector<CDIF *>* CDInterfaces)
 {
-   unsigned region = setting_region;
+   const int ss_cart_setting = MDFN_GetSettingI("ss.cart");
+   unsigned region;
    int cart_type;
+   unsigned cpucache_emumode;
    uint8 fd_id[16];
-   char sgid[16 + 1];
+   char sgid[16 + 1] = { 0 };
    cdifs = CDInterfaces;
-
-   log_cb(RETRO_LOG_INFO, "Calculating game ID...\n");
    CalcGameID(MDFNGameInfo->MD5, fd_id, sgid);
-   log_cb(RETRO_LOG_INFO, "Game ID is now: %s\n", sgid);
 
-	// auto-detect?
-	if ( region == 0 )
-	{
-		region = SMPC_AREA_NA; /* most likely */
-		log_cb(RETRO_LOG_INFO, "Trying to autodetect region...\n");
-		if ( !DB_LookupRegionDB( fd_id, &region ) )
-		{
-			log_cb(RETRO_LOG_INFO, "[Mednafen]: Could not find region inside DB.\n");
-			DetectRegion(&region);
-		}
-	}
+   log_cb(RETRO_LOG_INFO, "Game ID is: %s\n", sgid);
 
-   //
-   //
-   if((cart_type = MDFN_GetSettingI("ss.cart")) == CART__RESERVED)
-   {
-      log_cb(RETRO_LOG_INFO, "Trying to lookup cartridge from DB...\n");
-      cart_type = CART_BACKUP_MEM;
-      DB_LookupCartDB(sgid, fd_id, &cart_type);
+   region = setting_region;
+   cart_type = CART_BACKUP_MEM;
+   cpucache_emumode = CPUCACHE_EMUMODE_DATA;
+
+   DetectRegion(&region);
+   DB_Lookup(nullptr, sgid, fd_id, &region, &cart_type, &cpucache_emumode);
+
+   // forced region setting?
+   if ( setting_region != 0 ) {
+	   region = setting_region;
    }
 
+  if(ss_cart_setting != CART__RESERVED)
+   cart_type = ss_cart_setting;
+  //
    if(MDFN_GetSettingB("ss.cd_sanity"))
    {
       log_cb(RETRO_LOG_INFO, "Trying to do CD sanity checks...\n");
@@ -1685,14 +1726,14 @@ static MDFN_COLD bool LoadCD(std::vector<CDIF *>* CDInterfaces)
    }
    else
    {
-      log_cb(RETRO_LOG_WARN, 
+      log_cb(RETRO_LOG_WARN,
             "WARNING: CD (image) sanity checks disabled.\n");
     }
 
    // TODO: auth ID calc
 
 
-   if (!InitCommon(cart_type, region))
+   if (!InitCommon(cpucache_emumode, cart_type, region))
       return false;
 
    return true;
@@ -1712,6 +1753,11 @@ static MDFN_COLD void CloseGame(void)
  SaveRTC();
 
  Cleanup();
+}
+
+void MDFN_BackupSavFile(const uint8 max_backup_count, const char* sav_ext)
+{
+	// stub for libretro port
 }
 
 static MDFN_COLD void SaveBackupRAM(void)
@@ -1769,10 +1815,9 @@ static MDFN_COLD void LoadCartNV(void)
    {
     void* p = (uint8*)nv_ptr + i;
 
-    MDFN_ennsb<uint16_t>(p, MDFN_de16msb(p));
+    MDFN_ennsb<uint16>(p, MDFN_de16msb(p));
    }
   }
-
  }
 }
 
@@ -1945,6 +1990,7 @@ MDFN_COLD int LibRetro_StateAction( StateMem* sm, const unsigned load, const boo
 
   SFVAR(SH7095_mem_timestamp),
   SFVAR(SH7095_BusLock),
+  SFVAR(SH7095_DB),
 
   SFARRAY16(WorkRAML, sizeof(WorkRAML) / sizeof(WorkRAML[0])),
   SFARRAY16(WorkRAMH, sizeof(WorkRAMH) / sizeof(WorkRAMH[0])),
@@ -2506,7 +2552,7 @@ static void check_variables(bool startup)
    }
 
    var.key = "beetle_saturn_autortc";
-   
+
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
       if (strcmp(var.value, "enabled") == 0)
@@ -3339,7 +3385,7 @@ unsigned retro_api_version(void)
 
 void retro_set_controller_port_device(unsigned in_port, unsigned device)
 {
-   // Store input type 
+   // Store input type
    input_type[in_port] = device;
 
    switch (device)

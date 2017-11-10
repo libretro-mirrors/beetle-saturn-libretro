@@ -20,6 +20,12 @@
 */
 
 /*
+   Instruction cache emulation shouldn't be enabled globally for all games until we resolve timestamp vs mem_timestamp issues
+   in regards to bus contention and time sharing, or else emulated dual-CPU programs may run slower
+   than they should and probably glitch out(and also until 5GHz desktop CPUs are the norm ;)).
+*/
+
+/*
  Emulation implementation notes/deficiencies:
 	Cache multiple-way tag collisions (ostensibly an illegal condition) during reads/writes are not handled accurately.
 
@@ -75,11 +81,6 @@
        performance.
 */
 
-// Shouldn't enable instruction cache emulation until we resolve timestamp vs mem_timestamp issues
-// in regards to bus contention and time sharing, or else emulated dual-CPU programs will run slower
-// than they should and probably glitch out(and also until 5GHz desktop CPUs are the norm ;)).
-//#define SH7095_EMULATE_ICACHE
-
 #ifdef MSB_FIRST
  #define NE32ASU8_IDX_ADJ(T, idx) (idx)
 #else
@@ -88,22 +89,24 @@
 
 SH7095::SH7095(const char* const name_arg, const unsigned event_id_dma_arg, uint8 (*exivecfn_arg)(void)) : event_id_dma(event_id_dma_arg), cpu_name(name_arg), ExIVecFetch(exivecfn_arg)
 {
- Init();
+ Init(false);
 }
 
-template<unsigned which, typename T, unsigned region, bool CacheEnabled, bool TwoWayMode, bool IsInstr>
+template<unsigned which, typename T, unsigned region, bool CacheEnabled, bool TwoWayMode, bool IsInstr, bool CacheBypassHack>
 static NO_INLINE  T C_MemReadRT(uint32 A);
 
 template<unsigned which, typename T, unsigned region, bool CacheEnabled>
 static NO_INLINE  void C_MemWriteRT(uint32 A, T V);
 
-void SH7095::Init(void)
+void SH7095::Init(const bool cbh)
 {
+ CBH_Setting = cbh;
+ //
  #define MAHL_P(w, region) {									\
-		  MRFP8[region]  = C_MemReadRT<w, uint8,  region, false, false, false>;	\
-		  MRFP16[region] = C_MemReadRT<w, uint16, region, false, false, false>;	\
-		  MRFP32[region] = C_MemReadRT<w, uint32, region, false, false, false>;	\
-		  MRFPI[region]  = C_MemReadRT<w, uint32, region, false, false, true>;	\
+		  MRFP8[region]  = C_MemReadRT<w, uint8,  region, false, false, false, false>;	\
+		  MRFP16[region] = C_MemReadRT<w, uint16, region, false, false, false, false>;	\
+		  MRFP32[region] = C_MemReadRT<w, uint32, region, false, false, false, false>;	\
+		  MRFPI[region]  = C_MemReadRT<w, uint32, region, false, false, true, false>;	\
 		  MWFP8[region]  = C_MemWriteRT<w, uint8,  region, false>;	\
 		  MWFP16[region] = C_MemWriteRT<w, uint16, region, false>;	\
 		  MWFP32[region] = C_MemWriteRT<w, uint32, region, false>;	\
@@ -1937,7 +1940,7 @@ INLINE void SH7095::AssocPurge(const uint32 A)
  if(ATM == cent->Tag[3]) cent->Tag[3] |= 1U << 31;
 }
 
-template<typename T, unsigned region, bool CacheEnabled, bool TwoWayMode, bool IsInstr>
+template<typename T, unsigned region, bool CacheEnabled, bool TwoWayMode, bool IsInstr, bool CacheBypassHack>
 INLINE T SH7095::MemReadRT(uint32 A)
 {
  static_assert(region < 0x8, "Wrong region argument.");
@@ -2015,14 +2018,17 @@ INLINE T SH7095::MemReadRT(uint32 A)
 	   timestamp = SH7095_mem_timestamp;
 	 }
 
-#if 0
-	 if((SH7095_FastMap[A >> SH7095_EXT_MAP_GRAN_BITS] + (A & ((1U << SH7095_EXT_MAP_GRAN_BITS) - 1))) == (uintptr_t)fmap_dummy)
-	  SS_DBG(SS_DBG_WARNING | SS_DBG_SH2, "[%s] Cacheable %zu-byte read from non-RAM address 0x%08x!\n", cpu_name, sizeof(T), A);
-	 else if(ne16_rbo_be<T>((uint16*)(SH7095_FastMap[A >> SH7095_EXT_MAP_GRAN_BITS] + (A & ~0x3)), A & 0x3) != MDFN_densb<T, true>(&cent->Data[way_match][NE32ASU8_IDX_ADJ(T, A & 0x0F)]))
-	  SS_DBG(SS_DBG_WARNING | SS_DBG_SH2, "[%s] Cache incoherency for %zu-byte read from address 0x%08x!\n", cpu_name, sizeof(T), A);
-#endif
+	 if((SH7095_FastMap[A >> SH7095_EXT_MAP_GRAN_BITS] + (A & ~((1U << SH7095_EXT_MAP_GRAN_BITS) - 1))) == (uintptr_t)fmap_dummy)
+	  SS_DBG(SS_DBG_WARNING | SS_DBG_SH2_CACHE, "[%s] Cacheable %zu-byte read from non-RAM address 0x%08x!\n", cpu_name, sizeof(T), A);
+	 else if(ne16_rbo_be<T>(SH7095_FastMap[A >> SH7095_EXT_MAP_GRAN_BITS], A) != MDFN_densb<T, true>(&cent->Data[way_match][NE32ASU8_IDX_ADJ(T, A & 0x0F)]))
+	  SS_DBG(SS_DBG_WARNING | SS_DBG_SH2_CACHE, "[%s] Cache incoherency for %zu-byte read from address 0x%08x!\n", cpu_name, sizeof(T), A);
 
 	 cent->LRU = (cent->LRU & LRU_Update_Tab[way_match].AND) | LRU_Update_Tab[way_match].OR;
+
+	 // Ugggghhhh....
+	 if(CacheBypassHack && FMIsWriteable[A >> SH7095_EXT_MAP_GRAN_BITS])
+	  return ne16_rbo_be<T>(SH7095_FastMap[A >> SH7095_EXT_MAP_GRAN_BITS], A);
+
   	 return MDFN_densb<T, true>(&cent->Data[way_match][NE32ASU8_IDX_ADJ(T, A & 0x0F)]);
 	}
 	// Fall-through, no break here
@@ -2198,10 +2204,10 @@ INLINE void SH7095::MemWrite(uint32 A, T V)
 }
 
 
-template<unsigned which, typename T, unsigned region, bool CacheEnabled, bool TwoWayMode, bool IsInstr>
+template<unsigned which, typename T, unsigned region, bool CacheEnabled, bool TwoWayMode, bool IsInstr, bool CacheBypassHack>
 static NO_INLINE  T C_MemReadRT(uint32 A)
 {
- return CPU[which].MemReadRT<T, region, CacheEnabled, TwoWayMode, IsInstr>(A);
+ return CPU[which].MemReadRT<T, region, CacheEnabled, TwoWayMode, IsInstr, CacheBypassHack>(A);
 }
 
 template<unsigned which, typename T, unsigned region, bool CacheEnabled>
@@ -2213,12 +2219,11 @@ static NO_INLINE  void C_MemWriteRT(uint32 A, T V)
 
 INLINE void SH7095::SetCCR(uint8 V)
 {
- SS_DBG(SS_DBG_WARNING | SS_DBG_SH2, "[%s] Write to CCR: 0x%02x\n", cpu_name, V);
+ if(CCR != V)
+  SS_DBG(SS_DBG_SH2_CACHE, "[%s] CCR changed: 0x%02x->0x%02x%s\n", cpu_name, CCR, V, (V & CCR_CP) ? " (CACHE PURGE!)" : "");
 
  if(V & CCR_CP)
  {
-  SS_DBG(SS_DBG_WARNING | SS_DBG_SH2, "[%s] Cache purge.\n", cpu_name);
-
   for(unsigned entry = 0; entry < 64; entry++)
   {
    Cache[entry].LRU = 0;
@@ -2227,41 +2232,58 @@ INLINE void SH7095::SetCCR(uint8 V)
   }
   V &= ~CCR_CP;
  }
-
  CCR = V;
 
- #define MAHL(bs,w)									\
-		 if(CCR & CCR_CE)							\
-		 {									\
-		  if(CCR & CCR_TW)							\
-		  {									\
-		   MRFP##bs[0] = C_MemReadRT <w, uint##bs, 0x0, true, true, false>;	\
-		   MRFPI[0]    = C_MemReadRT <w, uint32,   0x0, true, true, true>;	\
-		  }									\
-		  else									\
-		  {									\
-		   MRFP##bs[0] = C_MemReadRT <w, uint##bs, 0x0, true, false, false>;	\
-		   MRFPI[0]    = C_MemReadRT <w, uint32,   0x0, true, false, true>;	\
-		  }									\
-		  MWFP##bs[0] = C_MemWriteRT<w, uint##bs, 0x0, true>;			\
-		 }									\
-		 else									\
-		 {									\
-		  MRFP##bs[0] =  C_MemReadRT <w, uint##bs, 0x0, false, false, false>;	\
-		  MRFPI[0]    =  C_MemReadRT <w, uint32,   0x0, false, false, true>;	\
-		  MWFP##bs[0] =  C_MemWriteRT<w, uint##bs, 0x0, false>;			\
+ #define MAHL(bs,w,cbh)										\
+		 if(CCR & CCR_CE)								\
+		 {										\
+		  if(CCR & CCR_TW)								\
+		  {										\
+		   MRFP##bs[0] = C_MemReadRT <w, uint##bs, 0x0, true, true, false, cbh>;	\
+		   MRFPI[0]    = C_MemReadRT <w, uint32,   0x0, true, true, true, cbh>;		\
+		  }										\
+		  else										\
+		  {										\
+		   MRFP##bs[0] = C_MemReadRT <w, uint##bs, 0x0, true, false, false, cbh>;	\
+		   MRFPI[0]    = C_MemReadRT <w, uint32,   0x0, true, false, true, cbh>;	\
+		  }										\
+		  MWFP##bs[0] = C_MemWriteRT<w, uint##bs, 0x0, true>;				\
+		 }										\
+		 else										\
+		 {										\
+		  MRFP##bs[0] =  C_MemReadRT <w, uint##bs, 0x0, false, false, false, cbh>;	\
+		  MRFPI[0]    =  C_MemReadRT <w, uint32,   0x0, false, false, true, cbh>;	\
+		  MWFP##bs[0] =  C_MemWriteRT<w, uint##bs, 0x0, false>;				\
 		 }
  if(this == &CPU[0])
  {
-  MAHL( 8, 0)
-  MAHL(16, 0)
-  MAHL(32, 0)
+  if(CBH_Setting)
+  {
+   MAHL( 8, 0, true)
+   MAHL(16, 0, true)
+   MAHL(32, 0, true)
+  }
+  else
+  {
+   MAHL( 8, 0, false)
+   MAHL(16, 0, false)
+   MAHL(32, 0, false)
+  }
  }
  else
  {
-  MAHL( 8, 1)
-  MAHL(16, 1)
-  MAHL(32, 1)
+  if(CBH_Setting)
+  {
+   MAHL( 8, 1, true)
+   MAHL(16, 1, true)
+   MAHL(32, 1, true)
+  }
+  else
+  {
+   MAHL( 8, 1, false)
+   MAHL(16, 1, false)
+   MAHL(32, 1, false)
+  }
  }
  #undef MAHL
 }
@@ -2513,47 +2535,50 @@ static const uint8 InstrDecodeTab[65536] =
  #include "sh7095_idecodetab.inc"
 };
 
-template<bool DebugMode>
+template<bool EmulateICache, bool DebugMode>
 INLINE void SH7095::FetchIF(bool ForceIBufferFill)
 {
  if(DebugMode)
   PC_IF = PC;
 
-#ifdef SH7095_EMULATE_ICACHE
- if(ForceIBufferFill)
+ if(EmulateICache)
  {
-  IBuffer = MRFPI[PC >> 29](PC &~ 2);
-  Pipe_IF = (uint16)(IBuffer >> (((PC & 2) ^ 2) << 3));
+  if(ForceIBufferFill)
+  {
+   IBuffer = MRFPI[PC >> 29](PC &~ 2);
+   Pipe_IF = (uint16)(IBuffer >> (((PC & 2) ^ 2) << 3));
+  }
+  else
+  {
+   Pipe_IF = (uint16)IBuffer;
+   if(!(PC & 0x2))
+   {
+    IBuffer = MRFPI[PC >> 29](PC);
+    Pipe_IF = IBuffer >> 16;
+   }
+  }
  }
  else
  {
-  Pipe_IF = (uint16)IBuffer;
-  if(!(PC & 0x2))
+  if(timestamp < (MA_until - (ForceIBufferFill ? 0 : ((int32)(PC & 0x2) << 28))))
+   timestamp = MA_until;
+
+  if(MDFN_UNLIKELY((int32)PC < 0))	// Mr. Boooones
   {
-   IBuffer = MRFPI[PC >> 29](PC);
-   Pipe_IF = IBuffer >> 16;
+   Pipe_IF = MRFP16[PC >> 29](PC);
+   timestamp++;
+   return;
   }
- }
-#else
- if(timestamp < (MA_until - (ForceIBufferFill ? 0 : ((int32)(PC & 0x2) << 28))))
-  timestamp = MA_until;
 
- if(MDFN_UNLIKELY((int32)PC < 0))	// Mr. Boooones
- {
-  Pipe_IF = MRFP16[PC >> 29](PC);
-  timestamp++;
-  return;
+  Pipe_IF = *(uint16*)(SH7095_FastMap[PC >> SH7095_EXT_MAP_GRAN_BITS] + PC);
  }
-
- Pipe_IF = *(uint16*)(SH7095_FastMap[PC >> SH7095_EXT_MAP_GRAN_BITS] + PC);
-#endif
  timestamp++;
 }
 
 //
 // TODO: Stop reading from memory when an exception is pending?
 //
-template<bool DebugMode, bool DelaySlot, bool IntPreventNext, bool SkipFetchIF>
+template<bool EmulateICache, bool DebugMode, bool DelaySlot, bool IntPreventNext, bool SkipFetchIF>
 INLINE void SH7095::DoIDIF_Real(void)
 {
  if(DelaySlot)
@@ -2587,16 +2612,16 @@ INLINE void SH7095::DoIDIF_Real(void)
  }
 
  if(!SkipFetchIF)
-  FetchIF<DebugMode>(false);
+  FetchIF<EmulateICache, DebugMode>(false);
 }
 
-template<unsigned which, bool DebugMode, bool DelaySlot, bool IntPreventNext, bool SkipFetchIF>
+template<unsigned which, bool EmulateICache, bool DebugMode, bool DelaySlot, bool IntPreventNext, bool SkipFetchIF>
 static NO_INLINE void DoIDIF(void)
 {
- CPU[which].DoIDIF_Real<DebugMode, DelaySlot, IntPreventNext, SkipFetchIF>();
+ CPU[which].DoIDIF_Real<EmulateICache, DebugMode, DelaySlot, IntPreventNext, SkipFetchIF>();
 }
 
-template<unsigned which, int DebugMode, bool delayed>
+template<unsigned which, bool EmulateICache, int DebugMode, bool delayed>
 INLINE void SH7095::Branch(uint32 target)
 {
 #if 0
@@ -2613,17 +2638,18 @@ INLINE void SH7095::Branch(uint32 target)
  {
   if(MDFN_UNLIKELY(PC & 1))
   {
-   DoIDIF<which, (bool)DebugMode, true, true, true>();
+   DoIDIF<which, EmulateICache, (bool)DebugMode, true, true, true>();
    SetPEX(PEX_CPUADDR);	// Pending for the instruction after the delay slot instruction.
   }
   else
   {
-#ifdef SH7095_EMULATE_ICACHE
-   if(PC & 0x2)
-    IBuffer = MRFPI[PC >> 29](PC &~ 2);
-#endif
+   if(EmulateICache)
+   {
+    if(PC & 0x2)
+     IBuffer = MRFPI[PC >> 29](PC &~ 2);
+   }
 
-   DoIDIF<which, (bool)DebugMode, true, false, false>();
+   DoIDIF<which, EmulateICache, (bool)DebugMode, true, false, false>();
   }
  }
  else
@@ -2631,24 +2657,25 @@ INLINE void SH7095::Branch(uint32 target)
   if(MDFN_UNLIKELY(PC & 1))
   {
    SetPEX(PEX_CPUADDR);
-   DoIDIF<which, (bool)DebugMode, false, false, true>();
+   DoIDIF<which, EmulateICache, (bool)DebugMode, false, false, true>();
   }
   else
   {
-#ifdef SH7095_EMULATE_ICACHE
-   if(PC & 0x2)
-    IBuffer = MRFPI[PC >> 29](PC &~ 2);
-#endif
+   if(EmulateICache)
+   {
+    if(PC & 0x2)
+     IBuffer = MRFPI[PC >> 29](PC &~ 2);
+   }
 
-   DoIDIF<which, (bool)DebugMode, false, false, false>();
+   DoIDIF<which, EmulateICache, (bool)DebugMode, false, false, false>();
    PC += 2;
-   DoIDIF<which, (bool)DebugMode, false, false, false>();
+   DoIDIF<which, EmulateICache, (bool)DebugMode, false, false, false>();
   }
  }
 }
 
 // Remember to use BEGIN_OP_DLYIDIF instead of BEGIN_OP
-template<unsigned which, int DebugMode>
+template<unsigned which, bool EmulateICache, int DebugMode>
 INLINE void SH7095::UCDelayBranch(uint32 target)
 {
 #if 0
@@ -2667,27 +2694,27 @@ INLINE void SH7095::UCDelayBranch(uint32 target)
 
  if(MDFN_UNLIKELY(PC & 1))
  {
-  DoIDIF<which, (bool)DebugMode, true, true, true>();
+  DoIDIF<which, EmulateICache, (bool)DebugMode, true, true, true>();
   SetPEX(PEX_CPUADDR);	// Pending for the instruction after the delay slot instruction.
  }
  else
  {
-  FetchIF<DebugMode>(true);
+  FetchIF<EmulateICache, DebugMode>(true);
  }
 }
 
-template<unsigned which, int DebugMode>
+template<unsigned which, bool EmulateICache, int DebugMode>
 INLINE void SH7095::UCRelDelayBranch(uint32 disp)
 {
- UCDelayBranch<which, DebugMode>(PC + disp);
+ UCDelayBranch<which, EmulateICache, DebugMode>(PC + disp);
 }
 
 
-template<unsigned which, int DebugMode, bool delayed>
+template<unsigned which, bool EmulateICache, int DebugMode, bool delayed>
 INLINE void SH7095::CondRelBranch(bool cond, uint32 disp)
 {
  if(cond)
-  Branch<which, DebugMode, delayed>(PC + disp);
+  Branch<which, EmulateICache, DebugMode, delayed>(PC + disp);
 }
 
 template<bool DebugMode>
@@ -2747,7 +2774,7 @@ uint32 NO_INLINE SH7095::Exception(const unsigned exnum, const unsigned vecnum)
 
 */
 
-template<unsigned which, bool DebugMode>
+template<unsigned which, bool EmulateICache, bool DebugMode>
 INLINE void SH7095::Step(void)
 {
  //
@@ -2772,14 +2799,14 @@ INLINE void SH7095::Step(void)
  {
  #include "sh7095_opdefs.inc"
 
- #define PART_OP_NORMIDIF DoIDIF<which, DebugMode, false, false, false>();
+ #define PART_OP_NORMIDIF DoIDIF<which, EmulateICache, DebugMode, false, false, false>();
 
  #define BEGIN_OP(x) 	     OP_##x { PART_OP_NORMIDIF
  #define BEGIN_OP_DLYIDIF(x) OP_##x { 
 
  // "Interrupt-disabled" instruction(blocks interrupt from being taken for next instruction).
  // Use with BEGIN_OP_DLYIDIF()
- #define PART_OP_INTDIS DoIDIF<which, DebugMode, false, true, false>();
+ #define PART_OP_INTDIS DoIDIF<which, EmulateICache, DebugMode, false, true, false>();
 
  #define END_OP } break;
 
@@ -4225,7 +4252,7 @@ INLINE void SH7095::Step(void)
  // BF 
  //
  BEGIN_OP(BF)
-	CondRelBranch<which, DebugMode, false>(!GetT(), (uint32)(int8)instr << 1);
+	CondRelBranch<which, EmulateICache, DebugMode, false>(!GetT(), (uint32)(int8)instr << 1);
  END_OP
 
 
@@ -4233,7 +4260,7 @@ INLINE void SH7095::Step(void)
  // BF/S 
  //
  BEGIN_OP(BF_S)
-	CondRelBranch<which, DebugMode, true>(!GetT(), (uint32)(int8)instr << 1);
+	CondRelBranch<which, EmulateICache, DebugMode, true>(!GetT(), (uint32)(int8)instr << 1);
  END_OP
 
 
@@ -4241,7 +4268,7 @@ INLINE void SH7095::Step(void)
  // BT 
  //
  BEGIN_OP(BT)
-	CondRelBranch<which, DebugMode, false>(GetT(), (uint32)(int8)instr << 1);
+	CondRelBranch<which, EmulateICache, DebugMode, false>(GetT(), (uint32)(int8)instr << 1);
  END_OP
 
 
@@ -4249,7 +4276,7 @@ INLINE void SH7095::Step(void)
  // BT/S 
  //
  BEGIN_OP(BT_S)
-	CondRelBranch<which, DebugMode, true>(GetT(), (uint32)(int8)instr << 1);
+	CondRelBranch<which, EmulateICache, DebugMode, true>(GetT(), (uint32)(int8)instr << 1);
  END_OP
 
 
@@ -4257,7 +4284,7 @@ INLINE void SH7095::Step(void)
  // BRA 
  //
  BEGIN_OP_DLYIDIF(BRA)
-	UCRelDelayBranch<which, DebugMode>((uint32)sign_x_to_s32(12, instr) << 1);
+	UCRelDelayBranch<which, EmulateICache, DebugMode>((uint32)sign_x_to_s32(12, instr) << 1);
  END_OP
 
 
@@ -4267,7 +4294,7 @@ INLINE void SH7095::Step(void)
  BEGIN_OP_DLYIDIF(BRAF_REG)
 	const unsigned m = instr_nyb2;
 
-	UCRelDelayBranch<which, DebugMode>(R[m]);
+	UCRelDelayBranch<which, EmulateICache, DebugMode>(R[m]);
  END_OP
 
 
@@ -4277,7 +4304,7 @@ INLINE void SH7095::Step(void)
  BEGIN_OP_DLYIDIF(BSR)
 	PR = PC;
 
-	UCRelDelayBranch<which, DebugMode>((uint32)sign_x_to_s32(12, instr) << 1);
+	UCRelDelayBranch<which, EmulateICache, DebugMode>((uint32)sign_x_to_s32(12, instr) << 1);
  END_OP
 
 
@@ -4289,7 +4316,7 @@ INLINE void SH7095::Step(void)
 
 	PR = PC;
 
-	UCRelDelayBranch<which, DebugMode>(R[m]);
+	UCRelDelayBranch<which, EmulateICache, DebugMode>(R[m]);
  END_OP
 
 
@@ -4299,7 +4326,7 @@ INLINE void SH7095::Step(void)
  BEGIN_OP_DLYIDIF(JMP_REGINDIR)
 	const unsigned m = instr_nyb2;
 
-	UCDelayBranch<which, DebugMode>(R[m]);
+	UCDelayBranch<which, EmulateICache, DebugMode>(R[m]);
  END_OP
 
 
@@ -4311,7 +4338,7 @@ INLINE void SH7095::Step(void)
 
 	PR = PC;
 
-	UCDelayBranch<which, DebugMode>(R[m]);
+	UCDelayBranch<which, EmulateICache, DebugMode>(R[m]);
  END_OP
 
 
@@ -4319,7 +4346,7 @@ INLINE void SH7095::Step(void)
  // RTS 
  //
  BEGIN_OP_DLYIDIF(RTS)
-	UCDelayBranch<which, DebugMode>(PR);
+	UCDelayBranch<which, EmulateICache, DebugMode>(PR);
  END_OP
 
 
@@ -4436,7 +4463,7 @@ INLINE void SH7095::Step(void)
 
 	timestamp++;
 
-	Branch<which, DebugMode, true>(new_PC);
+	Branch<which, EmulateICache, DebugMode, true>(new_PC);
  END_OP
 
 
@@ -4494,7 +4521,7 @@ INLINE void SH7095::Step(void)
 	}
 	else
 	{
-	 DoIDIF<which, DebugMode, false, false, false>();
+	 DoIDIF<which, EmulateICache, DebugMode, false, false, false>();
 	}
  END_OP
 
@@ -4510,7 +4537,7 @@ INLINE void SH7095::Step(void)
 
 	 FRT_Reset();	// Reset again(for the counter) because we didn't stop clocking it.
 
-	 DoIDIF<which, DebugMode, false, false, false>();
+	 DoIDIF<which, EmulateICache, DebugMode, false, false, false>();
 	}
  END_OP
 
@@ -4584,7 +4611,7 @@ INLINE void SH7095::Step(void)
 	const unsigned imm = (uint8)instr;
 
 	PC -= 2;
-	Branch<which, -DebugMode, false>(Exception<DebugMode>(EXCEPTION_TRAP, imm));
+	Branch<which, EmulateICache, -DebugMode, false>(Exception<DebugMode>(EXCEPTION_TRAP, imm));
  END_OP
 
 
@@ -4599,7 +4626,7 @@ INLINE void SH7095::Step(void)
  //
  BEGIN_OP_DLYIDIF(ILLEGAL)
 	PC -= 4;
-	Branch<which, -DebugMode, false>(Exception<DebugMode>(EXCEPTION_ILLINSTR, VECNUM_ILLINSTR));
+	Branch<which, EmulateICache, -DebugMode, false>(Exception<DebugMode>(EXCEPTION_ILLINSTR, VECNUM_ILLINSTR));
  END_OP
 
  //
@@ -4609,7 +4636,7 @@ INLINE void SH7095::Step(void)
  //
  BEGIN_OP_DLYIDIF(SLOT_ILLEGAL)
 	PC -= 2;
-	Branch<which, -DebugMode, false>(Exception<DebugMode>(EXCEPTION_ILLSLOT, VECNUM_ILLSLOT));
+	Branch<which, EmulateICache, -DebugMode, false>(Exception<DebugMode>(EXCEPTION_ILLSLOT, VECNUM_ILLSLOT));
  END_OP
 
  //
@@ -4730,7 +4757,7 @@ INLINE void SH7095::Step(void)
 	//
 	//
 	//
-	Branch<which, -DebugMode, false>(new_PC);
+	Branch<which, EmulateICache, -DebugMode, false>(new_PC);
  END_OP
 
  BEGIN_OP_DLYIDIF(PSEUDO_DMABURST)
