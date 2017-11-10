@@ -49,6 +49,11 @@ ifeq ($(HAVE_OPENGL),1)
    TARGET_NAME := mednafen_saturn_hw
 endif
 
+GIT_VERSION := " $(shell git rev-parse --short HEAD || echo unknown)"
+ifneq ($(GIT_VERSION)," unknown")
+   CXXFLAGS += -DGIT_VERSION=\"$(GIT_VERSION)\"
+endif
+
 # Unix
 ifneq (,$(findstring unix,$(platform)))
    TARGET := $(TARGET_NAME)_libretro.so
