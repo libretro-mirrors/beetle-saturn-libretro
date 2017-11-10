@@ -194,237 +194,255 @@ static T INLINE SH7095_BusRead(uint32 A, const bool BurstHax, int32* SH2DMAHax);
 // When BurstHax is true and we're accessing high work RAM, don't add anything.
 //
 template<typename T, bool IsWrite>
-static INLINE void BusRW(uint32 A, T& V, const bool BurstHax, int32* SH2DMAHax)
+static INLINE void BusRW_DB_CS0(const uint32 A, uint32& DB, const bool BurstHax, int32* SH2DMAHax)
 {
  //
- // High work RAM
+ // Low(and kinda slow) work RAM
  //
- if(A >= 0x06000000 && A <= 0x07FFFFFF)
+ if(A >= 0x00200000 && A <= 0x003FFFFF)
  {
-  ne16_rwbo_be<T, IsWrite>(WorkRAMH, A & 0xFFFFF, &V);
+  if(IsWrite)
+   ne16_wbo_be<T>(WorkRAML, A & 0xFFFFF, DB >> (((A & 1) ^ (2 - sizeof(T))) << 3));
+  else
+   DB = (DB & 0xFFFF0000) | ne16_rbo_be<uint16>(WorkRAML, A & 0xFFFFE);
+
+  if(!SH2DMAHax)
+   SH7095_mem_timestamp += 7;
+  else
+   *SH2DMAHax -= 7;
+
+  return;
+ }
+
+ //
+ // BIOS ROM
+ //
+ if(A >= 0x00000000 && A <= 0x000FFFFF)
+ {
+  if(!SH2DMAHax)
+   SH7095_mem_timestamp += 8;
+  else
+   *SH2DMAHax -= 8;
+
+  if(!IsWrite)
+   DB = (DB & 0xFFFF0000) | ne16_rbo_be<uint16>(BIOSROM, A & 0x7FFFE);
+
+  return;
+ }
+
+ //
+ // SMPC
+ //
+ if(A >= 0x00100000 && A <= 0x0017FFFF)
+ {
+  const uint32 SMPC_A = (A & 0x7F) >> 1;
+
+  if(!SH2DMAHax)
+  {
+   // SH7095_mem_timestamp += 2;
+   CheckEventsByMemTS();
+  }
+
+  if(IsWrite)
+  {
+   if(sizeof(T) == 2 || (A & 1))
+    SMPC_Write(SH7095_mem_timestamp, SMPC_A, DB);
+  }
+  else
+   DB = (DB & 0xFFFF0000) | 0xFF00 | SMPC_Read(SH7095_mem_timestamp, SMPC_A);
+
+  return;
+ }
+
+ //
+ // Backup RAM
+ //
+ if(A >= 0x00180000 && A <= 0x001FFFFF)
+ {
+  if(!SH2DMAHax)
+   SH7095_mem_timestamp += 8;
+  else
+   *SH2DMAHax -= 8;
+
+  if(IsWrite)
+  {
+   if(sizeof(T) != 1 || (A & 1))
+   {
+    BackupRAM[(A >> 1) & 0x7FFF] = DB;
+    BackupRAM_Dirty = true;
+   }
+  }
+  else
+   DB = (DB & 0xFFFF0000) | 0xFF00 | BackupRAM[(A >> 1) & 0x7FFF];
+
+  return;
+ }
+
+ //
+ // FRT trigger region
+ //
+ if(A >= 0x01000000 && A <= 0x01FFFFFF)
+ {
+  if(!SH2DMAHax)
+   SH7095_mem_timestamp += 8;
+  else
+   *SH2DMAHax -= 8;
+
+  //printf("FT FRT%08x %zu %08x %04x %d %d\n", A, sizeof(T), A, V, SMPC_IsSlaveOn(), SH7095_mem_timestamp);
+  if(IsWrite)
+  {
+   if(sizeof(T) != 1)
+   {
+    const unsigned c = ((A >> 23) & 1) ^ 1;
+
+    if(!c || SMPC_IsSlaveOn())
+    {
+     CPU[c].SetFTI(true);
+     CPU[c].SetFTI(false);
+    }
+   }
+  }
+  return;
+ }
+
+ //
+ //
+ //
+ if(!SH2DMAHax)
+  SH7095_mem_timestamp += 4;
+ else
+  *SH2DMAHax -= 4;
+
+ if(IsWrite)
+  SS_DBG(SS_DBG_WARNING, "[SH2 BUS] Unknown %zu-byte write of 0x%08x to 0x%08x\n", sizeof(T), DB >> (((A & 1) ^ (2 - sizeof(T))) << 3), A);
+ else
+  SS_DBG(SS_DBG_WARNING, "[SH2 BUS] Unknown %zu-byte read from 0x%08x\n", sizeof(T), A);
+}
+
+template<typename T, bool IsWrite>
+static INLINE void BusRW_DB_CS123(const uint32 A, uint32& DB, const bool BurstHax, int32* SH2DMAHax)
+{
+ //
+ // CS3: High work RAM/SDRAM, 0x06000000 ... 0x07FFFFFF
+ //
+ if(A >= 0x06000000)
+ {
+  if(!IsWrite || sizeof(T) == 4)
+   ne16_rwbo_be<uint32, IsWrite>(WorkRAMH, A & 0xFFFFC, &DB);
+  else
+   ne16_wbo_be<T>(WorkRAMH, A & 0xFFFFF, DB >> (((A & 3) ^ (4 - sizeof(T))) << 3));
 
   if(!BurstHax)
   {
-     if(!SH2DMAHax)
-     {
-        if(IsWrite)
-        {
-           SH7095_mem_timestamp = (SH7095_mem_timestamp + 4) &~ 3;
-        }
-        else
-        {
-           SH7095_mem_timestamp += 7;
-        }
-     }
-     else
-        *SH2DMAHax -= IsWrite ? 3 : 6;
-  }
-
-  return;
- }
-
- //
- //
- // SH-2 region 0
- //
- //  Note: 0x00400000 - 0x01FFFFFF: Open bus for accesses to 0x00000000-0x01FFFFFF(SH-2 area 0)
- //
- if(A < 0x02000000)
- {
-  if(sizeof(T) == 4)
-  {
-   if(IsWrite)
-   {
-    uint16 tmp;
-
-    tmp = V >> 16;
-    BusRW<uint16, true>(A, tmp, BurstHax, SH2DMAHax);
-
-    tmp = V >> 0;
-    BusRW<uint16, true>(A | 2, tmp, BurstHax, SH2DMAHax);
-   }
-   else
-   {
-    uint16 tmp = 0;
-
-    BusRW<uint16, false>(A | 2, tmp, BurstHax, SH2DMAHax);
-    V = tmp << 0;
-
-    BusRW<uint16, false>(A, tmp, BurstHax, SH2DMAHax);
-    V |= tmp << 16;
-   }
-
-   return;
-  }
-
-  //
-  // Low(and kinda slow) work RAM
-  //
-  if(A >= 0x00200000 && A <= 0x003FFFFF)
-  {
-   ne16_rwbo_be<T, IsWrite>(WorkRAML, A & 0xFFFFF, &V);
-
    if(!SH2DMAHax)
-    SH7095_mem_timestamp += 7;
-   else
-    *SH2DMAHax -= 7;
-
-   return;
-  }
-
-  //
-  // BIOS ROM
-  //
-  if(A >= 0x00000000 && A <= 0x000FFFFF)
-  {
-   if(!SH2DMAHax)
-    SH7095_mem_timestamp += 8;
-   else
-    *SH2DMAHax -= 8;
-
-   if(!IsWrite)
-    V = ne16_rbo_be<T>(BIOSROM, A & 0x7FFFF);
-
-   return;
-  }
-
-  //
-  // SMPC
-  //
-  if(A >= 0x00100000 && A <= 0x0017FFFF)
-  {
-   const uint32 SMPC_A = (A & 0x7F) >> 1;
-
-    if(!SH2DMAHax)
-   // SH7095_mem_timestamp += 2;
    {
-   //
-    // SH7095_mem_timestamp += 2;
-    CheckEventsByMemTS();
-   }
-
-   if(IsWrite)
-   {
-    if(sizeof(T) == 2 || (A & 1))
-     SMPC_Write(SH7095_mem_timestamp, SMPC_A, V);
-   }
-   else
-   {
-    if(sizeof(T) == 2)
-     V = 0xFF00 | SMPC_Read(SH7095_mem_timestamp, SMPC_A);
-    else if(sizeof(T) == 1 && (A & 1))
-     V = SMPC_Read(SH7095_mem_timestamp, SMPC_A);
+    if(IsWrite)
+    {
+     SH7095_mem_timestamp = (SH7095_mem_timestamp + 4) &~ 3;
+    }
     else
-     V = 0xFF;
-   }
-
-   return;
-  }
-
-  //
-  // Backup RAM
-  //
-  if(A >= 0x00180000 && A <= 0x001FFFFF)
-  {
-   if(!SH2DMAHax)
-    SH7095_mem_timestamp += 8;
-   else
-    *SH2DMAHax -= 8;
-
-   if(IsWrite)
-   {
-    if(sizeof(T) != 1 || (A & 1))
     {
-     BackupRAM[(A >> 1) & 0x7FFF] = V;
-     BackupRAM_Dirty = true;
+     SH7095_mem_timestamp += 7;
     }
    }
    else
-    V = ((BackupRAM[(A >> 1) & 0x7FFF] << 0) | (0xFF << 8)) >> (((A & 1) ^ (sizeof(T) & 1)) << 3);
-
-   return;
+    *SH2DMAHax -= IsWrite ? 3 : 6;
   }
-
-  //
-  // FRT trigger region
-  //
-  if(A >= 0x01000000 && A <= 0x01FFFFFF)
-  {
-   if(!SH2DMAHax)
-    SH7095_mem_timestamp += 8;
-   else
-    *SH2DMAHax -= 8;
-
-   //printf("FT FRT%08x %zu %08x %04x %d %d\n", A, sizeof(T), A, V, SMPC_IsSlaveOn(), SH7095_mem_timestamp);
-
-   if(IsWrite)
-   {
-    if(sizeof(T) != 1)
-    {
-     const unsigned c = ((A >> 23) & 1) ^ 1;
-
-     if(!c || SMPC_IsSlaveOn())
-     {
-      CPU[c].SetFTI(true);
-      CPU[c].SetFTI(false);
-     }
-    }
-   }
-   return;
-  }
-
-
-  //
-  //
-  //
-   if(!SH2DMAHax)
-    SH7095_mem_timestamp += 4;
-   else
-    *SH2DMAHax -= 4;
-
-  if(IsWrite)
-   SS_DBG(SS_DBG_WARNING, "[SH2 BUS] Unknown %zu-byte write of 0x%08x to 0x%08x\n", sizeof(T), V, A);
-  else
-  {
-   SS_DBG(SS_DBG_WARNING, "[SH2 BUS] Unknown %zu-byte read from 0x%08x\n", sizeof(T), A);
-
-   V = 0;
-  }
-
   return;
  }
 
  //
- // SCU
+ // CS1 and CS2: SCU
  //
- {
-  uint32 DB;
+ if(!IsWrite)
+  DB = 0;
 
-  if(IsWrite)
-   DB = V << (((A & 3) ^ (4 - sizeof(T))) << 3);
-  else
-   DB = 0;
-
-  SCU_FromSH2_BusRW_DB<T, IsWrite>(A, &DB, SH2DMAHax);
-
-  if(!IsWrite)
-   V = DB >> (((A & 3) ^ (4 - sizeof(T))) << 3);
- }
+ SCU_FromSH2_BusRW_DB<T, IsWrite>(A, &DB, SH2DMAHax);
 }
 
 template<typename T>
 static void INLINE SH7095_BusWrite(uint32 A, T V, const bool BurstHax, int32* SH2DMAHax)
 {
- BusRW<T, true>(A, V, BurstHax, SH2DMAHax);
+ uint32 DB = SH7095_DB;
+
+ if(A < 0x02000000)	// CS0, configured as 16-bit
+ {
+  if(sizeof(T) == 4)
+  {
+   // TODO/FIXME: Don't allow DMA transfers to occur between the two 16-bit accesses.
+   //if(!SH2DMAHax)
+   // SH7095_BusLock++;
+
+   DB = (DB & 0xFFFF0000) | (V >> 16);
+   BusRW_DB_CS0<uint16, true>(A, DB, BurstHax, SH2DMAHax);
+
+   DB = (DB & 0xFFFF0000) | (uint16)V;
+   BusRW_DB_CS0<uint16, true>(A | 2, DB, BurstHax, SH2DMAHax);
+
+   //if(!SH2DMAHax)
+   // SH7095_BusLock--;
+  }
+  else
+  {
+   const uint32 shift = ((A & 1) ^ (2 - sizeof(T))) << 3;
+   const uint32 mask = (0xFFFF >> ((2 - sizeof(T)) * 8)) << shift;
+
+   DB = (DB & ~mask) | (V << shift);
+   BusRW_DB_CS0<T, true>(A, DB, BurstHax, SH2DMAHax);
+  }
+ }
+ else	// CS1, CS2, CS3; 32-bit
+ {
+  const uint32 shift = ((A & 3) ^ (4 - sizeof(T))) << 3;
+  const uint32 mask = (0xFFFFFFFF >> ((4 - sizeof(T)) * 8)) << shift;
+
+  DB = (DB & ~mask) | (V << shift); // //ne32_wbo_be<T>(&DB, A & 0x3, V);
+  BusRW_DB_CS123<T, true>(A, DB, BurstHax, SH2DMAHax);
+ }
+
+ SH7095_DB = DB;
 }
 
 template<typename T>
 static T INLINE SH7095_BusRead(uint32 A, const bool BurstHax, int32* SH2DMAHax)
 {
- T ret = 0;
+ uint32 DB = SH7095_DB;
+ T ret;
 
- BusRW<T, false>(A, ret, BurstHax, SH2DMAHax);
+ if(A < 0x02000000)	// CS0, configured as 16-bit
+ {
+  if(sizeof(T) == 4)
+  {
+   // TODO/FIXME: Don't allow DMA transfers to occur between the two 16-bit accesses.
+   //if(!SH2DMAHax)
+   // SH7095_BusLock++;
 
+   BusRW_DB_CS0<uint16, false>(A, DB, BurstHax, SH2DMAHax);
+   ret = DB << 16;
+
+   BusRW_DB_CS0<uint16, false>(A | 2, DB, BurstHax, SH2DMAHax);
+   ret |= (uint16)DB;
+
+   //if(!SH2DMAHax)
+   // SH7095_BusLock--;
+  }
+  else
+  {
+   BusRW_DB_CS0<T, false>(A, DB, BurstHax, SH2DMAHax);
+   ret = DB >> (((A & 1) ^ (2 - sizeof(T))) << 3);
+  }
+ }
+ else	// CS1, CS2, CS3; 32-bit
+ {
+  BusRW_DB_CS123<T, false>(A, DB, BurstHax, SH2DMAHax);
+  ret = DB >> (((A & 3) ^ (4 - sizeof(T))) << 3);
+
+  // SDRAM leaves data bus in a weird state after read...
+  //if(A >= 0x06000000)
+  // DB = 0;
+ }
+
+ SH7095_DB = DB;
  return ret;
 }
 
