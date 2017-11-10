@@ -3295,8 +3295,7 @@ void retro_run(void)
          resolution_changed = true;
 
    source_height  =  spec.DisplayRect.h;
-   linevisfirst   =  PrevInterlaced ? (is_pal ? first_sl_pal : first_sl) << 1 :
-                     (is_pal ? first_sl_pal : first_sl);
+   linevisfirst   =  (is_pal ? first_sl_pal : first_sl) << PrevInterlaced;
    overscan_mask  =  PrevInterlaced ? 0 : h_mask >> 1;
    width          =  PrevInterlaced ? FB_WIDTH : (rects[0] - h_mask);
    height         =  (is_pal ? (last_sl_pal + 1 - first_sl_pal) :
