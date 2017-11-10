@@ -30,16 +30,17 @@
 
 #include <zlib.h>
 
-#define MEDNAFEN_CORE_NAME_MODULE "ss"
-#define MEDNAFEN_CORE_NAME "Mednafen Saturn"
-#define MEDNAFEN_CORE_VERSION "v0.9.48"
-#define MEDNAFEN_CORE_EXTENSIONS "cue|ccd|chd"
-#define MEDNAFEN_CORE_TIMING_FPS 59.82
-#define MEDNAFEN_CORE_GEOMETRY_BASE_W 320
-#define MEDNAFEN_CORE_GEOMETRY_BASE_H 240
-#define MEDNAFEN_CORE_GEOMETRY_MAX_W 704
-#define MEDNAFEN_CORE_GEOMETRY_MAX_H 576
-#define MEDNAFEN_CORE_GEOMETRY_ASPECT_RATIO (4.0 / 3.0)
+#define MEDNAFEN_CORE_NAME_MODULE            "ss"
+#define MEDNAFEN_CORE_NAME                   "Mednafen Saturn"
+#define MEDNAFEN_CORE_VERSION                "v0.9.48"
+#define MEDNAFEN_CORE_EXTENSIONS             "cue|ccd|chd"
+#define MEDNAFEN_CORE_TIMING_FPS             59.82
+#define MEDNAFEN_CORE_GEOMETRY_BASE_W        320
+#define MEDNAFEN_CORE_GEOMETRY_BASE_H        240
+#define MEDNAFEN_CORE_GEOMETRY_MAX_W         704
+#define MEDNAFEN_CORE_GEOMETRY_MAX_H         576
+#define MEDNAFEN_CORE_GEOMETRY_ASPECT_RATIO  (4.0 / 3.0)
+#define FB_WIDTH                             MEDNAFEN_CORE_GEOMETRY_MAX_W
 
 struct retro_perf_callback perf_cb;
 retro_get_cpu_features_t perf_get_cpu_features_cb = NULL;
@@ -3226,6 +3227,7 @@ void retro_run(void)
 {
    bool updated = false;
    bool resolution_changed = false;
+   unsigned linevisfirst, overscan_mask;
    static unsigned width, height, source_height;
 
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE_UPDATE, &updated) && updated)
@@ -3243,7 +3245,7 @@ void retro_run(void)
 
    update_input();
 
-   static int32 rects[MEDNAFEN_CORE_GEOMETRY_MAX_H];
+   static int32 rects[FB_WIDTH];
    rects[0] = ~0;
 
    static int16_t sound_buf[0x10000];
@@ -3287,47 +3289,21 @@ void retro_run(void)
 
 #endif
 
-   if (!PrevInterlaced && (width  != rects[0] - h_mask || source_height != spec.DisplayRect.h))
-      resolution_changed = true;
-   if (PrevInterlaced && (width  != 704 || source_height != spec.DisplayRect.h))
-      resolution_changed = true;
+   if ((!PrevInterlaced && (width != rects[0] - h_mask)) ||
+      (PrevInterlaced && (width != FB_WIDTH)) ||
+      source_height != spec.DisplayRect.h)
+         resolution_changed = true;
 
-   source_height = spec.DisplayRect.h;
+   source_height  =  spec.DisplayRect.h;
+   linevisfirst   =  PrevInterlaced ? (is_pal ? first_sl_pal : first_sl) << 1 :
+                     (is_pal ? first_sl_pal : first_sl);
+   overscan_mask  =  PrevInterlaced ? 0 : h_mask >> 1;
+   width          =  PrevInterlaced ? FB_WIDTH : (rects[0] - h_mask);
+   height         =  (is_pal ? (last_sl_pal + 1 - first_sl_pal) :
+                     (last_sl + 1 - first_sl)) << PrevInterlaced;
 
-   if (PrevInterlaced)
-   {
-      width = 704;
-
-      if (is_pal)
-      {
-         height = 2 * (last_sl_pal - first_sl_pal + 1);
-         video_cb(surf->pixels + surf->pitchinpix * (spec.DisplayRect.y + 2*first_sl_pal),
-            width, height, 704 * sizeof(uint32_t));
-      }
-      else
-      {
-         height = 2 * (last_sl - first_sl + 1);
-         video_cb(surf->pixels + surf->pitchinpix * (spec.DisplayRect.y + 2*first_sl),
-            width, height, 704 * sizeof(uint32_t));
-      }
-   }
-   else
-   {
-      width = rects[0] - h_mask;
-
-      if (is_pal)
-      {
-         height = last_sl_pal - first_sl_pal + 1;
-         video_cb(surf->pixels + surf->pitchinpix * (spec.DisplayRect.y + first_sl_pal) + (h_mask/2),
-            width, height, 704 * sizeof(uint32_t));
-      }
-      else
-      {
-         height = last_sl - first_sl + 1;
-         video_cb(surf->pixels + surf->pitchinpix * (spec.DisplayRect.y + first_sl) + (h_mask/2),
-            width, height, 704 * sizeof(uint32_t));
-      }
-   }
+   video_cb(surf->pixels + surf->pitchinpix * linevisfirst + overscan_mask,
+            width, height, FB_WIDTH << 2);
 
    if (resolution_changed)
       update_geometry(width, height);
