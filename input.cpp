@@ -236,7 +236,7 @@ void input_update( retro_input_state_t input_state_cb )
 				// -- standard control pad buttons + d-pad
 
 				// input_map_pad is configured to quickly map libretro buttons to the correct bits for the Saturn.
-				for ( int i = 0; i < INPUT_MAP_3D_PAD_SIZE; ++i ) {
+				for ( int i = 0; i < INPUT_MAP_PAD_SIZE; ++i ) {
 					p_input->buttons |= input_state_cb( iplayer, RETRO_DEVICE_JOYPAD, 0, input_map_pad[ i ] ) ? ( 1 << i ) : 0;
 				}
 				// .. the left trigger on the Saturn is a special case since there's a gap in the bits.
