@@ -49,14 +49,16 @@ static uint32_t input_mode[ MAX_CONTROLLERS ] = {0};
 #define RETRO_DEVICE_SS_PAD			RETRO_DEVICE_SUBCLASS( RETRO_DEVICE_JOYPAD, 0 )
 #define RETRO_DEVICE_SS_3D_PAD		RETRO_DEVICE_SUBCLASS( RETRO_DEVICE_ANALOG, 0 )
 #define RETRO_DEVICE_SS_WHEEL		RETRO_DEVICE_SUBCLASS( RETRO_DEVICE_ANALOG, 1 )
+#define RETRO_DEVICE_SS_GUN			RETRO_DEVICE_SUBCLASS( RETRO_DEVICE_LIGHTGUN, 0 )
 
-enum { INPUT_DEVICE_TYPES_COUNT = 1 /*none*/ + 3 }; // <-- update me!
+enum { INPUT_DEVICE_TYPES_COUNT = 1 /*none*/ + 4 }; // <-- update me!
 
 static const struct retro_controller_description input_device_types[ INPUT_DEVICE_TYPES_COUNT ] =
 {
 	{ "Control Pad", RETRO_DEVICE_JOYPAD },
 	{ "3D Control Pad", RETRO_DEVICE_SS_3D_PAD },
 	{ "Arcade Racer", RETRO_DEVICE_SS_WHEEL },
+	{ "Virtua Gun", RETRO_DEVICE_SS_GUN },
 	{ NULL, 0 },
 };
 
@@ -132,6 +134,7 @@ static const unsigned input_map_wheel_shift_right =
 	RETRO_DEVICE_ID_JOYPAD_R2;
 
 
+
 //------------------------------------------------------------------------------
 // Global Functions
 //------------------------------------------------------------------------------
@@ -159,6 +162,8 @@ void input_init_env( retro_environment_t _environ_cb )
 		{ 0, RETRO_DEVICE_ANALOG, RETRO_DEVICE_INDEX_ANALOG_LEFT, RETRO_DEVICE_ID_ANALOG_X, "Analog X" },
 		{ 0, RETRO_DEVICE_ANALOG, RETRO_DEVICE_INDEX_ANALOG_LEFT, RETRO_DEVICE_ID_ANALOG_Y, "Analog Y" },
 		{ 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_SELECT, "(3D Pad) Mode Switch" },
+		{ 0, RETRO_DEVICE_LIGHTGUN, 0, RETRO_DEVICE_ID_LIGHTGUN_TRIGGER, "(Gun) Trigger" },
+		{ 0, RETRO_DEVICE_LIGHTGUN, 0, RETRO_DEVICE_ID_LIGHTGUN_START, "(Gun) Start" },
 
 		{ 1, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_UP,    "D-Pad Up" },
 		{ 1, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_DOWN,  "D-Pad Down" },
@@ -176,6 +181,8 @@ void input_init_env( retro_environment_t _environ_cb )
 		{ 1, RETRO_DEVICE_ANALOG, RETRO_DEVICE_INDEX_ANALOG_LEFT, RETRO_DEVICE_ID_ANALOG_X, "Analog X" },
 		{ 1, RETRO_DEVICE_ANALOG, RETRO_DEVICE_INDEX_ANALOG_LEFT, RETRO_DEVICE_ID_ANALOG_Y, "Analog Y" },
 		{ 1, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_SELECT, "(3D Pad) Mode Switch" },
+		{ 1, RETRO_DEVICE_LIGHTGUN, 0, RETRO_DEVICE_ID_LIGHTGUN_TRIGGER, "(Gun) Trigger" },
+		{ 1, RETRO_DEVICE_LIGHTGUN, 0, RETRO_DEVICE_ID_LIGHTGUN_START, "(Gun) Start" },
 
 		{ 0 },
 	};
@@ -430,6 +437,21 @@ void input_update( retro_input_state_t input_state_cb )
 
 			break;
 
+		case RETRO_DEVICE_SS_GUN:
+
+			{
+				//
+				// -- Gun buttons
+
+				p_input->u8[0x4] = 0;
+				if ( input_state_cb( iplayer, RETRO_DEVICE_LIGHTGUN, 0, RETRO_DEVICE_ID_LIGHTGUN_TRIGGER ) ) {
+					p_input->u8[0x4] = ( 1 << 0 ); // Trigger
+				}
+				if ( input_state_cb( iplayer, RETRO_DEVICE_LIGHTGUN, 0, RETRO_DEVICE_ID_LIGHTGUN_START ) ) {
+					p_input->u8[0x4] = ( 1 << 1 ); // Start
+				}
+			}
+
 		}; // switch ( input_type[ iplayer ] )
 
 	}; // for each player
@@ -469,6 +491,11 @@ void retro_set_controller_port_device( unsigned in_port, unsigned device )
 		case RETRO_DEVICE_SS_WHEEL:
 			log_cb( RETRO_LOG_INFO, "Controller %u: Arcade Racer\n", (in_port+1) );
 			SMPC_SetInput( in_port, "wheel", (uint8*)&input_data[ in_port ] );
+			break;
+
+		case RETRO_DEVICE_SS_GUN:
+			log_cb( RETRO_LOG_INFO, "Controller %u: Virtua Gun\n", (in_port+1) );
+			SMPC_SetInput( in_port, "gun", (uint8*)&input_data[ in_port ] );
 			break;
 
 		default:
