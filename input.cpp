@@ -2,7 +2,7 @@
 #include "libretro.h"
 #include "mednafen/mednafen-types.h"
 #include "mednafen/ss/ss.h"
-#include "mednafen/ss/SMPC.h"
+#include "mednafen/ss/smpc.h"
 #include <math.h>
 #include <stdio.h>
 
@@ -227,7 +227,7 @@ void input_update( retro_input_state_t input_state_cb )
 				//
 				// -- 3d control pad buttons
 
-				// input_map_pad is configured to quickly map libretro buttons to the correct bits for the Saturn.
+				// input_map_3d_pad is configured to quickly map libretro buttons to the correct bits for the Saturn.
 				for ( int i = 0; i < INPUT_MAP_3D_PAD_SIZE; ++i ) {
 					p_input->buttons |= input_state_cb( iplayer, RETRO_DEVICE_JOYPAD, 0, input_map_3d_pad[ i ] ) ? ( 1 << i ) : 0;
 				}
