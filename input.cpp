@@ -36,7 +36,8 @@ static uint32_t input_type[ MAX_CONTROLLERS ] = {0};
 #define INPUT_MODE_3D_PAD_ANALOG		( 1 << 0 ) // Set means analog mode.
 #define INPUT_MODE_3D_PAD_PREVIOUS_MASK	( 1 << 1 ) // Edge trigger helper.
 
-#define INPUT_MODE_3D_PAD_DEFAULT		INPUT_MODE_3D_PAD_ANALOG
+#define INPUT_MODE_DEFAULT				0
+#define INPUT_MODE_DEFAULT_3D_PAD		INPUT_MODE_3D_PAD_ANALOG
 
 // Mode switch for 3D Control Pad (per player)
 static uint32_t input_mode[ MAX_CONTROLLERS ] = {0};
@@ -163,8 +164,6 @@ void input_init_env( retro_environment_t _environ_cb )
 		{ 0, RETRO_DEVICE_ANALOG, RETRO_DEVICE_INDEX_ANALOG_LEFT, RETRO_DEVICE_ID_ANALOG_X, "Analog X" },
 		{ 0, RETRO_DEVICE_ANALOG, RETRO_DEVICE_INDEX_ANALOG_LEFT, RETRO_DEVICE_ID_ANALOG_Y, "Analog Y" },
 		{ 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_SELECT, "(3D Pad) Mode Switch" },
-		{ 0, RETRO_DEVICE_LIGHTGUN, 0, RETRO_DEVICE_ID_LIGHTGUN_TRIGGER, "(Gun) Trigger" },
-		{ 0, RETRO_DEVICE_LIGHTGUN, 0, RETRO_DEVICE_ID_LIGHTGUN_START, "(Gun) Start" },
 
 		{ 1, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_UP,    "D-Pad Up" },
 		{ 1, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_DOWN,  "D-Pad Down" },
@@ -182,8 +181,6 @@ void input_init_env( retro_environment_t _environ_cb )
 		{ 1, RETRO_DEVICE_ANALOG, RETRO_DEVICE_INDEX_ANALOG_LEFT, RETRO_DEVICE_ID_ANALOG_X, "Analog X" },
 		{ 1, RETRO_DEVICE_ANALOG, RETRO_DEVICE_INDEX_ANALOG_LEFT, RETRO_DEVICE_ID_ANALOG_Y, "Analog Y" },
 		{ 1, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_SELECT, "(3D Pad) Mode Switch" },
-		{ 1, RETRO_DEVICE_LIGHTGUN, 0, RETRO_DEVICE_ID_LIGHTGUN_TRIGGER, "(Gun) Trigger" },
-		{ 1, RETRO_DEVICE_LIGHTGUN, 0, RETRO_DEVICE_ID_LIGHTGUN_START, "(Gun) Start" },
 
 		{ 0 },
 	};
@@ -209,7 +206,7 @@ void input_init()
 	for ( unsigned i = 0; i < MAX_CONTROLLERS; ++i )
 	{
 		input_type[ i ] = RETRO_DEVICE_JOYPAD;
-		input_mode[ i ] = INPUT_MODE_3D_PAD_DEFAULT;
+		input_mode[ i ] = INPUT_MODE_DEFAULT;
 
 		SMPC_SetInput( i, "gamepad", (uint8*)&input_data[ i ] );
 	}
@@ -490,7 +487,7 @@ void retro_set_controller_port_device( unsigned in_port, unsigned device )
 	{
 		// Store input type
 		input_type[ in_port ] = device;
-		input_mode[ in_port ] = 0;
+		input_mode[ in_port ] = INPUT_MODE_DEFAULT;
 
 		switch ( device )
 		{
@@ -509,7 +506,7 @@ void retro_set_controller_port_device( unsigned in_port, unsigned device )
 		case RETRO_DEVICE_SS_3D_PAD:
 			log_cb( RETRO_LOG_INFO, "Controller %u: 3D Control Pad\n", (in_port+1) );
 			SMPC_SetInput( in_port, "3dpad", (uint8*)&input_data[ in_port ] );
-			input_mode[ in_port ] = INPUT_MODE_3D_PAD_DEFAULT;
+			input_mode[ in_port ] = INPUT_MODE_DEFAULT_3D_PAD;
 			break;
 
 		case RETRO_DEVICE_SS_WHEEL:
