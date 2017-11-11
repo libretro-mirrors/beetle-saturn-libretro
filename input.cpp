@@ -21,6 +21,7 @@ static int astick_deadzone = 0;
 typedef union
 {
 	uint8_t u8[ 32 ];
+	uint16_t gun_pos[ 2 ];
 	uint16_t buttons;
 }
 INPUT_DATA;
@@ -440,16 +441,37 @@ void input_update( retro_input_state_t input_state_cb )
 		case RETRO_DEVICE_SS_GUN:
 
 			{
-				//
-				// -- Gun buttons
-
 				p_input->u8[0x4] = 0;
-				if ( input_state_cb( iplayer, RETRO_DEVICE_LIGHTGUN, 0, RETRO_DEVICE_ID_LIGHTGUN_TRIGGER ) ) {
-					p_input->u8[0x4] = ( 1 << 0 ); // Trigger
-				}
+
+				// start button
 				if ( input_state_cb( iplayer, RETRO_DEVICE_LIGHTGUN, 0, RETRO_DEVICE_ID_LIGHTGUN_START ) ) {
-					p_input->u8[0x4] = ( 1 << 1 ); // Start
+					p_input->u8[0x4] |= 0x2; // Start
 				}
+
+				// trigger
+				if ( input_state_cb( iplayer, RETRO_DEVICE_LIGHTGUN, 0, RETRO_DEVICE_ID_LIGHTGUN_TRIGGER ) ) {
+					p_input->u8[0x4] |= 0x1; // Trigger
+				}
+
+				// -- Position
+
+				int gun_x_raw, gun_y_raw;
+				gun_x_raw = input_state_cb( iplayer, RETRO_DEVICE_POINTER, 0, RETRO_DEVICE_ID_POINTER_X ) + 0x8000;
+				gun_y_raw = input_state_cb( iplayer, RETRO_DEVICE_POINTER, 0, RETRO_DEVICE_ID_POINTER_Y ) + 0x8000;
+
+				// .. scale into screen space:
+				// NOTE: this is complete hacky guesswork for this first pass, need to re-write.
+				int gun_x, gun_y;
+				gun_x = ( gun_x_raw * 22000 ) / 65536;
+				gun_y = ( gun_y_raw * 240 ) / 65536;
+
+				p_input->gun_pos[ 0 ] = gun_x;
+				p_input->gun_pos[ 1 ] = gun_y;
+
+//				log_cb( RETRO_LOG_INFO, "Gun: %d, %d\n", gun_x, gun_y );
+
+				// .. simulated off-screen shot?
+				// p_input->u8[0x4] |= 0x4;
 			}
 
 		}; // switch ( input_type[ iplayer ] )
@@ -468,6 +490,7 @@ void retro_set_controller_port_device( unsigned in_port, unsigned device )
 	{
 		// Store input type
 		input_type[ in_port ] = device;
+		input_mode[ in_port ] = 0;
 
 		switch ( device )
 		{
@@ -486,6 +509,7 @@ void retro_set_controller_port_device( unsigned in_port, unsigned device )
 		case RETRO_DEVICE_SS_3D_PAD:
 			log_cb( RETRO_LOG_INFO, "Controller %u: 3D Control Pad\n", (in_port+1) );
 			SMPC_SetInput( in_port, "3dpad", (uint8*)&input_data[ in_port ] );
+			input_mode[ in_port ] = INPUT_MODE_3D_PAD_DEFAULT;
 			break;
 
 		case RETRO_DEVICE_SS_WHEEL:
