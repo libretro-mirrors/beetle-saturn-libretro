@@ -48,7 +48,6 @@ static uint32_t input_mode[ MAX_CONTROLLERS ] = {0};
 
 #define RETRO_DEVICE_SS_PAD			RETRO_DEVICE_SUBCLASS( RETRO_DEVICE_JOYPAD, 0 )
 #define RETRO_DEVICE_SS_3D_PAD		RETRO_DEVICE_SUBCLASS( RETRO_DEVICE_ANALOG, 0 )
-#define RETRO_DEVICE_SS_MOUSE		RETRO_DEVICE_SUBCLASS( RETRO_DEVICE_MOUSE,  0 )
 #define RETRO_DEVICE_SS_WHEEL		RETRO_DEVICE_SUBCLASS( RETRO_DEVICE_ANALOG, 1 )
 
 enum { INPUT_DEVICE_TYPES_COUNT = 1 /*none*/ + 3 }; // <-- update me!
@@ -58,7 +57,6 @@ static const struct retro_controller_description input_device_types[ INPUT_DEVIC
 	{ "Control Pad", RETRO_DEVICE_JOYPAD },
 	{ "3D Control Pad", RETRO_DEVICE_SS_3D_PAD },
 	{ "Arcade Racer", RETRO_DEVICE_SS_WHEEL },
-//	{ "Mouse", RETRO_DEVICE_SS_MOUSE }, // todo !
 	{ NULL, 0 },
 };
 
@@ -467,11 +465,6 @@ void retro_set_controller_port_device( unsigned in_port, unsigned device )
 			log_cb( RETRO_LOG_INFO, "Controller %u: 3D Control Pad\n", (in_port+1) );
 			SMPC_SetInput( in_port, "3dpad", (uint8*)&input_data[ in_port ] );
 			break;
-
-		/*case RETRO_DEVICE_SS_MOUSE:
-			log_cb( RETRO_LOG_INFO, "Controller %u: Mouse\n", (in_port+1) );
-			SMPC_SetInput( in_port, "mouse", (uint8*)&input_data[ in_port ] );
-			break;*/
 
 		case RETRO_DEVICE_SS_WHEEL:
 			log_cb( RETRO_LOG_INFO, "Controller %u: Arcade Racer\n", (in_port+1) );
