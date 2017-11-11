@@ -46,15 +46,18 @@ static uint32_t input_mode[ MAX_CONTROLLERS ] = {0};
 // Supported Devices
 //------------------------------------------------------------------------------
 
-#define RETRO_DEVICE_SS_PAD       RETRO_DEVICE_SUBCLASS( RETRO_DEVICE_JOYPAD, 0 )
-#define RETRO_DEVICE_SS_3D_PAD    RETRO_DEVICE_SUBCLASS( RETRO_DEVICE_ANALOG, 0 )
-#define RETRO_DEVICE_SS_MOUSE     RETRO_DEVICE_SUBCLASS( RETRO_DEVICE_MOUSE,  0 )
+#define RETRO_DEVICE_SS_PAD			RETRO_DEVICE_SUBCLASS( RETRO_DEVICE_JOYPAD, 0 )
+#define RETRO_DEVICE_SS_3D_PAD		RETRO_DEVICE_SUBCLASS( RETRO_DEVICE_ANALOG, 0 )
+#define RETRO_DEVICE_SS_MOUSE		RETRO_DEVICE_SUBCLASS( RETRO_DEVICE_MOUSE,  0 )
+#define RETRO_DEVICE_SS_WHEEL		RETRO_DEVICE_SUBCLASS( RETRO_DEVICE_ANALOG, 1 )
 
-enum { INPUT_DEVICE_TYPES_COUNT = 1 /*none*/ + 2 }; // <-- update me!
+enum { INPUT_DEVICE_TYPES_COUNT = 1 /*none*/ + 3 }; // <-- update me!
+
 static const struct retro_controller_description input_device_types[ INPUT_DEVICE_TYPES_COUNT ] =
 {
 	{ "Control Pad", RETRO_DEVICE_JOYPAD },
 	{ "3D Control Pad", RETRO_DEVICE_SS_3D_PAD },
+	{ "Arcade Racer", RETRO_DEVICE_SS_WHEEL },
 //	{ "Mouse", RETRO_DEVICE_SS_MOUSE }, // todo !
 	{ NULL, 0 },
 };
@@ -108,6 +111,27 @@ static const unsigned input_map_3d_pad[ INPUT_MAP_3D_PAD_SIZE ] =
 
 static const unsigned input_map_3d_pad_mode_switch =
 	RETRO_DEVICE_ID_JOYPAD_SELECT;
+
+/* Arcade Racer (wheel) */
+enum { INPUT_MAP_WHEEL_BITSHIFT = 4 };
+enum { INPUT_MAP_WHEEL_SIZE = 7 };
+static const unsigned input_map_wheel[ INPUT_MAP_WHEEL_SIZE ] =
+{
+	// libretro input				 at position	|| maps to Saturn		on bit
+	//-----------------------------------------------------------------------------
+	RETRO_DEVICE_ID_JOYPAD_A,		// A(right)		-> B					4
+	RETRO_DEVICE_ID_JOYPAD_R,		// R1			-> C					5
+	RETRO_DEVICE_ID_JOYPAD_B,		// B(down)		-> A					6
+	RETRO_DEVICE_ID_JOYPAD_START,	// Start		-> Start				7
+	RETRO_DEVICE_ID_JOYPAD_L,		// L1			-> Z					8
+	RETRO_DEVICE_ID_JOYPAD_X,		// X(top)		-> Y					9
+	RETRO_DEVICE_ID_JOYPAD_Y,		// Y(left)		-> X					10
+};
+
+static const unsigned input_map_wheel_shift_left =
+	RETRO_DEVICE_ID_JOYPAD_L2;
+static const unsigned input_map_wheel_shift_right =
+	RETRO_DEVICE_ID_JOYPAD_R2;
 
 
 //------------------------------------------------------------------------------
@@ -339,6 +363,75 @@ void input_update( retro_input_state_t input_state_cb )
 
 			break;
 
+		case RETRO_DEVICE_SS_WHEEL:
+
+			{
+				//
+				// -- Wheel buttons
+
+				// input_map_wheel is configured to quickly map libretro buttons to the correct bits for the Saturn.
+				for ( int i = 0; i < INPUT_MAP_WHEEL_SIZE; ++i ) {
+					const uint16_t bit = ( 1 << ( i + INPUT_MAP_WHEEL_BITSHIFT ) );
+					p_input->buttons |= input_state_cb( iplayer, RETRO_DEVICE_JOYPAD, 0, input_map_wheel[ i ] ) ? bit : 0;
+				}
+
+				// shift-paddles
+				p_input->buttons |= input_state_cb( iplayer, RETRO_DEVICE_JOYPAD, 0, input_map_wheel_shift_left ) ? ( 1 << 0 ) : 0;
+				p_input->buttons |= input_state_cb( iplayer, RETRO_DEVICE_JOYPAD, 0, input_map_wheel_shift_right ) ? ( 1 << 1 ) : 0;
+
+				//
+				// -- analog wheel
+
+				int analog_x = input_state_cb( iplayer, RETRO_DEVICE_ANALOG, RETRO_DEVICE_INDEX_ANALOG_LEFT,
+					RETRO_DEVICE_ID_ANALOG_X );
+
+				// Analog stick deadzone
+				if ( astick_deadzone > 0 )
+				{
+					static const int ASTICK_MAX = 0x8000;
+					const float scale = ((float)ASTICK_MAX/(float)(ASTICK_MAX - astick_deadzone));
+
+					if ( analog_x < -astick_deadzone )
+					{
+						// Re-scale analog stick range
+						float scaled = (-analog_x - astick_deadzone)*scale;
+
+						analog_x = (int)round(-scaled);
+						if (analog_x < -32767) {
+							analog_x = -32767;
+						}
+					}
+					else if ( analog_x > astick_deadzone )
+					{
+						// Re-scale analog stick range
+						float scaled = (analog_x - astick_deadzone)*scale;
+
+						analog_x = (int)round(scaled);
+						if (analog_x > +32767) {
+							analog_x = +32767;
+						}
+					}
+					else
+					{
+						analog_x = 0;
+					}
+				}
+
+				//
+				// -- format input data
+
+				// Convert analog values into direction values.
+				uint16_t right = analog_x > 0 ?  analog_x : 0;
+				uint16_t left  = analog_x < 0 ? -analog_x : 0;
+
+				p_input->u8[0x2] = ((left  >> 0) & 0xff);
+				p_input->u8[0x3] = ((left  >> 8) & 0xff);
+				p_input->u8[0x4] = ((right >> 0) & 0xff);
+				p_input->u8[0x5] = ((right >> 8) & 0xff);
+			}
+
+			break;
+
 		}; // switch ( input_type[ iplayer ] )
 
 	}; // for each player
@@ -379,6 +472,11 @@ void retro_set_controller_port_device( unsigned in_port, unsigned device )
 			log_cb( RETRO_LOG_INFO, "Controller %u: Mouse\n", (in_port+1) );
 			SMPC_SetInput( in_port, "mouse", (uint8*)&input_data[ in_port ] );
 			break;*/
+
+		case RETRO_DEVICE_SS_WHEEL:
+			log_cb( RETRO_LOG_INFO, "Controller %u: Arcade Racer\n", (in_port+1) );
+			SMPC_SetInput( in_port, "wheel", (uint8*)&input_data[ in_port ] );
+			break;
 
 		default:
 			log_cb( RETRO_LOG_WARN, "Controller %u: Unsupported Device (%u)\n", (in_port+1), device );
