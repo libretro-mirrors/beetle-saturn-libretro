@@ -1,4 +1,4 @@
-/* Copyright (C) 2010-2016 The RetroArch team
+/* Copyright (C) 2010-2017 The RetroArch team
  *
  * ---------------------------------------------------------------------------------------
  * The following license statement only applies to this libretro API header (libretro.h).
@@ -230,20 +230,22 @@ extern "C" {
 /* Id values for LANGUAGE */
 enum retro_language
 {
-   RETRO_LANGUAGE_ENGLISH             =  0,
-   RETRO_LANGUAGE_JAPANESE            =  1,
-   RETRO_LANGUAGE_FRENCH              =  2,
-   RETRO_LANGUAGE_SPANISH             =  3,
-   RETRO_LANGUAGE_GERMAN              =  4,
-   RETRO_LANGUAGE_ITALIAN             =  5,
-   RETRO_LANGUAGE_DUTCH               =  6,
-   RETRO_LANGUAGE_PORTUGUESE          =  7,
-   RETRO_LANGUAGE_RUSSIAN             =  8,
-   RETRO_LANGUAGE_KOREAN              =  9,
-   RETRO_LANGUAGE_CHINESE_TRADITIONAL = 10,
-   RETRO_LANGUAGE_CHINESE_SIMPLIFIED  = 11,
-   RETRO_LANGUAGE_ESPERANTO           = 12,
-   RETRO_LANGUAGE_POLISH              = 13,
+   RETRO_LANGUAGE_ENGLISH             = 0,
+   RETRO_LANGUAGE_JAPANESE            = 1,
+   RETRO_LANGUAGE_FRENCH              = 2,
+   RETRO_LANGUAGE_SPANISH             = 3,
+   RETRO_LANGUAGE_GERMAN              = 4,
+   RETRO_LANGUAGE_ITALIAN             = 5,
+   RETRO_LANGUAGE_DUTCH               = 6,
+   RETRO_LANGUAGE_PORTUGUESE_BRAZIL   = 7,
+   RETRO_LANGUAGE_PORTUGUESE_PORTUGAL = 8,
+   RETRO_LANGUAGE_RUSSIAN             = 9,
+   RETRO_LANGUAGE_KOREAN              = 10,
+   RETRO_LANGUAGE_CHINESE_TRADITIONAL = 11,
+   RETRO_LANGUAGE_CHINESE_SIMPLIFIED  = 12,
+   RETRO_LANGUAGE_ESPERANTO           = 13,
+   RETRO_LANGUAGE_POLISH              = 14,
+   RETRO_LANGUAGE_VIETNAMESE          = 15,
    RETRO_LANGUAGE_LAST,
 
    /* Ensure sizeof(enum) == sizeof(int) */
@@ -712,7 +714,7 @@ enum retro_mod
                                            /* struct retro_log_callback * --
                                             * Gets an interface for logging. This is useful for 
                                             * logging in a cross-platform way
-                                            * as certain platforms cannot use use stderr for logging. 
+                                            * as certain platforms cannot use stderr for logging. 
                                             * It also allows the frontend to
                                             * show logging information in a more suitable way.
                                             * If this interface is not used, libretro cores should 
@@ -921,6 +923,18 @@ enum retro_mod
                                             * writeable (and readable).
                                             */
 
+#define RETRO_ENVIRONMENT_SET_HW_SHARED_CONTEXT (44 | RETRO_ENVIRONMENT_EXPERIMENTAL)
+                                           /* N/A (null) * --
+                                            * The frontend will try to use a 'shared' hardware context (mostly applicable
+                                            * to OpenGL) when a hardware context is being set up.
+                                            *
+                                            * Returns true if the frontend supports shared hardware contexts and false
+                                            * if the frontend does not support shared hardware contexts.
+                                            *
+                                            * This will do nothing on its own until SET_HW_RENDER env callbacks are
+                                            * being used.
+                                            */
+
 enum retro_hw_render_interface_type
 {
    RETRO_HW_RENDER_INTERFACE_VULKAN = 0,
@@ -975,6 +989,37 @@ struct retro_hw_render_context_negotiation_interface
                                             * This interface will be used when the frontend is trying to create a HW rendering context,
                                             * so it will be used after SET_HW_RENDER, but before the context_reset callback.
                                             */
+
+/* Serialized state is incomplete in some way. Set if serialization is
+ * usable in typical end-user cases but should not be relied upon to
+ * implement frame-sensitive frontend features such as netplay or
+ * rerecording. */
+#define RETRO_SERIALIZATION_QUIRK_INCOMPLETE (1 << 0)
+/* The core must spend some time initializing before serialization is
+ * supported. retro_serialize() will initially fail; retro_unserialize()
+ * and retro_serialize_size() may or may not work correctly either. */
+#define RETRO_SERIALIZATION_QUIRK_MUST_INITIALIZE (1 << 1)
+/* Serialization size may change within a session. */
+#define RETRO_SERIALIZATION_QUIRK_CORE_VARIABLE_SIZE (1 << 2)
+/* Set by the frontend to acknowledge that it supports variable-sized
+ * states. */
+#define RETRO_SERIALIZATION_QUIRK_FRONT_VARIABLE_SIZE (1 << 3)
+/* Serialized state can only be loaded during the same session. */
+#define RETRO_SERIALIZATION_QUIRK_SINGLE_SESSION (1 << 4)
+/* Serialized state cannot be loaded on an architecture with a different
+ * endianness from the one it was saved on. */
+#define RETRO_SERIALIZATION_QUIRK_ENDIAN_DEPENDENT (1 << 5)
+/* Serialized state cannot be loaded on a different platform from the one it
+ * was saved on for reasons other than endianness, such as word size
+ * dependence */
+#define RETRO_SERIALIZATION_QUIRK_PLATFORM_DEPENDENT (1 << 6)
+
+#define RETRO_ENVIRONMENT_SET_SERIALIZATION_QUIRKS 44
+                                           /* uint64_t * --
+                                            * Sets quirk flags associated with serialization. The frontend will zero any flags it doesn't
+                                            * recognize or support. Should be set in either retro_init or retro_load_game, but not both.
+                                            */
+
 
 #define RETRO_MEMDESC_CONST     (1 << 0)   /* The frontend will never change this memory area once retro_load_game has returned. */
 #define RETRO_MEMDESC_BIGENDIAN (1 << 1)   /* The memory area contains big endian data. Default is little endian. */
@@ -1284,6 +1329,8 @@ struct retro_log_callback
 #define RETRO_SIMD_VFPV4    (1 << 17)
 #define RETRO_SIMD_POPCNT   (1 << 18)
 #define RETRO_SIMD_MOVBE    (1 << 19)
+#define RETRO_SIMD_CMOV     (1 << 20)
+#define RETRO_SIMD_ASIMD    (1 << 21)
 
 typedef uint64_t retro_perf_tick_t;
 typedef int64_t retro_time_t;
@@ -1657,7 +1704,8 @@ struct retro_hw_render_callback
     * be providing preallocated framebuffers. */
    retro_hw_get_current_framebuffer_t get_current_framebuffer;
 
-   /* Set by frontend. */
+   /* Set by frontend.
+    * Can return all relevant functions, including glClear on Windows. */
    retro_hw_get_proc_address_t get_proc_address;
 
    /* Set if render buffers should have depth component attached.
@@ -1940,10 +1988,12 @@ struct retro_variable
 struct retro_game_info
 {
    const char *path;       /* Path to game, UTF-8 encoded.
-                            * Usually used as a reference.
-                            * May be NULL if rom was loaded from stdin
-                            * or similar. 
-                            * retro_system_info::need_fullpath guaranteed 
+                            * Sometimes used as a reference for building other paths.
+                            * May be NULL if game was loaded from stdin or similar,
+                            * but in this case some cores will be unable to load `data`.
+                            * So, it is preferable to fabricate something here instead
+                            * of passing NULL, which will help more cores to succeed.
+                            * retro_system_info::need_fullpath requires
                             * that this path is valid. */
    const void *data;       /* Memory buffer of loaded game. Will be NULL 
                             * if need_fullpath was set. */
