@@ -3,6 +3,7 @@
 #include "mednafen/mednafen-types.h"
 #include "mednafen/ss/ss.h"
 #include "mednafen/ss/smpc.h"
+#include "mednafen/state.h"
 #include <math.h>
 #include <stdio.h>
 
@@ -38,7 +39,7 @@ static uint32_t input_type[ MAX_CONTROLLERS ] = {0};
 #define INPUT_MODE_3D_PAD_DEFAULT		INPUT_MODE_3D_PAD_ANALOG
 
 // Mode switch for 3D Control Pad (per player)
-static uint32_t input_mode[ MAX_CONTROLLERS ] = {0};
+static uint16_t input_mode[ MAX_CONTROLLERS ] = {0};
 
 
 
@@ -308,8 +309,8 @@ void input_update( retro_input_state_t input_state_cb )
 
 				{
 					// Handle MODE button as a switch
-					unsigned prev = ( input_mode[iplayer] & INPUT_MODE_3D_PAD_PREVIOUS_MASK );
-					unsigned held = input_state_cb( iplayer, RETRO_DEVICE_JOYPAD, 0, input_map_3d_pad_mode_switch )
+					uint16_t prev = ( input_mode[iplayer] & INPUT_MODE_3D_PAD_PREVIOUS_MASK );
+					uint16_t held = input_state_cb( iplayer, RETRO_DEVICE_JOYPAD, 0, input_map_3d_pad_mode_switch )
 						? INPUT_MODE_3D_PAD_PREVIOUS_MASK : 0;
 
 					// Rising edge trigger
@@ -437,6 +438,22 @@ void input_update( retro_input_state_t input_state_cb )
 	}; // for each player
 }
 
+// save state function for input
+int input_StateAction( StateMem* sm, const unsigned load, const bool data_only )
+{
+	int success;
+
+	SFORMAT StateRegs[] =
+	{
+		SFARRAY16N( input_mode, MAX_CONTROLLERS, "mode" ),
+		SFEND
+	};
+
+	success = MDFNSS_StateAction( sm, load, data_only, StateRegs, "LIBRETRO-INPUT" );
+
+	// ok?
+	return success;
+}
 
 //------------------------------------------------------------------------------
 // Libretro Interface

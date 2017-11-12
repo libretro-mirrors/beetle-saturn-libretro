@@ -2012,6 +2012,11 @@ MDFN_COLD int LibRetro_StateAction( StateMem* sm, const unsigned load, const boo
 		return 0;
 	}
 
+	success = input_StateAction( sm, load, data_only );
+	if ( success == 0 ) {
+		log_cb( RETRO_LOG_WARN, "Input state failed.\n" );
+	}
+
 	if ( load )
 	{
 		BackupRAM_Dirty = true;
