@@ -25,6 +25,7 @@
 #include <compat/msvc.h>
 
 int setting_region = 0;
+int setting_cart = 1; /*CART_BACKUP_MEM*/
 bool setting_smpc_autortc = true;
 int setting_smpc_autortc_lang = 0;
 int setting_initial_scanline = 0;
@@ -59,17 +60,6 @@ int64 MDFN_GetSettingI(const char *name)
       return setting_last_scanline;
    if (!strcmp("ss.slendp", name))
       return setting_last_scanline_pal;
-   if (!strcmp("ss.cart", name))
-   {
-      /* -1 - reserved
-       *  0 - auto
-       *  1 - none
-       *  2 - backup
-       *  3 - extram1
-       *  4 - extram4
-       */
-      return -1;
-   }
    fprintf(stderr, "unhandled setting I: %s\n", name);
    return 0;
 }
