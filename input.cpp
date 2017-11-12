@@ -445,11 +445,11 @@ int input_StateAction( StateMem* sm, const unsigned load, const bool data_only )
 
 	SFORMAT StateRegs[] =
 	{
-		SFARRAY16N( input_mode, sizeof( input_mode ), "mode" ),
+		SFARRAY16N( input_mode, MAX_CONTROLLERS, "mode" ),
 		SFEND
 	};
 
-	success = MDFNSS_StateAction( sm, load, data_only, StateRegs, "LRINPUT" );
+	success = MDFNSS_StateAction( sm, load, data_only, StateRegs, "LIBRETRO-INPUT" );
 
 	// ok?
 	return success;
