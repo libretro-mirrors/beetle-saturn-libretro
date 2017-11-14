@@ -2938,7 +2938,7 @@ void retro_run(void)
 
    input_update( input_state_cb );
 
-   static int32 rects[FB_WIDTH];
+   static int32 rects[MEDNAFEN_CORE_GEOMETRY_MAX_H];
    rects[0] = ~0;
 
    static int16_t sound_buf[0x10000];
