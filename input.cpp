@@ -443,16 +443,15 @@ void input_update( retro_input_state_t input_state_cb )
 					p_input->u8[0x8] |= ( 1 << 0 ); // A
 				}
 
-				if ( input_state_cb( iplayer, RETRO_DEVICE_MOUSE, 0, RETRO_DEVICE_ID_MOUSE_MIDDLE ) ) {
+				if ( input_state_cb( iplayer, RETRO_DEVICE_MOUSE, 0, RETRO_DEVICE_ID_MOUSE_RIGHT ) ) {
 					p_input->u8[0x8] |= ( 1 << 1 ); // B
 				}
 
-				if ( input_state_cb( iplayer, RETRO_DEVICE_MOUSE, 0, RETRO_DEVICE_ID_MOUSE_RIGHT ) ) {
+				if ( input_state_cb( iplayer, RETRO_DEVICE_MOUSE, 0, RETRO_DEVICE_ID_MOUSE_MIDDLE ) ) {
 					p_input->u8[0x8] |= ( 1 << 2 ); // C
 				}
 
-				if ( // input_state_cb( iplayer, RETRO_DEVICE_MOUSE, 0, RETRO_DEVICE_ID_MOUSE_START ) ||
-					 input_state_cb( iplayer, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_START ) ) {
+				if ( input_state_cb( iplayer, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_START ) ) {
 					p_input->u8[0x8] |= ( 1 << 3 ); // Start
 				}
 
