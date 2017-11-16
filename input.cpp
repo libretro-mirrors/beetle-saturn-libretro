@@ -457,7 +457,14 @@ void input_update( retro_input_state_t input_state_cb )
 				}
 
 				// mouse input
+				int dx_raw, dy_raw;
+				dx_raw = input_state_cb( iplayer, RETRO_DEVICE_MOUSE, 0, RETRO_DEVICE_ID_MOUSE_X );
+				dy_raw = input_state_cb( iplayer, RETRO_DEVICE_MOUSE, 0, RETRO_DEVICE_ID_MOUSE_Y );
 
+				int *delta;
+				delta = (int*)p_input;
+				delta[ 0 ] = dx_raw;
+				delta[ 1 ] = dy_raw;
 			}
 
 			break;
