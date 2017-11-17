@@ -18,6 +18,7 @@ static retro_environment_t environ_cb; // cached during input_set_env
 static unsigned players = MAX_CONTROLLERS;
 
 static int astick_deadzone = 0;
+static int trigger_deadzone = 0;
 
 typedef union
 {
@@ -212,7 +213,14 @@ void input_init()
 
 void input_set_deadzone_stick( int percent )
 {
-	astick_deadzone = (int)( percent * 0.01f * 0x8000);
+	if ( percent >= 0 && percent <= 100 )
+		astick_deadzone = (int)( percent * 0.01f * 0x8000);
+}
+
+void input_set_deadzone_trigger( int percent )
+{
+	if ( percent >= 0 && percent <= 100 )
+		trigger_deadzone = (int)( percent * 0.01f * 0x8000);
 }
 
 void input_update( retro_input_state_t input_state_cb )
