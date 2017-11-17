@@ -137,6 +137,76 @@ static const unsigned input_map_wheel_shift_right =
 
 
 //------------------------------------------------------------------------------
+// Local Functions
+//------------------------------------------------------------------------------
+
+static uint16_t apply_trigger_deadzone( uint16_t input )
+{
+	if ( trigger_deadzone > 0 )
+	{
+		static const int TRIGGER_MAX = 0x8000;
+		const float scale = ((float)TRIGGER_MAX/(float)(TRIGGER_MAX - trigger_deadzone));
+
+		if ( input > trigger_deadzone )
+		{
+			// Re-scale analog range
+			float scaled = (input - trigger_deadzone)*scale;
+
+			input = (int)round(scaled);
+			if (input > +32767) {
+				input = +32767;
+			}
+		}
+		else
+		{
+			input = 0;
+		}
+	}
+
+	return input;
+}
+
+static uint16_t get_analog_trigger( retro_input_state_t input_state_cb,
+									int player_index,
+									int id )
+{
+	uint16_t trigger;
+
+	// NOTE: Analog triggers were added Nov 2017. Not all front-ends support this
+	// feature (or pre-date it) so we need to handle this in a graceful way.
+
+	// First, try and get an analog value using the new libretro API constant
+	trigger = input_state_cb( player_index,
+							  RETRO_DEVICE_ANALOG,
+							  RETRO_DEVICE_INDEX_ANALOG_BUTTON,
+							  id );
+
+	if ( trigger == 0 )
+	{
+		// If we got exactly zero, we're either not pressing the button, or the front-end
+		// is not reporting analog values. We need to do a second check using the classic
+		// digital API method, to at least get some response - better than nothing.
+
+		// NOTE: If we're really just not holding the trigger, we're still going to get zero.
+
+		trigger = input_state_cb( player_index,
+								  RETRO_DEVICE_JOYPAD,
+								  0,
+								  id ) ? 0x7FFF : 0;
+	}
+	else
+	{
+		// We got something, which means the front-end can handle analog buttons.
+		// So we apply a deadzone to the input and use it.
+
+		trigger = apply_trigger_deadzone( trigger );
+	}
+
+	return trigger;
+}
+
+
+//------------------------------------------------------------------------------
 // Global Functions
 //------------------------------------------------------------------------------
 
@@ -305,12 +375,13 @@ void input_update( retro_input_state_t input_state_cb )
 					}
 				}
 
+
 				//
 				// -- triggers
 
-				// note: LibRetro doesn't support analog triggers, so we must make do with digital inputs for now.
-				uint16_t l_trigger = input_state_cb( iplayer, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_L2) ? 32767 : 0;
-				uint16_t r_trigger = input_state_cb( iplayer, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_R2) ? 32767 : 0;
+				uint16_t l_trigger, r_trigger;
+				l_trigger = get_analog_trigger( input_state_cb, iplayer, RETRO_DEVICE_ID_JOYPAD_L2 );
+				r_trigger = get_analog_trigger( input_state_cb, iplayer, RETRO_DEVICE_ID_JOYPAD_R2 );
 
 				//
 				// -- mode switch
