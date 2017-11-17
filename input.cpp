@@ -52,14 +52,14 @@ static uint16_t input_mode[ MAX_CONTROLLERS ] = {0};
 #define RETRO_DEVICE_SS_MOUSE		RETRO_DEVICE_SUBCLASS( RETRO_DEVICE_MOUSE,  0 )
 #define RETRO_DEVICE_SS_WHEEL		RETRO_DEVICE_SUBCLASS( RETRO_DEVICE_ANALOG, 1 )
 
-enum { INPUT_DEVICE_TYPES_COUNT = 1 /*none*/ + 3 }; // <-- update me!
+enum { INPUT_DEVICE_TYPES_COUNT = 1 /*none*/ + 4 }; // <-- update me!
 
 static const struct retro_controller_description input_device_types[ INPUT_DEVICE_TYPES_COUNT ] =
 {
 	{ "Control Pad", RETRO_DEVICE_JOYPAD },
 	{ "3D Control Pad", RETRO_DEVICE_SS_3D_PAD },
 	{ "Arcade Racer", RETRO_DEVICE_SS_WHEEL },
-//	{ "Mouse", RETRO_DEVICE_SS_MOUSE }, // todo !
+	{ "Mouse", RETRO_DEVICE_SS_MOUSE },
 	{ NULL, 0 },
 };
 
@@ -161,7 +161,7 @@ void input_init_env( retro_environment_t _environ_cb )
 		{ 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_START, "Start Button" },
 		{ 0, RETRO_DEVICE_ANALOG, RETRO_DEVICE_INDEX_ANALOG_LEFT, RETRO_DEVICE_ID_ANALOG_X, "Analog X" },
 		{ 0, RETRO_DEVICE_ANALOG, RETRO_DEVICE_INDEX_ANALOG_LEFT, RETRO_DEVICE_ID_ANALOG_Y, "Analog Y" },
-		{ 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_SELECT, "(3D Pad) Mode Switch" },
+		{ 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_SELECT, "Mode Switch" },
 
 		{ 1, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_UP,    "D-Pad Up" },
 		{ 1, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_DOWN,  "D-Pad Down" },
@@ -178,7 +178,7 @@ void input_init_env( retro_environment_t _environ_cb )
 		{ 1, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_START, "Start" },
 		{ 1, RETRO_DEVICE_ANALOG, RETRO_DEVICE_INDEX_ANALOG_LEFT, RETRO_DEVICE_ID_ANALOG_X, "Analog X" },
 		{ 1, RETRO_DEVICE_ANALOG, RETRO_DEVICE_INDEX_ANALOG_LEFT, RETRO_DEVICE_ID_ANALOG_Y, "Analog Y" },
-		{ 1, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_SELECT, "(3D Pad) Mode Switch" },
+		{ 1, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_SELECT, "Mode Switch" },
 
 		{ 0 },
 	};
@@ -433,6 +433,41 @@ void input_update( retro_input_state_t input_state_cb )
 
 			break;
 
+		case RETRO_DEVICE_SS_MOUSE:
+
+			{
+				// mouse buttons
+				p_input->u8[0x8] = 0;
+
+				if ( input_state_cb( iplayer, RETRO_DEVICE_MOUSE, 0, RETRO_DEVICE_ID_MOUSE_LEFT ) ) {
+					p_input->u8[0x8] |= ( 1 << 0 ); // A
+				}
+
+				if ( input_state_cb( iplayer, RETRO_DEVICE_MOUSE, 0, RETRO_DEVICE_ID_MOUSE_RIGHT ) ) {
+					p_input->u8[0x8] |= ( 1 << 1 ); // B
+				}
+
+				if ( input_state_cb( iplayer, RETRO_DEVICE_MOUSE, 0, RETRO_DEVICE_ID_MOUSE_MIDDLE ) ) {
+					p_input->u8[0x8] |= ( 1 << 2 ); // C
+				}
+
+				if ( input_state_cb( iplayer, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_START ) ) {
+					p_input->u8[0x8] |= ( 1 << 3 ); // Start
+				}
+
+				// mouse input
+				int dx_raw, dy_raw;
+				dx_raw = input_state_cb( iplayer, RETRO_DEVICE_MOUSE, 0, RETRO_DEVICE_ID_MOUSE_X );
+				dy_raw = input_state_cb( iplayer, RETRO_DEVICE_MOUSE, 0, RETRO_DEVICE_ID_MOUSE_Y );
+
+				int *delta;
+				delta = (int*)p_input;
+				delta[ 0 ] = dx_raw;
+				delta[ 1 ] = dy_raw;
+			}
+
+			break;
+
 		}; // switch ( input_type[ iplayer ] )
 
 	}; // for each player
@@ -485,10 +520,10 @@ void retro_set_controller_port_device( unsigned in_port, unsigned device )
 			SMPC_SetInput( in_port, "3dpad", (uint8*)&input_data[ in_port ] );
 			break;
 
-		/*case RETRO_DEVICE_SS_MOUSE:
+		case RETRO_DEVICE_SS_MOUSE:
 			log_cb( RETRO_LOG_INFO, "Controller %u: Mouse\n", (in_port+1) );
 			SMPC_SetInput( in_port, "mouse", (uint8*)&input_data[ in_port ] );
-			break;*/
+			break;
 
 		case RETRO_DEVICE_SS_WHEEL:
 			log_cb( RETRO_LOG_INFO, "Controller %u: Arcade Racer\n", (in_port+1) );
