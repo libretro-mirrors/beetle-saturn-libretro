@@ -2904,15 +2904,6 @@ void retro_unload_game(void)
    retro_cd_base_name[0]      = '\0';
 }
 
-void update_geometry(unsigned width, unsigned height)
-{
-   struct retro_system_av_info system_av_info;
-   system_av_info.geometry.base_width = width;
-   system_av_info.geometry.base_height = height;
-   system_av_info.geometry.aspect_ratio = MEDNAFEN_CORE_GEOMETRY_ASPECT_RATIO;
-   environ_cb(RETRO_ENVIRONMENT_SET_GEOMETRY, &system_av_info);
-}
-
 static uint64_t video_frames, audio_frames;
 #define SOUND_CHANNELS 2
 
@@ -2924,6 +2915,7 @@ void retro_run(void)
    unsigned overscan_mask;
    unsigned linevisfirst, linevislast;
    static unsigned width, height;
+   static unsigned game_width, game_height;
 
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE_UPDATE, &updated) && updated)
    {
@@ -2986,10 +2978,6 @@ void retro_run(void)
       PrevInterlaced = false;
 
 #endif
-   if (width != rects[0] - (h_mask << hires_h_mode) ||
-       height != (linevislast + 1 - linevisfirst) << PrevInterlaced)
-         resolution_changed = true;
-
    const void *fb      = NULL;
    const uint32_t *pix = surf->pixels;
    size_t pitch        = FB_WIDTH * sizeof(uint32_t);
@@ -2999,14 +2987,28 @@ void retro_run(void)
    width          =  rects[0] - (h_mask << hires_h_mode);
    height         =  (linevislast + 1 - linevisfirst) << PrevInterlaced;
 
+   if (width != game_width || height != game_height)
+   {
+      struct retro_system_av_info av_info;
+
+      // Change frontend resolution using  base width/height (+ overscan adjustments).
+      // This avoids inconsistent frame scales when game switches between interlaced and non-interlaced modes.
+      av_info.geometry.base_width   = 352 - h_mask;
+      av_info.geometry.base_height  = linevislast + 1 - linevisfirst;
+      av_info.geometry.aspect_ratio = MEDNAFEN_CORE_GEOMETRY_ASPECT_RATIO;
+      environ_cb(RETRO_ENVIRONMENT_SET_GEOMETRY, &av_info);
+
+      log_cb(RETRO_LOG_INFO, "Target framebuffer size : %dx%d\n", width, height);
+
+      game_width  = width;
+      game_height = height;
+   }
+
    pix += surf->pitchinpix * (linevisfirst << PrevInterlaced) + overscan_mask;
 
    fb = pix;
 
-   video_cb(fb, width, height, pitch);
-
-   if (resolution_changed)
-      update_geometry(width, height);
+   video_cb(fb, game_width, game_height, pitch);
 
    video_frames++;
    audio_frames += spec.SoundBufSize;
