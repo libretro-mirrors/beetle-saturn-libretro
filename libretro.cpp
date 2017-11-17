@@ -2621,6 +2621,14 @@ static void check_variables(bool startup)
       last_sl_pal = atoi(var.value);
    }
 
+   var.key = "beetle_saturn_horizontal_blend";
+
+   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+   {
+      bool newval = (!strcmp(var.value, "enabled"));
+      DoHBlend = newval;
+   }
+
 	var.key = "beetle_saturn_analog_stick_deadzone";
 	var.value = NULL;
 
@@ -2904,30 +2912,23 @@ void retro_unload_game(void)
    retro_cd_base_name[0]      = '\0';
 }
 
-void update_geometry(unsigned width, unsigned height)
-{
-   struct retro_system_av_info system_av_info;
-   system_av_info.geometry.base_width = width;
-   system_av_info.geometry.base_height = height;
-   system_av_info.geometry.aspect_ratio = MEDNAFEN_CORE_GEOMETRY_ASPECT_RATIO;
-   environ_cb(RETRO_ENVIRONMENT_SET_GEOMETRY, &system_av_info);
-}
-
 static uint64_t video_frames, audio_frames;
 #define SOUND_CHANNELS 2
 
 void retro_run(void)
 {
    bool updated = false;
-   bool resolution_changed = false;
-   unsigned linevisfirst, overscan_mask;
-   static unsigned width, height, source_height;
+   bool hires_h_mode;
+   unsigned overscan_mask;
+   unsigned linevisfirst, linevislast;
+   static unsigned width, height;
+   static unsigned game_width, game_height;
 
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE_UPDATE, &updated) && updated)
-   {
       check_variables(false);
-      resolution_changed = true;
-   }
+
+   linevisfirst   =  is_pal ? first_sl_pal : first_sl;
+   linevislast    =  is_pal ? last_sl_pal : last_sl;
 
    // Keep the counters at 0 so that they don't display a bogus
    // value if this option is enabled later on
@@ -2981,24 +2982,37 @@ void retro_run(void)
       PrevInterlaced = false;
 
 #endif
+   const void *fb      = NULL;
+   const uint32_t *pix = surf->pixels;
+   size_t pitch        = FB_WIDTH * sizeof(uint32_t);
 
-   if ((!PrevInterlaced && (width != rects[0] - h_mask)) ||
-      (PrevInterlaced && (width != FB_WIDTH)) ||
-      source_height != spec.DisplayRect.h)
-         resolution_changed = true;
+   hires_h_mode   =  (rects[0] == 704) ? true : false;
+   overscan_mask  =  (h_mask >> 1) << hires_h_mode;
+   width          =  rects[0] - (h_mask << hires_h_mode);
+   height         =  (linevislast + 1 - linevisfirst) << PrevInterlaced;
 
-   source_height  =  spec.DisplayRect.h;
-   linevisfirst   =  (is_pal ? first_sl_pal : first_sl) << PrevInterlaced;
-   overscan_mask  =  PrevInterlaced ? 0 : h_mask >> 1;
-   width          =  PrevInterlaced ? FB_WIDTH : (rects[0] - h_mask);
-   height         =  (is_pal ? (last_sl_pal + 1 - first_sl_pal) :
-                     (last_sl + 1 - first_sl)) << PrevInterlaced;
+   if (width != game_width || height != game_height)
+   {
+      struct retro_system_av_info av_info;
 
-   video_cb(surf->pixels + surf->pitchinpix * linevisfirst + overscan_mask,
-            width, height, FB_WIDTH << 2);
+      // Change frontend resolution using  base width/height (+ overscan adjustments).
+      // This avoids inconsistent frame scales when game switches between interlaced and non-interlaced modes.
+      av_info.geometry.base_width   = 352 - h_mask;
+      av_info.geometry.base_height  = linevislast + 1 - linevisfirst;
+      av_info.geometry.aspect_ratio = MEDNAFEN_CORE_GEOMETRY_ASPECT_RATIO;
+      environ_cb(RETRO_ENVIRONMENT_SET_GEOMETRY, &av_info);
 
-   if (resolution_changed)
-      update_geometry(width, height);
+      log_cb(RETRO_LOG_INFO, "Target framebuffer size : %dx%d\n", width, height);
+
+      game_width  = width;
+      game_height = height;
+   }
+
+   pix += surf->pitchinpix * (linevisfirst << PrevInterlaced) + overscan_mask;
+
+   fb = pix;
+
+   video_cb(fb, game_width, game_height, pitch);
 
    video_frames++;
    audio_frames += spec.SoundBufSize;
@@ -3069,6 +3083,7 @@ void retro_set_environment( retro_environment_t cb )
       { "beetle_saturn_last_scanline", "Last scanline; 239|210|211|212|213|214|215|216|217|218|219|220|221|222|223|224|225|226|227|228|229|230|231|232|233|234|235|236|237|238" },
       { "beetle_saturn_initial_scanline_pal", "Initial scanline PAL; 16|17|18|19|20|21|22|23|24|25|26|27|28|29|30|31|32|33|34|35|36|37|38|39|40|41|42|43|44|45|46|47|48|49|50|51|52|53|54|55|56|57|58|59|60|0|1|2|3|4|5|6|7|8|9|10|11|12|13|14|15" },
       { "beetle_saturn_last_scanline_pal", "Last scanline PAL; 271|272|273|274|275|276|277|278|279|280|281|282|283|284|285|286|287|230|231|232|233|234|235|236|237|238|239|240|241|242|243|244|245|246|247|248|249|250|251|252|253|254|255|256|257|258|259|260|261|262|263|264|265|266|267|268|269|270" },
+      { "beetle_saturn_horizontal_blend", "Enable Horizontal Blend(blur); disabled|enabled" },
       { "beetle_saturn_analog_stick_deadzone", "Analog Deadzone (percent); 15|20|25|30|0|5|10"},
       { NULL, NULL },
    };

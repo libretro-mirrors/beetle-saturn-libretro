@@ -42,7 +42,7 @@ static EmulateSpecStruct* espec = NULL;
 static bool PAL;
 static bool CorrectAspect;
 static bool ShowHOverscan = true;
-static bool DoHBlend;
+bool DoHBlend;
 static int LineVisFirst, LineVisLast;
 static uint32_t NextOutLine;
 static bool Clock28M;
