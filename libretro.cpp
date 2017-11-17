@@ -2920,14 +2920,19 @@ void retro_run(void)
 {
    bool updated = false;
    bool resolution_changed = false;
-   unsigned linevisfirst, overscan_mask;
-   static unsigned width, height, source_height;
+   static bool hires_h_mode;
+   unsigned overscan_mask;
+   unsigned linevisfirst, linevislast;
+   static unsigned width, height;
 
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE_UPDATE, &updated) && updated)
    {
       check_variables(false);
       resolution_changed = true;
    }
+
+   linevisfirst   =  is_pal ? first_sl_pal : first_sl;
+   linevislast    =  is_pal ? last_sl_pal : last_sl;
 
    // Keep the counters at 0 so that they don't display a bogus
    // value if this option is enabled later on
@@ -2981,21 +2986,24 @@ void retro_run(void)
       PrevInterlaced = false;
 
 #endif
-
-   if ((!PrevInterlaced && (width != rects[0] - h_mask)) ||
-      (PrevInterlaced && (width != FB_WIDTH)) ||
-      source_height != spec.DisplayRect.h)
+   if (width != rects[0] - (h_mask << hires_h_mode) ||
+       height != (linevislast + 1 - linevisfirst) << PrevInterlaced)
          resolution_changed = true;
 
-   source_height  =  spec.DisplayRect.h;
-   linevisfirst   =  (is_pal ? first_sl_pal : first_sl) << PrevInterlaced;
-   overscan_mask  =  PrevInterlaced ? 0 : h_mask >> 1;
-   width          =  PrevInterlaced ? FB_WIDTH : (rects[0] - h_mask);
-   height         =  (is_pal ? (last_sl_pal + 1 - first_sl_pal) :
-                     (last_sl + 1 - first_sl)) << PrevInterlaced;
+   const void *fb      = NULL;
+   const uint32_t *pix = surf->pixels;
+   size_t pitch        = FB_WIDTH * sizeof(uint32_t);
 
-   video_cb(surf->pixels + surf->pitchinpix * linevisfirst + overscan_mask,
-            width, height, FB_WIDTH << 2);
+   hires_h_mode   =  (rects[0] == 704) ? true : false;
+   overscan_mask  =  (h_mask >> 1) << hires_h_mode;
+   width          =  rects[0] - (h_mask << hires_h_mode);
+   height         =  (linevislast + 1 - linevisfirst) << PrevInterlaced;
+
+   pix += surf->pitchinpix * (linevisfirst << PrevInterlaced) + overscan_mask;
+
+   fb = pix;
+
+   video_cb(fb, width, height, pitch);
 
    if (resolution_changed)
       update_geometry(width, height);
