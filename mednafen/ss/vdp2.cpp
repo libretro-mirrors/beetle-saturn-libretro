@@ -436,6 +436,13 @@ static INLINE int32 AddHCounter(const sscpu_timestamp_t event_timestamp, int32 c
   //
   if(HPhase == HPHASE_ACTIVE)
   {
+   {
+    const int32 div = Clock28M ? 61 : 65;
+    const int32 coord_adj = 6832 - 80 * div;
+
+    SMPC_LineHook(event_timestamp, CRTLineCounter, div, coord_adj);
+   }
+
    if(VPhase == VPHASE_ACTIVE)
    {
     VDP2Rend_LIB* lib = VDP2REND_GetLIB(VCounter);
