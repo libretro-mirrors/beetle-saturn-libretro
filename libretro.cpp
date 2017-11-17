@@ -1247,7 +1247,7 @@ static bool InitCommon(const unsigned cpucache_emumode, const unsigned cart_type
          { CART_NLMODEM, _("Netlink Modem") },
          { CART_MDFN_DEBUG, "Mednafen Debug" }
       };
-      const char* cn = "Unknown";
+      const char* cn = nullptr;
 
       for(i = 0; i < ARRAY_SIZE(CartNames); i++)
       {
@@ -1257,7 +1257,11 @@ static bool InitCommon(const unsigned cpucache_emumode, const unsigned cart_type
          cn = cne.name;
          break;
       }
-      log_cb(RETRO_LOG_INFO, "[Mednafen]: Cart: %s.\n", cn);
+      if ( cn ) {
+      	log_cb(RETRO_LOG_INFO, "[Mednafen]: Cart: %s.\n", cn);
+	  } else {
+      	log_cb(RETRO_LOG_INFO, "[Mednafen]: Cart: Unknown (%d).\n", cart_type );
+	  }
    }
    //
 
@@ -1687,20 +1691,20 @@ static bool DiscSanityChecks(void)
 
 static MDFN_COLD bool LoadCD(std::vector<CDIF *>* CDInterfaces)
 {
-   const int ss_cart_setting = MDFN_GetSettingI("ss.cart");
-   unsigned region;
-   int cart_type;
-   unsigned cpucache_emumode;
-   uint8 fd_id[16];
-   char sgid[16 + 1] = { 0 };
-   cdifs = CDInterfaces;
-   CalcGameID(MDFNGameInfo->MD5, fd_id, sgid);
+	unsigned region;
+	int cart_type;
+	unsigned cpucache_emumode;
+	uint8 fd_id[16];
+	char sgid[16 + 1] = { 0 };
+	cdifs = CDInterfaces;
+	CalcGameID(MDFNGameInfo->MD5, fd_id, sgid);
 
-   log_cb(RETRO_LOG_INFO, "Game ID is: %s\n", sgid);
+	log_cb(RETRO_LOG_INFO, "Game ID is: %s\n", sgid);
 
-   region = setting_region;
-   cart_type = CART_BACKUP_MEM;
-   cpucache_emumode = CPUCACHE_EMUMODE_DATA;
+	// .. safe defaults
+	region = SMPC_AREA_NA;
+	cart_type = CART_BACKUP_MEM;
+	cpucache_emumode = CPUCACHE_EMUMODE_DATA;
 
    DetectRegion(&region);
    DB_Lookup(nullptr, sgid, fd_id, &region, &cart_type, &cpucache_emumode);
@@ -1710,9 +1714,11 @@ static MDFN_COLD bool LoadCD(std::vector<CDIF *>* CDInterfaces)
 	   region = setting_region;
    }
 
-  if(ss_cart_setting != CART__RESERVED)
-   cart_type = ss_cart_setting;
-  //
+   // forced cartridge setting?
+   if ( setting_cart != CART__RESERVED ) {
+	   cart_type = setting_cart;
+   }
+
    if(MDFN_GetSettingB("ss.cd_sanity"))
    {
       log_cb(RETRO_LOG_INFO, "Trying to do CD sanity checks...\n");
@@ -2012,6 +2018,11 @@ MDFN_COLD int LibRetro_StateAction( StateMem* sm, const unsigned load, const boo
 		return 0;
 	}
 
+	success = input_StateAction( sm, load, data_only );
+	if ( success == 0 ) {
+		log_cb( RETRO_LOG_WARN, "Input state failed.\n" );
+	}
+
 	if ( load )
 	{
 		BackupRAM_Dirty = true;
@@ -2093,20 +2104,6 @@ static const MDFNSetting_EnumList RTCLang_List[] =
  { NULL, 0 },
 };
 
-static const MDFNSetting_EnumList Cart_List[] =
-{
- { "auto", CART__RESERVED, "Automatic" },
- { "none", CART_NONE, "None" },
- { "backup", CART_BACKUP_MEM, "Backup Memory(512KiB)" },
- { "extram1", CART_EXTRAM_1M, "1MiB Extended RAM" },
- { "extram4", CART_EXTRAM_4M, "4MiB Extended RAM" },
- { "cs1ram16", CART_CS1RAM_16M, "16MiB RAM mapped in A-bus CS1" },
- { "ar4mp", CART_AR4MP, NULL }, // Undocumented, unfinished. "Action Replay 4M Plus" },
- // { "nlmodem", CART_NLMODEM, "NetLink Modem" },
-
- { NULL, 0 },
-};
-
 static MDFNSetting SSSettings[] =
 {
    { "ss.bios_jp", MDFNSF_EMU_STATE, "Path to the Japan ROM BIOS", NULL, MDFNST_STRING, "sega_101.bin" },
@@ -2137,7 +2134,6 @@ static MDFNSetting SSSettings[] =
  { "ss.smpc.autortc", MDFNSF_NOFLAGS, "Automatically set RTC on game load.", "Automatically set the SMPC's emulated Real-Time Clock to the host system's current time and date upon game load.", MDFNST_BOOL, "1" },
  { "ss.smpc.autortc.lang", MDFNSF_NOFLAGS, "BIOS language.", NULL, MDFNST_ENUM, "english", NULL, NULL, NULL, NULL, RTCLang_List },
 
- { "ss.cart", MDFNSF_EMU_STATE | MDFNSF_UNTRUSTED_SAFE, "Expansion cart.", NULL, MDFNST_ENUM, "auto", NULL, NULL, NULL, NULL, Cart_List },
  { "ss.cart.kof95_path", MDFNSF_EMU_STATE, "Path to KoF 95 ROM image.", NULL, MDFNST_STRING, "mpr-18811-mx.ic1" },
  { "ss.cart.ultraman_path", MDFNSF_EMU_STATE, "Path to Ultraman ROM image.", NULL, MDFNST_STRING, "mpr-19367-mx.ic1" },
  { "ss.cart.satar4mp_path", MDFNSF_EMU_STATE | MDFNSF_SUPPRESS_DOC | MDFNSF_NONPERSISTENT, "Path to Action Replay 4M Plus firmware image.", NULL, MDFNST_STRING, "satar4mp.bin" },
@@ -2525,6 +2521,26 @@ static void check_variables(bool startup)
 			setting_region = SMPC_AREA_CSA_NTSC;
 		else if (!strcmp(var.value, "Latin America") || !strcmp(var.value, "la"))
 			setting_region = SMPC_AREA_CSA_PAL;
+	}
+
+	var.key = "beetle_saturn_cart";
+
+	if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+	{
+		if (!strcmp(var.value, "Auto Detect") || !strcmp(var.value, "auto"))
+			setting_cart = CART__RESERVED;
+		else if (!strcmp(var.value, "None") || !strcmp(var.value, "none"))
+			setting_cart = CART_NONE;
+		else if (!strcmp(var.value, "Backup Memory") || !strcmp(var.value, "backup"))
+			setting_cart = CART_BACKUP_MEM;
+		else if (!strcmp(var.value, "Extended RAM (1MB)") || !strcmp(var.value, "extram1"))
+			setting_cart = CART_EXTRAM_1M;
+		else if (!strcmp(var.value, "Extended RAM (4MB)") || !strcmp(var.value, "extram4"))
+			setting_cart = CART_EXTRAM_4M;
+		else if (!strcmp(var.value, "The King of Fighters '95") || !strcmp(var.value, "kof95"))
+			setting_cart = CART_KOF95;
+		else if (!strcmp(var.value, "Ultraman: Hikari no Kyojin Densetsu") || !strcmp(var.value, "ultraman"))
+			setting_cart = CART_ULTRAMAN;
 	}
 
    var.key = "beetle_saturn_cdimagecache";
@@ -2922,7 +2938,7 @@ void retro_run(void)
 
    input_update( input_state_cb );
 
-   static int32 rects[FB_WIDTH];
+   static int32 rects[MEDNAFEN_CORE_GEOMETRY_MAX_H];
    rects[0] = ~0;
 
    static int16_t sound_buf[0x10000];
@@ -3044,6 +3060,7 @@ void retro_set_environment( retro_environment_t cb )
 
    static const struct retro_variable vars[] = {
       { "beetle_saturn_region", "System Region; Auto Detect|Japan|North America|Europe|South Korea|Asia (NTSC)|Asia (PAL)|Brazil|Latin America" },
+      { "beetle_saturn_cart", "Cartridge; Auto Detect|None|Backup Memory|Extended RAM (1MB)|Extended RAM (4MB)|The King of Fighters '95|Ultraman: Hikari no Kyojin Densetsu" },
       { "beetle_saturn_cdimagecache", "CD Image Cache (restart); disabled|enabled" },
       { "beetle_saturn_autortc", "Automatically set RTC on game load; enabled|disabled" },
       { "beetle_saturn_autortc_lang", "BIOS language; english|german|french|spanish|italian|japanese" },
