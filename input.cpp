@@ -56,7 +56,7 @@ static uint16_t input_mode[ MAX_CONTROLLERS ] = {0};
 #define RETRO_DEVICE_SS_MOUSE		RETRO_DEVICE_SUBCLASS( RETRO_DEVICE_MOUSE,  0 )
 #define RETRO_DEVICE_SS_GUN			RETRO_DEVICE_SUBCLASS( RETRO_DEVICE_LIGHTGUN, 0 )
 
-enum { INPUT_DEVICE_TYPES_COUNT = 1 /*none*/ + 4 }; // <-- update me!
+enum { INPUT_DEVICE_TYPES_COUNT = 1 /*none*/ + 5 }; // <-- update me!
 
 static const struct retro_controller_description input_device_types[ INPUT_DEVICE_TYPES_COUNT ] =
 {
