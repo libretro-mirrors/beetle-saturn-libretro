@@ -564,6 +564,9 @@ void input_update( retro_input_state_t input_state_cb )
 					p_input->u8[0x4] |= 0x1; // Trigger
 				}
 
+				if ( input_state_cb( iplayer, RETRO_DEVICE_LIGHTGUN, 0, RETRO_DEVICE_ID_LIGHTGUN_TURBO ) ) {
+					p_input->u8[0x4] |= 0x4; // Offscreen Shot(Simulated)
+
 				// start button
 				if ( input_state_cb( iplayer, RETRO_DEVICE_LIGHTGUN, 0, RETRO_DEVICE_ID_LIGHTGUN_START ) ||
 					 input_state_cb( iplayer, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_START ) ||
@@ -576,14 +579,14 @@ void input_update( retro_input_state_t input_state_cb )
 				// -- Position
 
 				int gun_x_raw, gun_y_raw;
-				gun_x_raw = input_state_cb( iplayer, RETRO_DEVICE_POINTER, 0, RETRO_DEVICE_ID_POINTER_X ) + 0x8000;
-				gun_y_raw = input_state_cb( iplayer, RETRO_DEVICE_POINTER, 0, RETRO_DEVICE_ID_POINTER_Y ) + 0x8000;
+				gun_x_raw = input_state_cb( iplayer, RETRO_DEVICE_POINTER, 0, RETRO_DEVICE_ID_POINTER_X ) + 0x7fff;
+				gun_y_raw = input_state_cb( iplayer, RETRO_DEVICE_POINTER, 0, RETRO_DEVICE_ID_POINTER_Y ) + 0x7fff;
 
 				// .. scale into screen space:
 				// NOTE: this is complete hacky guesswork for this first pass, need to re-write.
 				int gun_x, gun_y;
-				gun_x = ( gun_x_raw * 22000 ) / 65536;
-				gun_y = ( gun_y_raw * 240 ) / 65536;
+				gun_x = ( gun_x_raw * 21472 ) / (0x7fff << 1);
+				gun_y = ( gun_y_raw * 240 ) / (0x7fff << 1);
 
 				p_input->gun_pos[ 0 ] = gun_x;
 				p_input->gun_pos[ 1 ] = gun_y;
