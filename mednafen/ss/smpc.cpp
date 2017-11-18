@@ -749,7 +749,10 @@ void SMPC_Write(const sscpu_timestamp_t timestamp, uint8 A, uint8 V)
 
   case 0x3F:
 	ExLatchEn[0] = (bool)(V & 0x1);
+	UpdateIOBus(0, SH7095_mem_timestamp);
+
 	ExLatchEn[1] = (bool)(V & 0x2);
+	UpdateIOBus(1, SH7095_mem_timestamp);
 	break;
 
   default:
