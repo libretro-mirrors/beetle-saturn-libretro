@@ -2634,6 +2634,12 @@ static void check_variables(bool startup)
 
 	if ( environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value )
 		input_set_deadzone_stick( atoi( var.value ) );
+
+	var.key = "beetle_saturn_trigger_deadzone";
+	var.value = NULL;
+
+	if ( environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value )
+		input_set_deadzone_trigger( atoi( var.value ) );
 }
 
 #ifdef NEED_CD
@@ -3085,6 +3091,7 @@ void retro_set_environment( retro_environment_t cb )
       { "beetle_saturn_last_scanline_pal", "Last scanline PAL; 271|272|273|274|275|276|277|278|279|280|281|282|283|284|285|286|287|230|231|232|233|234|235|236|237|238|239|240|241|242|243|244|245|246|247|248|249|250|251|252|253|254|255|256|257|258|259|260|261|262|263|264|265|266|267|268|269|270" },
       { "beetle_saturn_horizontal_blend", "Enable Horizontal Blend(blur); disabled|enabled" },
       { "beetle_saturn_analog_stick_deadzone", "Analog Deadzone (percent); 15|20|25|30|0|5|10"},
+      { "beetle_saturn_trigger_deadzone", "Trigger Deadzone (percent); 15|20|25|30|0|5|10"},
       { NULL, NULL },
    };
 
