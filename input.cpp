@@ -559,14 +559,18 @@ void input_update( retro_input_state_t input_state_cb )
 			{
 				p_input->u8[0x4] = 0;
 
-				// start button
-				if ( input_state_cb( iplayer, RETRO_DEVICE_LIGHTGUN, 0, RETRO_DEVICE_ID_LIGHTGUN_START ) ) {
-					p_input->u8[0x4] |= 0x2; // Start
-				}
-
 				// trigger
 				if ( input_state_cb( iplayer, RETRO_DEVICE_LIGHTGUN, 0, RETRO_DEVICE_ID_LIGHTGUN_TRIGGER ) ) {
 					p_input->u8[0x4] |= 0x1; // Trigger
+				}
+
+				// start button
+				if ( input_state_cb( iplayer, RETRO_DEVICE_LIGHTGUN, 0, RETRO_DEVICE_ID_LIGHTGUN_START ) ||
+					 input_state_cb( iplayer, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_START ) ||
+					 input_state_cb( iplayer, RETRO_DEVICE_MOUSE, 0, RETRO_DEVICE_ID_MOUSE_BUTTON_4 ) ||
+					 input_state_cb( iplayer, RETRO_DEVICE_MOUSE, 0, RETRO_DEVICE_ID_MOUSE_BUTTON_5 ) )
+				{
+					p_input->u8[0x4] |= 0x2; // Start
 				}
 
 				// -- Position
