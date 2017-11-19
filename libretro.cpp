@@ -2640,6 +2640,15 @@ static void check_variables(bool startup)
 
 	if ( environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value )
 		input_set_deadzone_trigger( atoi( var.value ) );
+
+	var.key = "beetle_saturn_virtuagun_trigger";
+	var.value = NULL;
+
+	if ( environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value )
+	{
+		bool newval = (!strcmp(var.value, "Right Mouse Button"));
+		input_set_virtua_gun_trigger( newval );
+	}
 }
 
 #ifdef NEED_CD
@@ -3081,6 +3090,9 @@ void retro_set_environment( retro_environment_t cb )
    static const struct retro_variable vars[] = {
       { "beetle_saturn_region", "System Region; Auto Detect|Japan|North America|Europe|South Korea|Asia (NTSC)|Asia (PAL)|Brazil|Latin America" },
       { "beetle_saturn_cart", "Cartridge; Auto Detect|None|Backup Memory|Extended RAM (1MB)|Extended RAM (4MB)|The King of Fighters '95|Ultraman: Hikari no Kyojin Densetsu" },
+      { "beetle_saturn_analog_stick_deadzone", "3D Pad - Analog Deadzone; 15%|20%|25%|30%|0%|5%|10%"},
+      { "beetle_saturn_trigger_deadzone", "3D Pad - Trigger Deadzone; 15%|20%|25%|30%|0%|5%|10%"},
+      { "beetle_saturn_virtuagun_trigger", "Virtua Gun - Trigger; Left Mouse Button|Right Mouse Button" },
       { "beetle_saturn_cdimagecache", "CD Image Cache (restart); disabled|enabled" },
       { "beetle_saturn_autortc", "Automatically set RTC on game load; enabled|disabled" },
       { "beetle_saturn_autortc_lang", "BIOS language; english|german|french|spanish|italian|japanese" },
@@ -3090,8 +3102,6 @@ void retro_set_environment( retro_environment_t cb )
       { "beetle_saturn_initial_scanline_pal", "Initial scanline PAL; 16|17|18|19|20|21|22|23|24|25|26|27|28|29|30|31|32|33|34|35|36|37|38|39|40|41|42|43|44|45|46|47|48|49|50|51|52|53|54|55|56|57|58|59|60|0|1|2|3|4|5|6|7|8|9|10|11|12|13|14|15" },
       { "beetle_saturn_last_scanline_pal", "Last scanline PAL; 271|272|273|274|275|276|277|278|279|280|281|282|283|284|285|286|287|230|231|232|233|234|235|236|237|238|239|240|241|242|243|244|245|246|247|248|249|250|251|252|253|254|255|256|257|258|259|260|261|262|263|264|265|266|267|268|269|270" },
       { "beetle_saturn_horizontal_blend", "Enable Horizontal Blend(blur); disabled|enabled" },
-      { "beetle_saturn_analog_stick_deadzone", "Analog Deadzone (percent); 15|20|25|30|0|5|10"},
-      { "beetle_saturn_trigger_deadzone", "Trigger Deadzone (percent); 15|20|25|30|0|5|10"},
       { NULL, NULL },
    };
 
