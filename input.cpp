@@ -65,7 +65,7 @@ static const struct retro_controller_description input_device_types[ INPUT_DEVIC
 	{ "3D Control Pad", RETRO_DEVICE_SS_3D_PAD },
 	{ "Arcade Racer", RETRO_DEVICE_SS_WHEEL },
 	{ "Mouse", RETRO_DEVICE_SS_MOUSE },
-	{ "Virtua Gun", RETRO_DEVICE_SS_GUN },
+	{ "Virtua Gun / Stunner", RETRO_DEVICE_SS_GUN },
 	{ NULL, 0 },
 };
 
