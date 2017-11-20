@@ -19,7 +19,6 @@ static unsigned players = MAX_CONTROLLERS;
 
 static int astick_deadzone = 0;
 static int trigger_deadzone = 0;
-static bool virtua_gun_trigger_rmb = false;
 
 typedef union
 {
@@ -299,11 +298,6 @@ void input_set_deadzone_trigger( int percent )
 		trigger_deadzone = (int)( percent * 0.01f * 0x8000);
 }
 
-void input_set_virtua_gun_trigger( bool use_rmb )
-{
-	virtua_gun_trigger_rmb = use_rmb;
-}
-
 void input_update( retro_input_state_t input_state_cb )
 {
 	// For each player (logical controller)
@@ -563,33 +557,25 @@ void input_update( retro_input_state_t input_state_cb )
 		case RETRO_DEVICE_SS_GUN:
 
 			{
-				p_input->u8[0x4] = 0;
-				uint8_t shot_type = 0;
-
-				// -- Position
-
+				uint8_t shot_type;
 				int gun_x, gun_y;
-				int gun_x_raw, gun_y_raw;
-				gun_x_raw = input_state_cb( iplayer, RETRO_DEVICE_POINTER, 0, RETRO_DEVICE_ID_POINTER_X );
-				gun_y_raw = input_state_cb( iplayer, RETRO_DEVICE_POINTER, 0, RETRO_DEVICE_ID_POINTER_Y );
-
-				int gun_edge_detect = 32700;
 
 				// off-screen?
-				if ( ( ( gun_x_raw == 0 ) && ( gun_y_raw == 0 ) ) ||
-					 ( gun_x_raw < -gun_edge_detect ) ||
-					 ( gun_x_raw > gun_edge_detect ) ||
-					 ( gun_y_raw < -gun_edge_detect ) ||
-					 ( gun_y_raw > gun_edge_detect ) )
+				if ( input_state_cb( iplayer, RETRO_DEVICE_LIGHTGUN, 0, RETRO_DEVICE_ID_LIGHTGUN_IS_OFFSCREEN ) ||
+					 input_state_cb( iplayer, RETRO_DEVICE_LIGHTGUN, 0, RETRO_DEVICE_ID_LIGHTGUN_OFFSCREEN_SHOT ) )
 				{
-					shot_type = ( 1 << 2 ); // Off-screen shot
+					shot_type = 0x4; // off-screen shot
 
 					gun_x = -16384; // magic position to disable cross-hair drawing.
 					gun_y = -16384;
 				}
 				else
 				{
-					shot_type = ( 1 << 0 ); // On-screen shot!
+					shot_type = 0x1; // on-screen shot
+
+					int gun_x_raw, gun_y_raw;
+					gun_x_raw = input_state_cb( iplayer, RETRO_DEVICE_LIGHTGUN, 0, RETRO_DEVICE_ID_LIGHTGUN_SCREEN_X );
+					gun_y_raw = input_state_cb( iplayer, RETRO_DEVICE_LIGHTGUN, 0, RETRO_DEVICE_ID_LIGHTGUN_SCREEN_Y );
 
 					// .. scale into screen space:
 					// NOTE: the scaling here is semi-guesswork, need to re-write.
@@ -607,27 +593,17 @@ void input_update( retro_input_state_t input_state_cb )
 				p_input->gun_pos[ 0 ] = gun_x;
 				p_input->gun_pos[ 1 ] = gun_y;
 
-				unsigned mbutton_trigger;
-				unsigned mbutton_start;
-
-				if ( virtua_gun_trigger_rmb ) {
-					mbutton_trigger = RETRO_DEVICE_ID_MOUSE_RIGHT;
-					mbutton_start = RETRO_DEVICE_ID_MOUSE_LEFT;
-				} else {
-					mbutton_trigger = RETRO_DEVICE_ID_MOUSE_LEFT;
-					mbutton_start = RETRO_DEVICE_ID_MOUSE_RIGHT;
-				}
+				// buttons
+				p_input->u8[ 4 ] = 0;
 
 				// trigger
-				if ( input_state_cb( iplayer, RETRO_DEVICE_MOUSE, 0, mbutton_trigger ) ) {
-					p_input->u8[4] |= shot_type;
+				if ( input_state_cb( iplayer, RETRO_DEVICE_LIGHTGUN, 0, RETRO_DEVICE_ID_LIGHTGUN_TRIGGER ) ) {
+					p_input->u8[ 4 ] |= shot_type;
 				}
 
 				// start
-				if ( input_state_cb( iplayer, RETRO_DEVICE_MOUSE, 0, mbutton_start ) ||
-					 input_state_cb( iplayer, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_START ) )
-				{
-					p_input->u8[0x4] |= ( 1 << 1 ); // Start Button
+				if ( input_state_cb( iplayer, RETRO_DEVICE_LIGHTGUN, 0, RETRO_DEVICE_ID_LIGHTGUN_START ) ) {
+					p_input->u8[ 4 ] |= 0x2;
 				}
 			}
 

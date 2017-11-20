@@ -2640,15 +2640,6 @@ static void check_variables(bool startup)
 
 	if ( environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value )
 		input_set_deadzone_trigger( atoi( var.value ) );
-
-	var.key = "beetle_saturn_virtuagun_trigger";
-	var.value = NULL;
-
-	if ( environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value )
-	{
-		bool newval = (!strcmp(var.value, "Right Mouse Button"));
-		input_set_virtua_gun_trigger( newval );
-	}
 }
 
 #ifdef NEED_CD
@@ -3092,7 +3083,6 @@ void retro_set_environment( retro_environment_t cb )
       { "beetle_saturn_cart", "Cartridge; Auto Detect|None|Backup Memory|Extended RAM (1MB)|Extended RAM (4MB)|The King of Fighters '95|Ultraman: Hikari no Kyojin Densetsu" },
       { "beetle_saturn_analog_stick_deadzone", "3D Pad - Analog Deadzone; 15%|20%|25%|30%|0%|5%|10%"},
       { "beetle_saturn_trigger_deadzone", "3D Pad - Trigger Deadzone; 15%|20%|25%|30%|0%|5%|10%"},
-      { "beetle_saturn_virtuagun_trigger", "Virtua Gun - Trigger; Left Mouse Button|Right Mouse Button" },
       { "beetle_saturn_cdimagecache", "CD Image Cache (restart); disabled|enabled" },
       { "beetle_saturn_autortc", "Automatically set RTC on game load; enabled|disabled" },
       { "beetle_saturn_autortc_lang", "BIOS language; english|german|french|spanish|italian|japanese" },
