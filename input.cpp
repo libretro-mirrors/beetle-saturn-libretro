@@ -19,10 +19,12 @@ static unsigned players = MAX_CONTROLLERS;
 
 static int astick_deadzone = 0;
 static int trigger_deadzone = 0;
+static bool virtua_gun_trigger_rmb = false;
 
 typedef union
 {
 	uint8_t u8[ 32 ];
+	uint16_t gun_pos[ 2 ];
 	uint16_t buttons;
 }
 INPUT_DATA;
@@ -37,7 +39,8 @@ static uint32_t input_type[ MAX_CONTROLLERS ] = {0};
 #define INPUT_MODE_3D_PAD_ANALOG		( 1 << 0 ) // Set means analog mode.
 #define INPUT_MODE_3D_PAD_PREVIOUS_MASK	( 1 << 1 ) // Edge trigger helper.
 
-#define INPUT_MODE_3D_PAD_DEFAULT		INPUT_MODE_3D_PAD_ANALOG
+#define INPUT_MODE_DEFAULT				0
+#define INPUT_MODE_DEFAULT_3D_PAD		INPUT_MODE_3D_PAD_ANALOG
 
 // Mode switch for 3D Control Pad (per player)
 static uint16_t input_mode[ MAX_CONTROLLERS ] = {0};
@@ -50,10 +53,11 @@ static uint16_t input_mode[ MAX_CONTROLLERS ] = {0};
 
 #define RETRO_DEVICE_SS_PAD			RETRO_DEVICE_SUBCLASS( RETRO_DEVICE_JOYPAD, 0 )
 #define RETRO_DEVICE_SS_3D_PAD		RETRO_DEVICE_SUBCLASS( RETRO_DEVICE_ANALOG, 0 )
-#define RETRO_DEVICE_SS_MOUSE		RETRO_DEVICE_SUBCLASS( RETRO_DEVICE_MOUSE,  0 )
 #define RETRO_DEVICE_SS_WHEEL		RETRO_DEVICE_SUBCLASS( RETRO_DEVICE_ANALOG, 1 )
+#define RETRO_DEVICE_SS_MOUSE		RETRO_DEVICE_SUBCLASS( RETRO_DEVICE_MOUSE,  0 )
+#define RETRO_DEVICE_SS_GUN			RETRO_DEVICE_SUBCLASS( RETRO_DEVICE_LIGHTGUN, 0 )
 
-enum { INPUT_DEVICE_TYPES_COUNT = 1 /*none*/ + 4 }; // <-- update me!
+enum { INPUT_DEVICE_TYPES_COUNT = 1 /*none*/ + 5 }; // <-- update me!
 
 static const struct retro_controller_description input_device_types[ INPUT_DEVICE_TYPES_COUNT ] =
 {
@@ -61,6 +65,7 @@ static const struct retro_controller_description input_device_types[ INPUT_DEVIC
 	{ "3D Control Pad", RETRO_DEVICE_SS_3D_PAD },
 	{ "Arcade Racer", RETRO_DEVICE_SS_WHEEL },
 	{ "Mouse", RETRO_DEVICE_SS_MOUSE },
+	{ "Virtua Gun", RETRO_DEVICE_SS_GUN },
 	{ NULL, 0 },
 };
 
@@ -134,6 +139,7 @@ static const unsigned input_map_wheel_shift_left =
 	RETRO_DEVICE_ID_JOYPAD_L2;
 static const unsigned input_map_wheel_shift_right =
 	RETRO_DEVICE_ID_JOYPAD_R2;
+
 
 
 //------------------------------------------------------------------------------
@@ -275,7 +281,7 @@ void input_init()
 	for ( unsigned i = 0; i < MAX_CONTROLLERS; ++i )
 	{
 		input_type[ i ] = RETRO_DEVICE_JOYPAD;
-		input_mode[ i ] = INPUT_MODE_3D_PAD_DEFAULT;
+		input_mode[ i ] = INPUT_MODE_DEFAULT;
 
 		SMPC_SetInput( i, "gamepad", (uint8*)&input_data[ i ] );
 	}
@@ -291,6 +297,11 @@ void input_set_deadzone_trigger( int percent )
 {
 	if ( percent >= 0 && percent <= 100 )
 		trigger_deadzone = (int)( percent * 0.01f * 0x8000);
+}
+
+void input_set_virtua_gun_trigger( bool use_rmb )
+{
+	virtua_gun_trigger_rmb = use_rmb;
 }
 
 void input_update( retro_input_state_t input_state_cb )
@@ -549,6 +560,79 @@ void input_update( retro_input_state_t input_state_cb )
 
 			break;
 
+		case RETRO_DEVICE_SS_GUN:
+
+			{
+				p_input->u8[0x4] = 0;
+				uint8_t shot_type = 0;
+
+				// -- Position
+
+				int gun_x, gun_y;
+				int gun_x_raw, gun_y_raw;
+				gun_x_raw = input_state_cb( iplayer, RETRO_DEVICE_POINTER, 0, RETRO_DEVICE_ID_POINTER_X );
+				gun_y_raw = input_state_cb( iplayer, RETRO_DEVICE_POINTER, 0, RETRO_DEVICE_ID_POINTER_Y );
+
+				int gun_edge_detect = 32700;
+
+				// off-screen?
+				if ( ( ( gun_x_raw == 0 ) && ( gun_y_raw == 0 ) ) ||
+					 ( gun_x_raw < -gun_edge_detect ) ||
+					 ( gun_x_raw > gun_edge_detect ) ||
+					 ( gun_y_raw < -gun_edge_detect ) ||
+					 ( gun_y_raw > gun_edge_detect ) )
+				{
+					shot_type = ( 1 << 2 ); // Off-screen shot
+
+					gun_x = -16384; // magic position to disable cross-hair drawing.
+					gun_y = -16384;
+				}
+				else
+				{
+					shot_type = ( 1 << 0 ); // On-screen shot!
+
+					// .. scale into screen space:
+					// NOTE: the scaling here is semi-guesswork, need to re-write.
+					// TODO: Test with PAL games.
+
+					const int scale_x = 21472;
+					const int offset_x = 60;
+					const int scale_y = 240;
+
+					gun_x = ( ( gun_x_raw + offset_x + 0x7fff ) * scale_x ) / (0x7fff << 1);
+					gun_y = ( ( gun_y_raw + 0x7fff ) * scale_y ) / (0x7fff << 1);
+				}
+
+				// position
+				p_input->gun_pos[ 0 ] = gun_x;
+				p_input->gun_pos[ 1 ] = gun_y;
+
+				unsigned mbutton_trigger;
+				unsigned mbutton_start;
+
+				if ( virtua_gun_trigger_rmb ) {
+					mbutton_trigger = RETRO_DEVICE_ID_MOUSE_RIGHT;
+					mbutton_start = RETRO_DEVICE_ID_MOUSE_LEFT;
+				} else {
+					mbutton_trigger = RETRO_DEVICE_ID_MOUSE_LEFT;
+					mbutton_start = RETRO_DEVICE_ID_MOUSE_RIGHT;
+				}
+
+				// trigger
+				if ( input_state_cb( iplayer, RETRO_DEVICE_MOUSE, 0, mbutton_trigger ) ) {
+					p_input->u8[4] |= shot_type;
+				}
+
+				// start
+				if ( input_state_cb( iplayer, RETRO_DEVICE_MOUSE, 0, mbutton_start ) ||
+					 input_state_cb( iplayer, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_START ) )
+				{
+					p_input->u8[0x4] |= ( 1 << 1 ); // Start Button
+				}
+			}
+
+			break;
+
 		}; // switch ( input_type[ iplayer ] )
 
 	}; // for each player
@@ -581,6 +665,7 @@ void retro_set_controller_port_device( unsigned in_port, unsigned device )
 	{
 		// Store input type
 		input_type[ in_port ] = device;
+		input_mode[ in_port ] = INPUT_MODE_DEFAULT;
 
 		switch ( device )
 		{
@@ -599,6 +684,12 @@ void retro_set_controller_port_device( unsigned in_port, unsigned device )
 		case RETRO_DEVICE_SS_3D_PAD:
 			log_cb( RETRO_LOG_INFO, "Controller %u: 3D Control Pad\n", (in_port+1) );
 			SMPC_SetInput( in_port, "3dpad", (uint8*)&input_data[ in_port ] );
+			input_mode[ in_port ] = INPUT_MODE_DEFAULT_3D_PAD;
+			break;
+
+		case RETRO_DEVICE_SS_WHEEL:
+			log_cb( RETRO_LOG_INFO, "Controller %u: Arcade Racer\n", (in_port+1) );
+			SMPC_SetInput( in_port, "wheel", (uint8*)&input_data[ in_port ] );
 			break;
 
 		case RETRO_DEVICE_SS_MOUSE:
@@ -606,9 +697,9 @@ void retro_set_controller_port_device( unsigned in_port, unsigned device )
 			SMPC_SetInput( in_port, "mouse", (uint8*)&input_data[ in_port ] );
 			break;
 
-		case RETRO_DEVICE_SS_WHEEL:
-			log_cb( RETRO_LOG_INFO, "Controller %u: Arcade Racer\n", (in_port+1) );
-			SMPC_SetInput( in_port, "wheel", (uint8*)&input_data[ in_port ] );
+		case RETRO_DEVICE_SS_GUN:
+			log_cb( RETRO_LOG_INFO, "Controller %u: Virtua Gun\n", (in_port+1) );
+			SMPC_SetInput( in_port, "gun", (uint8*)&input_data[ in_port ] );
 			break;
 
 		default:
