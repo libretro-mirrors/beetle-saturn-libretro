@@ -559,8 +559,9 @@ void input_update( retro_input_state_t input_state_cb )
 			{
 				uint8_t shot_type;
 				int gun_x, gun_y;
+				int offscreen_shot;
 
-				int offscreen_shot = input_state_cb( iplayer, RETRO_DEVICE_LIGHTGUN, 0, RETRO_DEVICE_ID_LIGHTGUN_OFFSCREEN_SHOT );
+				offscreen_shot = input_state_cb( iplayer, RETRO_DEVICE_LIGHTGUN, 0, RETRO_DEVICE_ID_LIGHTGUN_OFFSCREEN_SHOT );
 
 				// off-screen?
 				if ( input_state_cb( iplayer, RETRO_DEVICE_LIGHTGUN, 0, RETRO_DEVICE_ID_LIGHTGUN_IS_OFFSCREEN ) ||
