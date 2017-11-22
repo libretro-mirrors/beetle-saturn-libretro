@@ -23,15 +23,7 @@
 #include "mednafen.h"
 #include "settings.h"
 #include <compat/msvc.h>
-
-int setting_region = 0;
-int setting_cart = 1; /*CART_BACKUP_MEM*/
-bool setting_smpc_autortc = true;
-int setting_smpc_autortc_lang = 0;
-int setting_initial_scanline = 0;
-int setting_initial_scanline_pal = 0;
-int setting_last_scanline = 239;
-int setting_last_scanline_pal = 287;
+#include "libretro_settings.h"
 
 extern char retro_cd_base_name[4096];
 extern char retro_save_directory[4096];
@@ -61,15 +53,6 @@ int64 MDFN_GetSettingI(const char *name)
    if (!strcmp("ss.slendp", name))
       return setting_last_scanline_pal;
    fprintf(stderr, "unhandled setting I: %s\n", name);
-   return 0;
-}
-
-double MDFN_GetSettingF(const char *name)
-{
-   if (!strcmp("ss.input.mouse_sensitivity", name))
-      return 0.50; /* TODO - make configurable */
-
-   fprintf(stderr, "unhandled setting F: %s\n", name);
    return 0;
 }
 

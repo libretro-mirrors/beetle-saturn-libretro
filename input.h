@@ -15,6 +15,7 @@ extern void input_set_env( retro_environment_t environ_cb );
 
 extern void input_set_deadzone_stick( int percent );
 extern void input_set_deadzone_trigger( int percent );
+extern void input_set_mouse_sensitivity( int percent );
 
 extern void input_update( retro_input_state_t input_state_cb );
 

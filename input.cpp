@@ -19,6 +19,7 @@ static unsigned players = MAX_CONTROLLERS;
 
 static int astick_deadzone = 0;
 static int trigger_deadzone = 0;
+static float mouse_sensitivity = 0.5f;
 
 typedef union
 {
@@ -304,6 +305,13 @@ void input_set_deadzone_trigger( int percent )
 		trigger_deadzone = (int)( percent * 0.01f * 0x8000);
 }
 
+void input_set_mouse_sensitivity( int percent )
+{
+	if ( percent > 0 && percent <= 200 ) {
+		mouse_sensitivity = (float)percent / 100.0f;
+	}
+}
+
 void input_update( retro_input_state_t input_state_cb )
 {
 	// For each player (logical controller)
@@ -554,8 +562,8 @@ void input_update( retro_input_state_t input_state_cb )
 
 				int *delta;
 				delta = (int*)p_input;
-				delta[ 0 ] = dx_raw;
-				delta[ 1 ] = dy_raw;
+				delta[ 0 ] = (int)roundf( dx_raw * mouse_sensitivity );
+				delta[ 1 ] = (int)roundf( dy_raw * mouse_sensitivity );
 			}
 
 			break;

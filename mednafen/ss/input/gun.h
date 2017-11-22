@@ -54,7 +54,6 @@ class IODevice_Gun final : public IODevice
  bool light_phase;
  int32 light_phase_counter;
 
- bool chair_draw;
  int chair_r, chair_g, chair_b;
 };
 

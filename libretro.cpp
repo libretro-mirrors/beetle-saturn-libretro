@@ -12,6 +12,7 @@
 #include <retro_stat.h>
 #include <string/stdstring.h>
 #include "libretro_cbs.h"
+#include "libretro_settings.h"
 #include "input.h"
 
 #include <mednafen/cdrom/cdromif.h>
@@ -848,7 +849,6 @@ static void Emulate(EmulateSpecStruct* espec_arg)
 
  espec = espec_arg;
  AllowMidSync = MDFN_GetSettingB("ss.midsync");
- MDFNGameInfo->mouse_sensitivity = MDFN_GetSettingF("ss.input.mouse_sensitivity");
 
  cur_clock_div = SMPC_StartFrame(espec);
  UpdateSMPCInput(0);
@@ -2112,7 +2112,6 @@ static MDFNSetting SSSettings[] =
  { "ss.scsp.resamp_quality", MDFNSF_NOFLAGS, "SCSP output resampler quality.",
 	"0 is lowest quality and CPU usage, 10 is highest quality and CPU usage.  The resampler that this setting refers to is used for converting from 44.1KHz to the sampling rate of the host audio device Mednafen is using.  Changing Mednafen's output rate, via the \"sound.rate\" setting, to \"44100\" may bypass the resampler, which can decrease CPU usage by Mednafen, and can increase or decrease audio quality, depending on various operating system and hardware factors.", MDFNST_UINT, "4", "0", "10" },
 
- { "ss.input.mouse_sensitivity", MDFNSF_NOFLAGS, "Emulated mouse sensitivity.", NULL, MDFNST_FLOAT, "0.50", NULL, NULL },
   { "ss.input.sport1.multitap", MDFNSF_EMU_STATE | MDFNSF_UNTRUSTED_SAFE, "Enable multitap on Saturn port 1.", NULL, MDFNST_BOOL, "0", NULL, NULL },
  { "ss.input.sport2.multitap", MDFNSF_EMU_STATE | MDFNSF_UNTRUSTED_SAFE, "Enable multitap on Saturn port 2.", NULL, MDFNST_BOOL, "0", NULL, NULL },
 
@@ -2548,9 +2547,9 @@ static void check_variables(bool startup)
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
       bool cdimage_cache = true;
-      if (strcmp(var.value, "enabled") == 0)
+      if (!strcmp(var.value, "enabled"))
          cdimage_cache = true;
-      else if (strcmp(var.value, "disabled") == 0)
+      else if (!strcmp(var.value, "disabled"))
          cdimage_cache = false;
       if (cdimage_cache != old_cdimagecache)
       {
@@ -2562,9 +2561,9 @@ static void check_variables(bool startup)
 
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-      if (strcmp(var.value, "enabled") == 0)
+      if (!strcmp(var.value, "enabled"))
          setting_smpc_autortc = 1;
-      else if (strcmp(var.value, "disabled") == 0)
+      else if (!strcmp(var.value, "disabled"))
          setting_smpc_autortc = 0;
    }
 
@@ -2572,17 +2571,17 @@ static void check_variables(bool startup)
 
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-       if (strcmp(var.value, "english") == 0)
+       if (!strcmp(var.value, "english"))
           setting_smpc_autortc_lang = 0;
-       else if (strcmp(var.value, "german") == 0)
+       else if (!strcmp(var.value, "german"))
           setting_smpc_autortc_lang = 1;
-       else if (strcmp(var.value, "french") == 0)
+       else if (!strcmp(var.value, "french"))
           setting_smpc_autortc_lang = 2;
-       else if (strcmp(var.value, "spanish") == 0)
+       else if (!strcmp(var.value, "spanish"))
           setting_smpc_autortc_lang = 3;
-       else if (strcmp(var.value, "italian") == 0)
+       else if (!strcmp(var.value, "italian"))
           setting_smpc_autortc_lang = 4;
-       else if (strcmp(var.value, "japanese") == 0)
+       else if (!strcmp(var.value, "japanese"))
           setting_smpc_autortc_lang = 5;
    }
 
@@ -2640,6 +2639,26 @@ static void check_variables(bool startup)
 
 	if ( environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value )
 		input_set_deadzone_trigger( atoi( var.value ) );
+
+	var.key = "beetle_saturn_mouse_sensitivity";
+	var.value = NULL;
+
+	if ( environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value )
+		input_set_mouse_sensitivity( atoi( var.value ) );
+
+	var.key = "beetle_saturn_virtuagun_crosshair";
+	var.value = NULL;
+
+	if ( environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value )
+	{
+		if ( !strcmp(var.value, "Off") ) {
+			setting_gun_crosshair = SETTING_GUN_CROSSHAIR_OFF;
+		} else if ( !strcmp(var.value, "Cross") ) {
+			setting_gun_crosshair = SETTING_GUN_CROSSHAIR_CROSS;
+		} else if ( !strcmp(var.value, "Dot") ) {
+			setting_gun_crosshair = SETTING_GUN_CROSSHAIR_DOT;
+		}
+	}
 }
 
 #ifdef NEED_CD
@@ -3083,6 +3102,8 @@ void retro_set_environment( retro_environment_t cb )
       { "beetle_saturn_cart", "Cartridge; Auto Detect|None|Backup Memory|Extended RAM (1MB)|Extended RAM (4MB)|The King of Fighters '95|Ultraman: Hikari no Kyojin Densetsu" },
       { "beetle_saturn_analog_stick_deadzone", "3D Pad - Analog Deadzone; 15%|20%|25%|30%|0%|5%|10%"},
       { "beetle_saturn_trigger_deadzone", "3D Pad - Trigger Deadzone; 15%|20%|25%|30%|0%|5%|10%"},
+      { "beetle_saturn_mouse_sensitivity", "Mouse - Sensitivity; 100%|105%|110%|115%|120%|125%|130%|135%|140%|145%|150%|155%|160%|165%|170%|175%|180%|185%|190%|195%|200%|5%|10%|15%|20%|25%|30%|35%|40%|45%|50%|55%|60%|65%|70%|75%|80%|85%|90%|95%" },
+      { "beetle_saturn_virtuagun_crosshair", "Virtua Gun - Crosshair; Cross|Dot|Off" },
       { "beetle_saturn_cdimagecache", "CD Image Cache (restart); disabled|enabled" },
       { "beetle_saturn_autortc", "Automatically set RTC on game load; enabled|disabled" },
       { "beetle_saturn_autortc_lang", "BIOS language; english|german|french|spanish|italian|japanese" },
