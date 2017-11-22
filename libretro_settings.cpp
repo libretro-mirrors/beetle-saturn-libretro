@@ -8,3 +8,6 @@ int setting_initial_scanline = 0;
 int setting_initial_scanline_pal = 0;
 int setting_last_scanline = 239;
 int setting_last_scanline_pal = 287;
+int setting_gun_crosshair = SETTING_GUN_CROSSHAIR_CROSS;
+
+
