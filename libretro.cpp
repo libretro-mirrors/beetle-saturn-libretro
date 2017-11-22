@@ -849,7 +849,6 @@ static void Emulate(EmulateSpecStruct* espec_arg)
 
  espec = espec_arg;
  AllowMidSync = MDFN_GetSettingB("ss.midsync");
- MDFNGameInfo->mouse_sensitivity = MDFN_GetSettingF("ss.input.mouse_sensitivity");
 
  cur_clock_div = SMPC_StartFrame(espec);
  UpdateSMPCInput(0);
@@ -2113,7 +2112,6 @@ static MDFNSetting SSSettings[] =
  { "ss.scsp.resamp_quality", MDFNSF_NOFLAGS, "SCSP output resampler quality.",
 	"0 is lowest quality and CPU usage, 10 is highest quality and CPU usage.  The resampler that this setting refers to is used for converting from 44.1KHz to the sampling rate of the host audio device Mednafen is using.  Changing Mednafen's output rate, via the \"sound.rate\" setting, to \"44100\" may bypass the resampler, which can decrease CPU usage by Mednafen, and can increase or decrease audio quality, depending on various operating system and hardware factors.", MDFNST_UINT, "4", "0", "10" },
 
- { "ss.input.mouse_sensitivity", MDFNSF_NOFLAGS, "Emulated mouse sensitivity.", NULL, MDFNST_FLOAT, "0.50", NULL, NULL },
   { "ss.input.sport1.multitap", MDFNSF_EMU_STATE | MDFNSF_UNTRUSTED_SAFE, "Enable multitap on Saturn port 1.", NULL, MDFNST_BOOL, "0", NULL, NULL },
  { "ss.input.sport2.multitap", MDFNSF_EMU_STATE | MDFNSF_UNTRUSTED_SAFE, "Enable multitap on Saturn port 2.", NULL, MDFNST_BOOL, "0", NULL, NULL },
 
@@ -2642,6 +2640,12 @@ static void check_variables(bool startup)
 	if ( environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value )
 		input_set_deadzone_trigger( atoi( var.value ) );
 
+	var.key = "beetle_saturn_mouse_sensitivity";
+	var.value = NULL;
+
+	if ( environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value )
+		input_set_mouse_sensitivity( atoi( var.value ) );
+
 	var.key = "beetle_saturn_virtuagun_trigger";
 	var.value = NULL;
 
@@ -3093,6 +3097,7 @@ void retro_set_environment( retro_environment_t cb )
       { "beetle_saturn_cart", "Cartridge; Auto Detect|None|Backup Memory|Extended RAM (1MB)|Extended RAM (4MB)|The King of Fighters '95|Ultraman: Hikari no Kyojin Densetsu" },
       { "beetle_saturn_analog_stick_deadzone", "3D Pad - Analog Deadzone; 15%|20%|25%|30%|0%|5%|10%"},
       { "beetle_saturn_trigger_deadzone", "3D Pad - Trigger Deadzone; 15%|20%|25%|30%|0%|5%|10%"},
+      { "beetle_saturn_mouse_sensitivity", "Mouse - Sensitivity; 100%|105%|110%|115%|120%|125%|130%|135%|140%|145%|150%|155%|160%|165%|170%|175%|180%|185%|190%|195%|200%|5%|10%|15%|20%|25%|30%|35%|40%|45%|50%|55%|60%|65%|70%|75%|80%|85%|90%|95%" },
       { "beetle_saturn_virtuagun_trigger", "Virtua Gun - Trigger; Left Mouse Button|Right Mouse Button" },
       { "beetle_saturn_cdimagecache", "CD Image Cache (restart); disabled|enabled" },
       { "beetle_saturn_autortc", "Automatically set RTC on game load; enabled|disabled" },
