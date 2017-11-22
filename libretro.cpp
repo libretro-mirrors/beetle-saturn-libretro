@@ -2502,23 +2502,23 @@ static void check_variables(bool startup)
 
 	if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
 	{
-		if (!strcmp(var.value, "Auto Detect") || !strcmp(var.value, "auto"))
+		if (!stricmp(var.value, "Auto Detect") || !stricmp(var.value, "auto"))
 			setting_region = 0;
-		else if (!strcmp(var.value, "Japan") || !strcmp(var.value, "jp"))
+		else if (!stricmp(var.value, "Japan") || !stricmp(var.value, "jp"))
 			setting_region = SMPC_AREA_JP;
-		else if (!strcmp(var.value, "North America") || !strcmp(var.value, "na"))
+		else if (!stricmp(var.value, "North America") || !stricmp(var.value, "na"))
 			setting_region = SMPC_AREA_NA;
-		else if (!strcmp(var.value, "Europe") || !strcmp(var.value, "eu"))
+		else if (!stricmp(var.value, "Europe") || !stricmp(var.value, "eu"))
 			setting_region = SMPC_AREA_EU_PAL;
-		else if (!strcmp(var.value, "South Korea") || !strcmp(var.value, "kr"))
+		else if (!stricmp(var.value, "South Korea") || !stricmp(var.value, "kr"))
 			setting_region = SMPC_AREA_KR;
-		else if (!strcmp(var.value, "Asia (NTSC)") || !strcmp(var.value, "tw"))
+		else if (!stricmp(var.value, "Asia (NTSC)") || !stricmp(var.value, "tw"))
 			setting_region = SMPC_AREA_ASIA_NTSC;
-		else if (!strcmp(var.value, "Asia (PAL)") || !strcmp(var.value, "as"))
+		else if (!stricmp(var.value, "Asia (PAL)") || !stricmp(var.value, "as"))
 			setting_region = SMPC_AREA_ASIA_PAL;
-		else if (!strcmp(var.value, "Brazil") || !strcmp(var.value, "br"))
+		else if (!stricmp(var.value, "Brazil") || !stricmp(var.value, "br"))
 			setting_region = SMPC_AREA_CSA_NTSC;
-		else if (!strcmp(var.value, "Latin America") || !strcmp(var.value, "la"))
+		else if (!stricmp(var.value, "Latin America") || !stricmp(var.value, "la"))
 			setting_region = SMPC_AREA_CSA_PAL;
 	}
 
@@ -2526,19 +2526,19 @@ static void check_variables(bool startup)
 
 	if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
 	{
-		if (!strcmp(var.value, "Auto Detect") || !strcmp(var.value, "auto"))
+		if (!stricmp(var.value, "Auto Detect") || !stricmp(var.value, "auto"))
 			setting_cart = CART__RESERVED;
-		else if (!strcmp(var.value, "None") || !strcmp(var.value, "none"))
+		else if (!stricmp(var.value, "None") || !stricmp(var.value, "none"))
 			setting_cart = CART_NONE;
-		else if (!strcmp(var.value, "Backup Memory") || !strcmp(var.value, "backup"))
+		else if (!stricmp(var.value, "Backup Memory") || !stricmp(var.value, "backup"))
 			setting_cart = CART_BACKUP_MEM;
-		else if (!strcmp(var.value, "Extended RAM (1MB)") || !strcmp(var.value, "extram1"))
+		else if (!stricmp(var.value, "Extended RAM (1MB)") || !stricmp(var.value, "extram1"))
 			setting_cart = CART_EXTRAM_1M;
-		else if (!strcmp(var.value, "Extended RAM (4MB)") || !strcmp(var.value, "extram4"))
+		else if (!stricmp(var.value, "Extended RAM (4MB)") || !stricmp(var.value, "extram4"))
 			setting_cart = CART_EXTRAM_4M;
-		else if (!strcmp(var.value, "The King of Fighters '95") || !strcmp(var.value, "kof95"))
+		else if (!stricmp(var.value, "The King of Fighters '95") || !stricmp(var.value, "kof95"))
 			setting_cart = CART_KOF95;
-		else if (!strcmp(var.value, "Ultraman: Hikari no Kyojin Densetsu") || !strcmp(var.value, "ultraman"))
+		else if (!stricmp(var.value, "Ultraman: Hikari no Kyojin Densetsu") || !stricmp(var.value, "ultraman"))
 			setting_cart = CART_ULTRAMAN;
 	}
 
@@ -2547,9 +2547,9 @@ static void check_variables(bool startup)
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
       bool cdimage_cache = true;
-      if (strcmp(var.value, "enabled") == 0)
+      if (!stricmp(var.value, "enabled"))
          cdimage_cache = true;
-      else if (strcmp(var.value, "disabled") == 0)
+      else if (!stricmp(var.value, "disabled"))
          cdimage_cache = false;
       if (cdimage_cache != old_cdimagecache)
       {
@@ -2561,9 +2561,9 @@ static void check_variables(bool startup)
 
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-      if (strcmp(var.value, "enabled") == 0)
+      if (!stricmp(var.value, "enabled"))
          setting_smpc_autortc = 1;
-      else if (strcmp(var.value, "disabled") == 0)
+      else if (!stricmp(var.value, "disabled"))
          setting_smpc_autortc = 0;
    }
 
@@ -2571,17 +2571,17 @@ static void check_variables(bool startup)
 
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-       if (strcmp(var.value, "english") == 0)
+       if (!stricmp(var.value, "english"))
           setting_smpc_autortc_lang = 0;
-       else if (strcmp(var.value, "german") == 0)
+       else if (!stricmp(var.value, "german"))
           setting_smpc_autortc_lang = 1;
-       else if (strcmp(var.value, "french") == 0)
+       else if (!stricmp(var.value, "french"))
           setting_smpc_autortc_lang = 2;
-       else if (strcmp(var.value, "spanish") == 0)
+       else if (!stricmp(var.value, "spanish"))
           setting_smpc_autortc_lang = 3;
-       else if (strcmp(var.value, "italian") == 0)
+       else if (!stricmp(var.value, "italian"))
           setting_smpc_autortc_lang = 4;
-       else if (strcmp(var.value, "japanese") == 0)
+       else if (!stricmp(var.value, "japanese"))
           setting_smpc_autortc_lang = 5;
    }
 
@@ -2651,7 +2651,7 @@ static void check_variables(bool startup)
 
 	if ( environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value )
 	{
-		bool newval = (!strcmp(var.value, "Right Mouse Button"));
+		bool newval = (!stricmp(var.value, "Right Mouse Button"));
 		input_set_virtua_gun_trigger( newval );
 	}
 }
