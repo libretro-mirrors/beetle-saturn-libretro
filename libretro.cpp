@@ -12,6 +12,7 @@
 #include <retro_stat.h>
 #include <string/stdstring.h>
 #include "libretro_cbs.h"
+#include "libretro_settings.h"
 #include "input.h"
 
 #include <mednafen/cdrom/cdromif.h>
