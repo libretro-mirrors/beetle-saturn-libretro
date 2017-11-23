@@ -19,7 +19,7 @@ static unsigned players = MAX_CONTROLLERS;
 
 static int astick_deadzone = 0;
 static int trigger_deadzone = 0;
-static float mouse_sensitivity = 0.5f;
+static float mouse_sensitivity = 1.0f;
 
 typedef union
 {
