@@ -2547,9 +2547,9 @@ static void check_variables(bool startup)
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
       bool cdimage_cache = true;
-      if (strcmp(var.value, "enabled") == 0)
+      if (!strcmp(var.value, "enabled"))
          cdimage_cache = true;
-      else if (strcmp(var.value, "disabled") == 0)
+      else if (!strcmp(var.value, "disabled"))
          cdimage_cache = false;
       if (cdimage_cache != old_cdimagecache)
       {
@@ -2561,9 +2561,9 @@ static void check_variables(bool startup)
 
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-      if (strcmp(var.value, "enabled") == 0)
+      if (!strcmp(var.value, "enabled"))
          setting_smpc_autortc = 1;
-      else if (strcmp(var.value, "disabled") == 0)
+      else if (!strcmp(var.value, "disabled"))
          setting_smpc_autortc = 0;
    }
 
@@ -2571,17 +2571,17 @@ static void check_variables(bool startup)
 
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-       if (strcmp(var.value, "english") == 0)
+       if (!strcmp(var.value, "english"))
           setting_smpc_autortc_lang = 0;
-       else if (strcmp(var.value, "german") == 0)
+       else if (!strcmp(var.value, "german"))
           setting_smpc_autortc_lang = 1;
-       else if (strcmp(var.value, "french") == 0)
+       else if (!strcmp(var.value, "french"))
           setting_smpc_autortc_lang = 2;
-       else if (strcmp(var.value, "spanish") == 0)
+       else if (!strcmp(var.value, "spanish"))
           setting_smpc_autortc_lang = 3;
-       else if (strcmp(var.value, "italian") == 0)
+       else if (!strcmp(var.value, "italian"))
           setting_smpc_autortc_lang = 4;
-       else if (strcmp(var.value, "japanese") == 0)
+       else if (!strcmp(var.value, "japanese"))
           setting_smpc_autortc_lang = 5;
    }
 
@@ -2645,6 +2645,20 @@ static void check_variables(bool startup)
 
 	if ( environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value )
 		input_set_mouse_sensitivity( atoi( var.value ) );
+
+	var.key = "beetle_saturn_virtuagun_crosshair";
+	var.value = NULL;
+
+	if ( environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value )
+	{
+		if ( !strcmp(var.value, "Off") ) {
+			setting_gun_crosshair = SETTING_GUN_CROSSHAIR_OFF;
+		} else if ( !strcmp(var.value, "Cross") ) {
+			setting_gun_crosshair = SETTING_GUN_CROSSHAIR_CROSS;
+		} else if ( !strcmp(var.value, "Dot") ) {
+			setting_gun_crosshair = SETTING_GUN_CROSSHAIR_DOT;
+		}
+	}
 
 	var.key = "beetle_saturn_virtuagun_trigger";
 	var.value = NULL;
@@ -3098,6 +3112,7 @@ void retro_set_environment( retro_environment_t cb )
       { "beetle_saturn_analog_stick_deadzone", "3D Pad - Analog Deadzone; 15%|20%|25%|30%|0%|5%|10%"},
       { "beetle_saturn_trigger_deadzone", "3D Pad - Trigger Deadzone; 15%|20%|25%|30%|0%|5%|10%"},
       { "beetle_saturn_mouse_sensitivity", "Mouse - Sensitivity; 100%|105%|110%|115%|120%|125%|130%|135%|140%|145%|150%|155%|160%|165%|170%|175%|180%|185%|190%|195%|200%|5%|10%|15%|20%|25%|30%|35%|40%|45%|50%|55%|60%|65%|70%|75%|80%|85%|90%|95%" },
+      { "beetle_saturn_virtuagun_crosshair", "Virtua Gun - Crosshair; Cross|Dot|Off" },
       { "beetle_saturn_virtuagun_trigger", "Virtua Gun - Trigger; Left Mouse Button|Right Mouse Button" },
       { "beetle_saturn_cdimagecache", "CD Image Cache (restart); disabled|enabled" },
       { "beetle_saturn_autortc", "Automatically set RTC on game load; enabled|disabled" },

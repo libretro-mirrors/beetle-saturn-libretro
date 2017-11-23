@@ -10,4 +10,14 @@ extern int setting_initial_scanline_pal;
 extern int setting_last_scanline;
 extern int setting_last_scanline_pal;
 
+enum {
+	SETTING_GUN_CROSSHAIR_OFF,
+	SETTING_GUN_CROSSHAIR_CROSS,
+	SETTING_GUN_CROSSHAIR_DOT,
+
+	SETTING_GUN_CROSSHAIR_LAST,
+};
+
+extern int setting_gun_crosshair;
+
 #endif
