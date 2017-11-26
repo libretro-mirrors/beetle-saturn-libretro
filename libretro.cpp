@@ -2659,15 +2659,6 @@ static void check_variables(bool startup)
 			setting_gun_crosshair = SETTING_GUN_CROSSHAIR_DOT;
 		}
 	}
-
-	var.key = "beetle_saturn_virtuagun_trigger";
-	var.value = NULL;
-
-	if ( environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value )
-	{
-		bool newval = (!strcmp(var.value, "Right Mouse Button"));
-		input_set_virtua_gun_trigger( newval );
-	}
 }
 
 #ifdef NEED_CD
@@ -3113,7 +3104,6 @@ void retro_set_environment( retro_environment_t cb )
       { "beetle_saturn_trigger_deadzone", "3D Pad - Trigger Deadzone; 15%|20%|25%|30%|0%|5%|10%"},
       { "beetle_saturn_mouse_sensitivity", "Mouse - Sensitivity; 100%|105%|110%|115%|120%|125%|130%|135%|140%|145%|150%|155%|160%|165%|170%|175%|180%|185%|190%|195%|200%|5%|10%|15%|20%|25%|30%|35%|40%|45%|50%|55%|60%|65%|70%|75%|80%|85%|90%|95%" },
       { "beetle_saturn_virtuagun_crosshair", "Virtua Gun - Crosshair; Cross|Dot|Off" },
-      { "beetle_saturn_virtuagun_trigger", "Virtua Gun - Trigger; Left Mouse Button|Right Mouse Button" },
       { "beetle_saturn_cdimagecache", "CD Image Cache (restart); disabled|enabled" },
       { "beetle_saturn_autortc", "Automatically set RTC on game load; enabled|disabled" },
       { "beetle_saturn_autortc_lang", "BIOS language; english|german|french|spanish|italian|japanese" },
