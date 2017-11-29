@@ -14,6 +14,7 @@
 #include "libretro_cbs.h"
 #include "libretro_settings.h"
 #include "input.h"
+#include "disc.h"
 
 #include <mednafen/cdrom/cdromif.h>
 #include <mednafen/FileStream.h>
@@ -144,7 +145,6 @@ static uint32 SH7095_DB;
 #endif
 
 static sha256_digest BIOS_SHA256;	// SHA-256 hash of the currently-loaded BIOS; used for save state sanity checks.
-static std::vector<CDIF*> *cdifs = NULL;
 static std::bitset<1U << (27 - SH7095_EXT_MAP_GRAN_BITS)> FMIsWriteable;
 
 template<typename T>
@@ -973,219 +973,7 @@ static MDFN_COLD void Cleanup(void)
  SOUND_Kill();
  CDB_Kill();
 
- cdifs = NULL;
-}
-
-static MDFN_COLD bool IsSaturnDisc(const uint8* sa32k)
-{
- if(sha256(&sa32k[0x100], 0xD00) != "96b8ea48819cfa589f24c40aa149c224c420dccf38b730f00156efe25c9bbc8f"_sha256)
-  return false;
-
- if(memcmp(&sa32k[0], "SEGA SEGASATURN ", 16))
-  return false;
-
- log_cb(RETRO_LOG_INFO, "[Mednafen]: Is a Saturn disc.\n");
-
- return true;
-}
-
-static INLINE void CalcGameID(uint8* id_out16, uint8* fd_id_out16, char* sgid)
-{
-   md5_context mctx;
-   uint8_t buf[2048];
-
-   log_cb(RETRO_LOG_INFO, "Start calculating game ID, discs: %d...\n", cdifs ? cdifs->size() : 0);
-
-   mctx.starts();
-
-   for(size_t x = 0; x < cdifs->size(); x++)
-   {
-      CDIF *c = (*cdifs)[x];
-      TOC toc;
-
-      c->ReadTOC(&toc);
-
-      mctx.update_u32_as_lsb(toc.first_track);
-      mctx.update_u32_as_lsb(toc.last_track);
-      mctx.update_u32_as_lsb(toc.disc_type);
-
-      for(unsigned i = 1; i <= 100; i++)
-      {
-         const auto& t = toc.tracks[i];
-
-         mctx.update_u32_as_lsb(t.adr);
-         mctx.update_u32_as_lsb(t.control);
-         mctx.update_u32_as_lsb(t.lba);
-         mctx.update_u32_as_lsb(t.valid);
-      }
-
-      for(unsigned i = 0; i < 512; i++)
-      {
-         if(c->ReadSector((uint8_t*)&buf[0], i, 1) >= 0x1)
-         {
-            if(i == 0)
-            {
-               char* tmp;
-               memcpy(sgid, (void*)(&buf[0x20]), 16);
-               sgid[16] = 0;
-               if((tmp = strrchr(sgid, 'V')))
-               {
-                  do
-                  {
-                     *tmp = 0;
-                  } while(tmp-- != sgid && (signed char)*tmp <= 0x20);
-               }
-            }
-
-            mctx.update(&buf[0], 2048);
-         }
-      }
-
-      if(x == 0)
-      {
-         md5_context fd_mctx = mctx;
-         fd_mctx.finish(fd_id_out16);
-      }
-   }
-
-   mctx.finish(id_out16);
-}
-
-//
-// Remember to rebuild region database in db.cpp if changing the order of entries in this table(and be careful about game id collisions, e.g. with some Korean games).
-//
-static const struct
-{
- const char c;
- const char* str;	// Community-defined region string that may appear in filename.
- unsigned region;
-} region_strings[] =
-{
- // Listed in order of preference for multi-region games.
- { 'U', "USA", SMPC_AREA_NA },
- { 'J', "Japan", SMPC_AREA_JP },
- { 'K', "Korea", SMPC_AREA_KR },
-
- { 'E', "Europe", SMPC_AREA_EU_PAL },
- { 'E', "Germany", SMPC_AREA_EU_PAL },
- { 'E', "France", SMPC_AREA_EU_PAL },
- { 'E', "Spain", SMPC_AREA_EU_PAL },
-
- { 'B', "Brazil", SMPC_AREA_CSA_NTSC },
-
- { 'T', nullptr, SMPC_AREA_ASIA_NTSC },
- { 'A', nullptr, SMPC_AREA_ASIA_PAL },
- { 'L', nullptr, SMPC_AREA_CSA_PAL },
-};
-
-
-static INLINE bool DetectRegion(unsigned* const region)
-{
- uint8_t *buf = new uint8[2048 * 16];
- uint64 possible_regions = 0;
-
- for(auto& c : *cdifs)
- {
-  if(c->ReadSector(&buf[0], 0, 16) != 0x1)
-   continue;
-
-  if(!IsSaturnDisc(&buf[0]))
-   continue;
-
-  for(unsigned i = 0; i < 16; i++)
-  {
-   for(auto const& rs : region_strings)
-   {
-    if(rs.c == buf[0x40 + i])
-    {
-     possible_regions |= (uint64)1 << rs.region;
-     break;
-    }
-   }
-  }
-  break;
- }
-
- free(buf);
-
- for(auto const& rs : region_strings)
- {
-  if(possible_regions & ((uint64)1 << rs.region))
-  {
-     log_cb(RETRO_LOG_INFO, "[Mednafen]: Found region: %d\n", (uint64)1 << rs.region);
-   *region = rs.region;
-   return true;
-  }
- }
-
- return false;
-}
-
-static MDFN_COLD bool DetectRegionByFN(const std::string& fn, unsigned* const region)
-{
- std::string ss = fn;
- size_t cp_pos;
- uint64 possible_regions = 0;
-
- while((cp_pos = ss.rfind(')')) != std::string::npos && cp_pos > 0)
- {
-  ss.resize(cp_pos);
-  //
-  size_t op_pos = ss.rfind('(');
-
-  if(op_pos != std::string::npos)
-  {
-   for(auto const& rs : region_strings)
-   {
-    if(!rs.str)
-     continue;
-
-    size_t rs_pos = ss.find(rs.str, op_pos + 1);
-
-    if(rs_pos != std::string::npos)
-    {
-     bool leading_ok = true;
-     bool trailing_ok = true;
-
-     for(size_t i = rs_pos - 1; i > op_pos; i--)
-     {
-      if(ss[i] == ',')
-       break;
-      else if(ss[i] != ' ')
-      {
-       leading_ok = false;
-       break;
-      }
-     }
-
-     for(size_t i = rs_pos + strlen(rs.str); i < ss.size(); i++)
-     {
-      if(ss[i] == ',')
-       break;
-      else if(ss[i] != ' ')
-      {
-       trailing_ok = false;
-       break;
-      }
-     }
-
-     if(leading_ok && trailing_ok)
-      possible_regions |= (uint64)1 << rs.region;
-    }
-   }
-  }
- }
-
- for(auto const& rs : region_strings)
- {
-  if(possible_regions & ((uint64)1 << rs.region))
-  {
-   *region = rs.region;
-   return true;
-  }
- }
-
- return false;
+	disc_cleanup();
 }
 
 typedef struct
@@ -1464,278 +1252,6 @@ static bool InitCommon(const unsigned cpucache_emumode, const unsigned cart_type
    }
    //
    SS_Reset(true);
-
-   return true;
-}
-
-#ifdef MDFN_SS_DEV_BUILD
-static bool TestMagic(MDFNFILE* fp)
-{
- return false;
-}
-#endif
-
-static MDFN_COLD bool Load(MDFNFILE* fp)
-{
-#if 0
-   // cat regiondb.inc | sort | uniq --all-repeated=separate -w 102
-   {
-      FileStream rdbfp("/tmp/regiondb.inc", MODE_WRITE);
-      Stream* s = fp->stream();
-      std::string linebuf;
-      static std::vector<CDIF *> CDInterfaces;
-
-      cdifs = &CDInterfaces;
-
-      while(s->get_line(linebuf) >= 0)
-      {
-         static uint8 sbuf[2048 * 16];
-         CDIF* iface = CDIF_Open(linebuf, false);
-         int m = iface->ReadSector(sbuf, 0, 16, true);
-         std::string fb;
-
-         assert(m == 0x1);
-         assert(IsSaturnDisc(&sbuf[0]) == true);
-         //
-         uint8 dummytmp[16] = { 0 };
-         uint8 tmp[16] = { 0 };
-         const char* regstr;
-         unsigned region = ~0U;
-
-         MDFN_GetFilePathComponents(linebuf, nullptr, &fb);
-
-         if(!DetectRegionByFN(fb, &region))
-            abort();
-
-         switch(region)
-         {
-            default: abort(); break;
-            case SMPC_AREA_NA: regstr = "SMPC_AREA_NA"; break;
-            case SMPC_AREA_JP: regstr = "SMPC_AREA_JP"; break;
-            case SMPC_AREA_EU_PAL: regstr = "SMPC_AREA_EU_PAL"; break;
-            case SMPC_AREA_KR: regstr = "SMPC_AREA_KR"; break;
-            case SMPC_AREA_CSA_NTSC: regstr = "SMPC_AREA_CSA_NTSC"; break;
-         }
-
-         CDInterfaces.clear();
-         CDInterfaces.push_back(iface);
-
-         CalcGameID(dummytmp, tmp);
-
-         unsigned tmpreg;
-         if(!DetectRegion(&tmpreg) || tmpreg != region)
-         {
-            rdbfp.print_format("{ { ");
-            for(unsigned i = 0; i < 16; i++)
-               rdbfp.print_format("0x%02x, ", tmp[i]);
-            rdbfp.print_format("}, %s }, // %s\n", regstr, fb.c_str());
-         }
-
-         delete iface;
-      }
-   }
-
-   return;
-#endif
-   //uint8 elf_header[
-
-   cdifs = NULL;
-
-   unsigned i;
-#ifdef MDFN_SS_DEV_BUILD
-   if(MDFN_GetSettingS("ss.dbg_exe_cdpath") != "")
-   {
-      RMD_Drive dr;
-      RMD_DriveDefaults drdef;
-
-      dr.Name = std::string("Virtual CD Drive");
-      dr.PossibleStates.push_back(RMD_State({"Tray Open", false, false, true}));
-      dr.PossibleStates.push_back(RMD_State({"Tray Closed (Empty)", false, false, false}));
-      dr.PossibleStates.push_back(RMD_State({"Tray Closed", true, true, false}));
-      dr.CompatibleMedia.push_back(0);
-      dr.MediaMtoPDelay = 2000;
-
-      drdef.State = 2; // Tray Closed
-      drdef.Media = 0;
-      drdef.Orientation = 0;
-
-      MDFNGameInfo->RMD->Drives.push_back(dr);
-      MDFNGameInfo->RMD->DrivesDefaults.push_back(drdef);
-      MDFNGameInfo->RMD->MediaTypes.push_back(RMD_MediaType({"CD"}));
-      MDFNGameInfo->RMD->Media.push_back(RMD_Media({"Test CD", 0}));
-
-      static std::vector<CDIF *> CDInterfaces;
-      CDInterfaces.clear();
-      CDInterfaces.push_back(CDIF_Open(MDFN_GetSettingS("ss.dbg_exe_cdpath").c_str(), false));
-      cdifs = &CDInterfaces;
-   }
-#endif
-
-   if (!InitCommon(CPUCACHE_EMUMODE_DATA, CART_MDFN_DEBUG, MDFN_GetSettingUI("ss.region_default")))
-      return false;
-
-   // 0x25FE00C4 = 0x1;
-   for(i = 0; i < fp->size; i += 2)
-   {
-      uint8 tmp[2];
-
-      file_read(fp, tmp, 2, 1);
-      //fp->read(tmp, 2);
-
-      *(uint16*)((uint8*)WorkRAMH + 0x4000 + i) = (tmp[0] << 8) | (tmp[1] << 0);
-   }
-   BIOSROM[0] = 0x0600;
-   BIOSROM[1] = 0x4000; //0x4130; //0x4060;
-
-   BIOSROM[2] = 0x0600;
-   BIOSROM[3] = 0x4000; //0x4130; //0x4060;
-
-   BIOSROM[4] = 0xDEAD;
-   BIOSROM[5] = 0xBEEF;
-
-   return true;
-}
-
-static MDFN_COLD bool TestMagicCD(std::vector<CDIF *> *CDInterfaces)
-{
-   bool is_cd = false;
-   uint8 *buf = new uint8[2048 * 16];
-
-   if((*CDInterfaces)[0]->ReadSector(&buf[0], 0, 16) != 0x1)
-      return false;
-
-   is_cd = IsSaturnDisc(&buf[0]);
-
-   free(buf);
-
-   return is_cd;
-}
-
-static bool DiscSanityChecks(void)
-{
-   size_t i;
-
-   for(i = 0; i < cdifs->size(); i++)
-   {
-      TOC toc;
-
-      (*cdifs)[i]->ReadTOC(&toc);
-
-      for(int32 track = 1; track <= 99; track++)
-      {
-         if(!toc.tracks[track].valid)
-            continue;
-
-         if(toc.tracks[track].control & SUBQ_CTRLF_DATA)
-            continue;
-         //
-         //
-         //
-         const int32 start_lba = toc.tracks[track].lba;
-         const int32 end_lba = start_lba + 32 - 1;
-         bool any_subq_curpos = false;
-
-         for(int32 lba = start_lba; lba <= end_lba; lba++)
-         {
-            uint8 pwbuf[96];
-            uint8 qbuf[12];
-
-            if(!(*cdifs)[i]->ReadRawSectorPWOnly(pwbuf, lba, false))
-            {
-               log_cb(RETRO_LOG_ERROR,
-                     "Disc %zu of %zu: Error reading sector at lba=%d in DiscSanityChecks().\n", i + 1, cdifs->size(), lba);
-               return false;
-            }
-
-            subq_deinterleave(pwbuf, qbuf);
-            if(subq_check_checksum(qbuf) && (qbuf[0] & 0xF) == ADR_CURPOS)
-            {
-               const uint8 qm = qbuf[7];
-               const uint8 qs = qbuf[8];
-               const uint8 qf = qbuf[9];
-               uint8 lm, ls, lf;
-
-               any_subq_curpos = true;
-
-               LBA_to_AMSF(lba, &lm, &ls, &lf);
-               lm = U8_to_BCD(lm);
-               ls = U8_to_BCD(ls);
-               lf = U8_to_BCD(lf);
-
-               if(lm != qm || ls != qs || lf != qf)
-               {
-                  log_cb(RETRO_LOG_ERROR,
-                  "Disc %zu of %zu: Time mismatch at lba=%d(%02x:%02x:%02x); Q subchannel: %02x:%02x:%02x\n",
-                        i + 1, cdifs->size(),
-                        lba,
-                        lm, ls, lf,
-                        qm, qs, qf);
-                  return false;
-               }
-            }
-         }
-
-         if(!any_subq_curpos)
-         {
-            log_cb(RETRO_LOG_ERROR,
-                  "Disc %zu of %zu: No valid Q subchannel ADR_CURPOS data present at lba %d-%d?!\n", i + 1, cdifs->size(), start_lba, end_lba);
-            return false;
-         }
-
-         break;
-      }
-   }
-
-   return true;
-}
-
-static MDFN_COLD bool LoadCD(std::vector<CDIF *>* CDInterfaces)
-{
-	unsigned region;
-	int cart_type;
-	unsigned cpucache_emumode;
-	uint8 fd_id[16];
-	char sgid[16 + 1] = { 0 };
-	cdifs = CDInterfaces;
-	CalcGameID(MDFNGameInfo->MD5, fd_id, sgid);
-
-	log_cb(RETRO_LOG_INFO, "Game ID is: %s\n", sgid);
-
-	// .. safe defaults
-	region = SMPC_AREA_NA;
-	cart_type = CART_BACKUP_MEM;
-	cpucache_emumode = CPUCACHE_EMUMODE_DATA;
-
-   DetectRegion(&region);
-   DB_Lookup(nullptr, sgid, fd_id, &region, &cart_type, &cpucache_emumode);
-
-   // forced region setting?
-   if ( setting_region != 0 ) {
-	   region = setting_region;
-   }
-
-   // forced cartridge setting?
-   if ( setting_cart != CART__RESERVED ) {
-	   cart_type = setting_cart;
-   }
-
-   if(MDFN_GetSettingB("ss.cd_sanity"))
-   {
-      log_cb(RETRO_LOG_INFO, "Trying to do CD sanity checks...\n");
-      if (!DiscSanityChecks())
-         return false;
-   }
-   else
-   {
-      log_cb(RETRO_LOG_WARN,
-            "WARNING: CD (image) sanity checks disabled.\n");
-    }
-
-   // TODO: auth ID calc
-
-
-   if (!InitCommon(cpucache_emumode, cart_type, region))
-      return false;
 
    return true;
 }
@@ -2038,54 +1554,6 @@ MDFN_COLD int LibRetro_StateAction( StateMem* sm, const unsigned load, const boo
 	return 1;
 }
 
-static MDFN_COLD bool SetMedia(uint32 drive_idx, uint32 state_idx, uint32 media_idx, uint32 orientation_idx)
-{
- const RMD_Layout* rmd = EmulatedSS.RMD;
- const RMD_Drive* rd = &rmd->Drives[drive_idx];
- const RMD_State* rs = &rd->PossibleStates[state_idx];
-
- //printf("%d %d %d\n", rs->MediaPresent, rs->MediaUsable, rs->MediaCanChange);
-
- if(rs->MediaPresent && rs->MediaUsable)
-  CDB_SetDisc(false, (*cdifs)[media_idx]);
- else
-  CDB_SetDisc(rs->MediaCanChange, NULL);
-
- return(true);
-}
-
-static void DoSimpleCommand(int cmd)
-{
- switch(cmd)
- {
-  case MDFN_MSC_POWER: SS_Reset(true); break;
-  // MDFN_MSC_RESET is not handled here; special reset button handling in smpc.cpp.
- }
-}
-
-static const FileExtensionSpecStruct KnownExtensions[] =
-{
- { ".elf", "SS Homebrew ELF Executable" },
-
- { NULL, NULL }
-};
-
-static const MDFNSetting_EnumList Region_List[] =
-{
- { "jp", SMPC_AREA_JP, "Japan" },
- { "na", SMPC_AREA_NA, "North America" },
- { "eu", SMPC_AREA_EU_PAL, "Europe" },
- { "kr", SMPC_AREA_KR, "South Korea" },
-
- { "tw", SMPC_AREA_ASIA_NTSC, "Taiwan" },	// Taiwan, Philippines
- { "as", SMPC_AREA_ASIA_PAL, "China" },	// China, Middle East
-
- { "br", SMPC_AREA_CSA_NTSC, "Brazil" },
- { "la", SMPC_AREA_CSA_PAL, "Latin America" },
-
- { NULL, 0 },
-};
-
 static const MDFNSetting_EnumList RTCLang_List[] =
 {
  { "english", SMPC_RTC_LANG_ENGLISH, "English" },
@@ -2141,8 +1609,6 @@ static MDFNSetting SSSettings[] =
 
  { "ss.bios_sanity", MDFNSF_NOFLAGS, "Enable BIOS ROM image sanity checks.", NULL, MDFNST_BOOL, "1" },
 
- { "ss.cd_sanity", MDFNSF_NOFLAGS, "Enable CD (image) sanity checks.", NULL, MDFNST_BOOL, "1" },
-
  { "ss.slstart", MDFNSF_NOFLAGS, "First displayed scanline in NTSC mode.", NULL, MDFNST_INT, "0", "0", "239" },
  { "ss.slend", MDFNSF_NOFLAGS, "Last displayed scanline in NTSC mode.", NULL, MDFNST_INT, "239", "0", "239" },
 
@@ -2174,29 +1640,29 @@ static const CheatInfoStruct CheatInfo =
 
 MDFNGI EmulatedSS =
 {
- SSSettings,
- 0,
- 0,
+	SSSettings,
+	0,
+	0,
 
- true, // Multires possible?
+	true, // Multires possible?
 
- //
- // Note: Following video settings will be overwritten during game load.
- //
- 320,	// lcm_width
- 240,	// lcm_height
- NULL,  // Dummy
+	//
+	// Note: Following video settings will be overwritten during game load.
+	//
+	320,	// lcm_width
+	240,	// lcm_height
+	NULL,  // Dummy
 
- 320,   // Nominal width
- 240,   // Nominal height
+	320,   // Nominal width
+	240,   // Nominal height
 
- 0,   // Framebuffer width
- 0,   // Framebuffer height
- //
- //
- //
+	0,   // Framebuffer width
+	0,   // Framebuffer height
+	//
+	//
+	//
 
- 2,     // Number of output sound channels
+	2,     // Number of output sound channels
 };
 
 
@@ -2265,147 +1731,9 @@ static void check_system_specs(void)
    environ_cb(RETRO_ENVIRONMENT_SET_PERFORMANCE_LEVEL, &level);
 }
 
-static unsigned disk_get_num_images(void)
-{
-   if(cdifs)
-       return cdifs->size();
-   return 0;
-}
-
-static bool eject_state;
-static bool disk_set_eject_state(bool ejected)
-{
-   log_cb(RETRO_LOG_INFO, "[Mednafen]: Ejected: %u.\n", ejected);
-   if (ejected == eject_state)
-      return false;
-
-   DoSimpleCommand(ejected ? MDFN_MSC_EJECT_DISK : MDFN_MSC_INSERT_DISK);
-   eject_state = ejected;
-   return true;
-}
-
-static bool disk_get_eject_state(void)
-{
-   return eject_state;
-}
-
-static unsigned disk_get_image_index(void)
-{
-#if 0
-   // PSX global. Hacky.
-   return CD_SelectedDisc;
-#else
-   return 0;
-#endif
-}
-
-static bool disk_set_image_index(unsigned index)
-{
-#if 0
-   CD_SelectedDisc = index;
-   if (CD_SelectedDisc > disk_get_num_images())
-      CD_SelectedDisc = disk_get_num_images();
-
-   // Very hacky. CDSelect command will increment first.
-   CD_SelectedDisc--;
-
-   DoSimpleCommand(MDFN_MSC_SELECT_DISK);
-   return true;
-#else
-   return false;
-#endif
-}
-
-#if 0
-// Mednafen PSX really doesn't support adding disk images on the fly ...
-// Hack around this.
-static void update_md5_checksum(CDIF *iface)
-{
-   uint8 LayoutMD5[16];
-   md5_context layout_md5;
-   CD_TOC toc;
-
-   md5_starts(&layout_md5);
-
-   TOC_Clear(&toc);
-
-   iface->ReadTOC(&toc);
-
-   md5_update_u32_as_lsb(&layout_md5, toc.first_track);
-   md5_update_u32_as_lsb(&layout_md5, toc.last_track);
-   md5_update_u32_as_lsb(&layout_md5, toc.tracks[100].lba);
-
-   for (uint32 track = toc.first_track; track <= toc.last_track; track++)
-   {
-      md5_update_u32_as_lsb(&layout_md5, toc.tracks[track].lba);
-      md5_update_u32_as_lsb(&layout_md5, toc.tracks[track].control & 0x4);
-   }
-
-   md5_finish(&layout_md5, LayoutMD5);
-   memcpy(MDFNGameInfo->MD5, LayoutMD5, 16);
-
-   char *md5 = md5_asciistr(MDFNGameInfo->MD5);
-   log_cb(RETRO_LOG_INFO, "[Mednafen]: Updated md5 checksum: %s.\n", md5);
-}
-#endif
-
-// Untested ...
-static bool disk_replace_image_index(unsigned index, const struct retro_game_info *info)
-{
-#if 0
-   if (index >= disk_get_num_images() || !eject_state)
-      return false;
-
-   if (!info)
-   {
-      delete cdifs->at(index);
-      cdifs->erase(cdifs->begin() + index);
-      if (index < CD_SelectedDisc)
-         CD_SelectedDisc--;
-
-      // Poke into psx.cpp
-      CalcDiscSCEx();
-      return true;
-   }
-
-   bool success = true;
-   CDIF *iface = CDIF_Open(&success, info->path, false, false);
-
-   if (!success)
-      return false;
-
-   delete cdifs->at(index);
-   cdifs->at(index) = iface;
-   CalcDiscSCEx();
-
-   /* If we replace, we want the "swap disk manually effect". */
-   extract_basename(retro_cd_base_name, info->path, sizeof(retro_cd_base_name));
-   /* Ugly, but needed to get proper disk swapping effect. */
-   update_md5_checksum(iface);
-   return true;
-#else
-   return false;
-#endif
-}
-
-static bool disk_add_image_index(void)
-{
-   cdifs->push_back(NULL);
-   return true;
-}
-
-static struct retro_disk_control_callback disk_interface = {
-   disk_set_eject_state,
-   disk_get_eject_state,
-   disk_get_image_index,
-   disk_set_image_index,
-   disk_get_num_images,
-   disk_replace_image_index,
-   disk_add_image_index,
-};
-
 static void fallback_log(enum retro_log_level level, const char *fmt, ...)
 {
+	// stub
 }
 
 
@@ -2419,8 +1747,6 @@ void retro_init(void)
       log_cb = fallback_log;
 
    CDUtility_Init();
-
-   eject_state = false;
 
    const char *dir = NULL;
 
@@ -2450,7 +1776,7 @@ void retro_init(void)
       snprintf(retro_save_directory, sizeof(retro_save_directory), "%s", retro_base_directory);
    }
 
-   environ_cb(RETRO_ENVIRONMENT_SET_DISK_CONTROL_INTERFACE, &disk_interface);
+   disc_init( environ_cb );
 
    if (environ_cb(RETRO_ENVIRONMENT_GET_PERF_INTERFACE, &perf_cb))
       perf_get_cpu_features_cb = perf_cb.get_cpu_features;
@@ -2470,11 +1796,7 @@ void retro_init(void)
 
 void retro_reset(void)
 {
-#if 0
-   DoSimpleCommand(MDFN_MSC_RESET);
-#else
-   DoSimpleCommand(MDFN_MSC_POWER);
-#endif
+	SS_Reset( true );
 }
 
 bool retro_load_game_special(unsigned, const struct retro_game_info *, size_t)
@@ -2661,280 +1983,166 @@ static void check_variables(bool startup)
 	}
 }
 
-#ifdef NEED_CD
-static void ReadM3U(std::vector<std::string> &file_list, std::string path, unsigned depth = 0)
+static MDFNGI *MDFNI_LoadGame( const char *name )
 {
-   std::string dir_path;
-   char linebuf[2048];
-   FILE *fp = fopen(path.c_str(), "rb");
+	size_t name_len = strlen( name );
 
-   if (fp == NULL)
-      return;
+	// check for a valid file extension
+	if ( name_len > 4 )
+	{
+		const char *ext = name + name_len - 4;
 
-   MDFN_GetFilePathComponents(path, &dir_path);
+		// supported extension?
+		if ( (!strcasecmp( ext, ".ccd" )) ||
+			 (!strcasecmp( ext, ".chd" )) ||
+			 (!strcasecmp( ext, ".cue" )) ||
+			 (!strcasecmp( ext, ".toc" )) ||
+			 (!strcasecmp( ext, ".m3u" )) )
+		{
+			unsigned cpucache_emumode;
+			int cart_type;
+			unsigned region;
 
-   while(fgets(linebuf, sizeof(linebuf), fp) != NULL)
-   {
-      std::string efp;
+			uint8 fd_id[16];
+			char sgid[16 + 1] = { 0 };
 
-      if(linebuf[0] == '#')
-         continue;
-      string_trim_whitespace_right(linebuf);
-      if(linebuf[0] == 0)
-         continue;
+			MDFNGameInfo = &EmulatedSS;
+			if ( disc_load_content( MDFNGameInfo, name, fd_id, sgid ) )
+			{
+				log_cb(RETRO_LOG_INFO, "Game ID is: %s\n", sgid );
 
-      efp = MDFN_EvalFIP(dir_path, std::string(linebuf));
+				// test discs?
+				bool discs_ok;
+				if ( setting_disc_test ) {
+					discs_ok = disc_test();
+				} else {
+					discs_ok = true; // OK!
+				}
 
-      if(efp.size() >= 4 && efp.substr(efp.size() - 4) == ".m3u")
-      {
-         if(efp == path)
-         {
-            log_cb(RETRO_LOG_ERROR, "M3U at \"%s\" references self.\n", efp.c_str());
-            goto end;
-         }
+				if ( discs_ok )
+				{
+					// .. safe defaults
+					region = SMPC_AREA_NA;
+					cart_type = CART_BACKUP_MEM;
+					cpucache_emumode = CPUCACHE_EMUMODE_DATA;
 
-         if(depth == 99)
-         {
-            log_cb(RETRO_LOG_ERROR, "M3U load recursion too deep!\n");
-            goto end;
-         }
+					disc_detect_region( &region );
 
-         ReadM3U(file_list, efp, depth++);
-      }
-      else
-         file_list.push_back(efp);
-   }
+					DB_Lookup(nullptr, sgid, fd_id, &region, &cart_type, &cpucache_emumode );
 
-end:
-   fclose(fp);
-}
+					// forced region setting?
+					if ( setting_region != 0 ) {
+						region = setting_region;
+					}
 
-static std::vector<CDIF *> CDInterfaces;	// FIXME: Cleanup on error out.
-// TODO: LoadCommon()
+					// forced cartridge setting?
+					if ( setting_cart != CART__RESERVED ) {
+						cart_type = setting_cart;
+					}
 
-static MDFNGI *MDFNI_LoadCD(const char *devicename)
-{
-   uint8 LayoutMD5[16];
+					// GO!
+					if ( InitCommon( cpucache_emumode, cart_type, region ) )
+					{
+						MDFN_LoadGameCheats(NULL);
+						MDFNMP_InstallReadPatches();
 
-   log_cb(RETRO_LOG_INFO, "Loading %s...\n", devicename);
+						return MDFNGameInfo;
+					}
 
-   try
-   {
-      if(devicename && strlen(devicename) > 4 && !strcasecmp(devicename + strlen(devicename) - 4, ".m3u"))
-      {
-         std::vector<std::string> file_list;
+				}; // discs okay?
 
-         ReadM3U(file_list, devicename);
+			}; // load content
 
-         for(unsigned i = 0; i < file_list.size(); i++)
-         {
-            bool success = true;
-            CDIF *image  = CDIF_Open(file_list[i].c_str(), false);
-            CDInterfaces.push_back(image);
-         }
-      }
-      else
-      {
-         bool success = true;
-         CDIF *image  = CDIF_Open(devicename, false);
-         log_cb(RETRO_LOG_INFO, "Pushing CD image onto stack: %s.\n", devicename);
-         CDInterfaces.push_back(image);
-      }
-   }
-   catch(std::exception &e)
-   {
-      log_cb(RETRO_LOG_ERROR, "Error opening CD.\n");
-      return(0);
-   }
+		}; // supported extension?
 
-   // Print out a track list for all discs.
-   for(unsigned i = 0; i < CDInterfaces.size(); i++)
-   {
-      TOC toc;
+	}; // valid name?
 
-      CDInterfaces[i]->ReadTOC(&toc);
-
-      log_cb(RETRO_LOG_DEBUG, "CD %d Layout:\n", i + 1);
-
-      for(int32 track = toc.first_track; track <= toc.last_track; track++)
-      {
-         log_cb(RETRO_LOG_DEBUG, "Track %2d, LBA: %6d  %s\n", track, toc.tracks[track].lba, (toc.tracks[track].control & 0x4) ? "DATA" : "AUDIO");
-      }
-
-      log_cb(RETRO_LOG_DEBUG, "Leadout: %6d\n", toc.tracks[100].lba);
-   }
-
-   log_cb(RETRO_LOG_DEBUG, "Calculating layout MD5.\n");
-   // Calculate layout MD5.  The system emulation LoadCD() code is free to ignore this value and calculate
-   // its own, or to use it to look up a game in its database.
-   {
-      md5_context layout_md5;
-
-      layout_md5.starts();
-
-      for(unsigned i = 0; i < CDInterfaces.size(); i++)
-      {
-         TOC toc;
-
-         CDInterfaces[i]->ReadTOC(&toc);
-
-         layout_md5.update_u32_as_lsb(toc.first_track);
-         layout_md5.update_u32_as_lsb(toc.last_track);
-         layout_md5.update_u32_as_lsb(toc.tracks[100].lba);
-
-         for(uint32 track = toc.first_track; track <= toc.last_track; track++)
-         {
-            layout_md5.update_u32_as_lsb(toc.tracks[track].lba);
-            layout_md5.update_u32_as_lsb(toc.tracks[track].control & 0x4);
-         }
-      }
-
-      layout_md5.finish(LayoutMD5);
-   }
-
-   log_cb(RETRO_LOG_DEBUG, "Done calculating layout MD5.\n");
-   // TODO: include module name in hash
-   if (MDFNGameInfo == NULL)
-   {
-      MDFNGameInfo = &EmulatedSS;
-   }
-
-   memcpy(MDFNGameInfo->MD5, LayoutMD5, 16);
-
-   if(!(LoadCD(&CDInterfaces)))
-   {
-      Cleanup();
-      return NULL;
-   }
-
-   //MDFNI_SetLayerEnableMask(~0ULL);
-
-   MDFN_LoadGameCheats(NULL);
-   MDFNMP_InstallReadPatches();
-
-   return(MDFNGameInfo);
-}
-#endif
-
-static MDFNGI *MDFNI_LoadGame(const char *name)
-{
-   MDFNFILE *GameFile = NULL;
-
-	if(strlen(name) > 4 && (!strcasecmp(name + strlen(name) - 4, ".cue") || !strcasecmp(name + strlen(name) - 4, ".ccd") || !strcasecmp(name + strlen(name) - 4, ".chd") || !strcasecmp(name + strlen(name) - 4, ".toc") || !strcasecmp(name + strlen(name) - 4, ".m3u") || !strcasecmp(name + strlen(name) - 4, ".pbp")))
-   {
-      MDFNGI *gi = MDFNI_LoadCD(name);
-      if (!gi)
-         goto error;
-      return gi;
-   }
-
-   GameFile = file_open(name);
-
-   if(!GameFile)
-      goto error;
-
-   if(Load(GameFile) <= 0)
-      goto error;
-
-   file_close(GameFile);
-   GameFile   = NULL;
-
-   return(MDFNGameInfo);
-
-error:
-   for(unsigned i = 0; i < CDInterfaces.size(); i++)
-      delete CDInterfaces[i];
-   CDInterfaces.clear();
-   if (GameFile)
-      file_close(GameFile);
-   GameFile     = NULL;
-   MDFNGameInfo = NULL;
-   return NULL;
+	// error
+	Cleanup();
+	MDFNGameInfo = NULL;
+	return NULL;
 }
 
 bool retro_load_game(const struct retro_game_info *info)
 {
-   char tocbasepath[4096];
-   bool ret = false;
+	char tocbasepath[4096];
+	bool ret = false;
 
-   if (!info || failed_init)
-      return false;
+	if (!info || failed_init)
+		return false;
 
 	input_init_env( environ_cb );
 
-   enum retro_pixel_format fmt = RETRO_PIXEL_FORMAT_XRGB8888;
-   if (!environ_cb(RETRO_ENVIRONMENT_SET_PIXEL_FORMAT, &fmt))
-      return false;
+	enum retro_pixel_format fmt = RETRO_PIXEL_FORMAT_XRGB8888;
+	if (!environ_cb(RETRO_ENVIRONMENT_SET_PIXEL_FORMAT, &fmt))
+		return false;
 
-   extract_basename(retro_cd_base_name,       info->path, sizeof(retro_cd_base_name));
-   extract_directory(retro_cd_base_directory, info->path, sizeof(retro_cd_base_directory));
+	extract_basename(retro_cd_base_name,       info->path, sizeof(retro_cd_base_name));
+	extract_directory(retro_cd_base_directory, info->path, sizeof(retro_cd_base_directory));
 
-   snprintf(tocbasepath, sizeof(tocbasepath), "%s%c%s.toc", retro_cd_base_directory, retro_slash, retro_cd_base_name);
+	snprintf(tocbasepath, sizeof(tocbasepath), "%s%c%s.toc", retro_cd_base_directory, retro_slash, retro_cd_base_name);
 
-   if (path_is_valid(tocbasepath))
-      snprintf(retro_cd_path, sizeof(retro_cd_path), "%s", tocbasepath);
-   else
-      snprintf(retro_cd_path, sizeof(retro_cd_path), "%s", info->path);
+	if (path_is_valid(tocbasepath))
+		snprintf(retro_cd_path, sizeof(retro_cd_path), "%s", tocbasepath);
+	else
+		snprintf(retro_cd_path, sizeof(retro_cd_path), "%s", info->path);
 
-   check_variables(true);
-   //make sure shared memory cards and save states are enabled only at startup
-   shared_memorycards = shared_memorycards_toggle;
+	check_variables(true);
+	//make sure shared memory cards and save states are enabled only at startup
+	shared_memorycards = shared_memorycards_toggle;
 
-   if (!MDFNI_LoadGame(retro_cd_path))
-   {
-      failed_init = true;
-      return false;
-   }
+	if (!MDFNI_LoadGame(retro_cd_path))
+	{
+		failed_init = true;
+		return false;
+	}
 
-   MDFN_LoadGameCheats(NULL);
-   MDFNMP_InstallReadPatches();
+	MDFN_LoadGameCheats(NULL);
+	MDFNMP_InstallReadPatches();
 
-   alloc_surface();
+	alloc_surface();
 
 #ifdef NEED_DEINTERLACER
-   PrevInterlaced = false;
-   deint.ClearState();
+	PrevInterlaced = false;
+	deint.ClearState();
 #endif
 
 	input_init();
 
-   boot = false;
+	boot = false;
 
-   cdifs = &CDInterfaces;
-   CDB_SetDisc(false, (*cdifs)[0]);
+	disc_select(0);
 
-   frame_count = 0;
-   internal_frame_count = 0;
+	frame_count = 0;
+	internal_frame_count = 0;
 
-   return true;
+	return true;
 }
 
 void retro_unload_game(void)
 {
-   if(!MDFNGameInfo)
-      return;
+	if(!MDFNGameInfo)
+		return;
 
-   MDFN_FlushGameCheats(0);
+	MDFN_FlushGameCheats(0);
 
-   CloseGame();
+	CloseGame();
 
-   if (MDFNGameInfo->RMD)
-   {
-      delete MDFNGameInfo->RMD;
-      MDFNGameInfo->RMD = NULL;
-   }
+	if (MDFNGameInfo->RMD)
+	{
+		delete MDFNGameInfo->RMD;
+		MDFNGameInfo->RMD = NULL;
+	}
 
-   MDFNMP_Kill();
+	MDFNMP_Kill();
 
-   MDFNGameInfo = NULL;
+	MDFNGameInfo = NULL;
 
-   for(unsigned i = 0; i < CDInterfaces.size(); i++)
-      delete CDInterfaces[i];
-   CDInterfaces.clear();
+	disc_cleanup();
 
-   retro_cd_base_directory[0] = '\0';
-   retro_cd_path[0]           = '\0';
-   retro_cd_base_name[0]      = '\0';
+	retro_cd_base_directory[0] = '\0';
+	retro_cd_path[0]           = '\0';
+	retro_cd_base_name[0]      = '\0';
 }
 
 static uint64_t video_frames, audio_frames;
