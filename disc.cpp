@@ -154,44 +154,29 @@ static bool disk_get_eject_state(void)
 
 static unsigned disk_get_image_index(void)
 {
-	log_cb(RETRO_LOG_INFO, "disk_get_image_index called.\n");
-	return 0;
-
-	// todo - untested
-
-#if 0
-   // PSX global. Hacky.
-   return CD_SelectedDisc;
-#else
-   return 0;
-#endif
+	return g_current_disc;
 }
 
 static bool disk_set_image_index(unsigned index)
 {
-	log_cb(RETRO_LOG_INFO, "disk_set_image_index(%d) called.\n", index );
+	// only listen if the tray is open
+	if ( g_eject_state == true )
+	{
+		if ( index < CDInterfaces.size() ) {
+			// log_cb(RETRO_LOG_INFO, "Selected disc %d of %d.\n", index+1, CDInterfaces.size() );
+			g_current_disc = index;
+			return true;
+		}
+	}
+
 	return false;
-
-	// todo - untested
-
-#if 0
-   CD_SelectedDisc = index;
-   if (CD_SelectedDisc > disk_get_num_images())
-      CD_SelectedDisc = disk_get_num_images();
-
-   // Very hacky. CDSelect command will increment first.
-   CD_SelectedDisc--;
-
-   DoSimpleCommand(MDFN_MSC_SELECT_DISK);
-   return true;
-#endif
 }
 
 static unsigned disk_get_num_images(void)
 {
-	log_cb(RETRO_LOG_INFO, "disk_get_num_images called -> %d.\n", CDInterfaces.size() );
 	return CDInterfaces.size();
 }
+
 /*
 #if 0
 // Mednafen really doesn't support adding disk images on the fly ...
