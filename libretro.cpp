@@ -1188,22 +1188,12 @@ static bool InitCommon(const unsigned cpucache_emumode, const unsigned cart_type
    MDFN_printf("\n");
 #endif
 
-   for(unsigned sp = 0; sp < 2; sp++)
-   {
-      char buf[64];
-      bool sv;
-
-      snprintf(buf, sizeof(buf), "ss.input.sport%u.multitap", sp + 1);
-      sv = MDFN_GetSettingB(buf);
-      SMPC_SetMultitap(sp, sv);
-
-#if 0
-      MDFN_printf(_("Multitap on Saturn Port %u: %s\n"), sp + 1, sv ? _("Enabled") : _("Disabled"));
-#endif
-   }
+   // Apply multi-tap state to SMPC
+   SMPC_SetMultitap( 0, setting_multitap_port1 );
+   SMPC_SetMultitap( 1, setting_multitap_port2 );
 
 
-   for(unsigned vp = 0; vp < 12; vp++)
+   /*for(unsigned vp = 0; vp < 12; vp++)
    {
       char buf[64];
       uint32 sv;
@@ -1211,7 +1201,7 @@ static bool InitCommon(const unsigned cpucache_emumode, const unsigned cart_type
       snprintf(buf, sizeof(buf), "ss.input.port%u.gun_chairs", vp + 1);
       sv = MDFN_GetSettingUI(buf);
       SMPC_SetCrosshairsColor(vp, sv);
-   }
+   }*/
    //
    //
    //
@@ -1864,6 +1854,32 @@ static void check_variables(bool startup)
 			setting_cart = CART_ULTRAMAN;
 	}
 
+	var.key = "beetle_saturn_multitap_port1";
+
+	if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+	{
+		bool connected = false;
+		if (!strcmp(var.value, "enabled"))
+			connected = true;
+		else if (!strcmp(var.value, "disabled"))
+			connected = false;
+
+		input_multitap( 1, connected );
+	}
+
+	var.key = "beetle_saturn_multitap_port2";
+
+	if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+	{
+		bool connected = false;
+		if (!strcmp(var.value, "enabled"))
+			connected = true;
+		else if (!strcmp(var.value, "disabled"))
+			connected = false;
+
+		input_multitap( 2, connected );
+	}
+
    var.key = "beetle_saturn_cdimagecache";
 
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
@@ -2308,6 +2324,8 @@ void retro_set_environment( retro_environment_t cb )
    static const struct retro_variable vars[] = {
       { "beetle_saturn_region", "System Region; Auto Detect|Japan|North America|Europe|South Korea|Asia (NTSC)|Asia (PAL)|Brazil|Latin America" },
       { "beetle_saturn_cart", "Cartridge; Auto Detect|None|Backup Memory|Extended RAM (1MB)|Extended RAM (4MB)|The King of Fighters '95|Ultraman: Hikari no Kyojin Densetsu" },
+      { "beetle_saturn_multitap_port1", "6Player Adaptor on Port 1; disabled|enabled" },
+      { "beetle_saturn_multitap_port2", "6Player Adaptor on Port 2; disabled|enabled" },
       { "beetle_saturn_analog_stick_deadzone", "3D Pad - Analog Deadzone; 15%|20%|25%|30%|0%|5%|10%"},
       { "beetle_saturn_trigger_deadzone", "3D Pad - Trigger Deadzone; 15%|20%|25%|30%|0%|5%|10%"},
       { "beetle_saturn_mouse_sensitivity", "Mouse - Sensitivity; 100%|105%|110%|115%|120%|125%|130%|135%|140%|145%|150%|155%|160%|165%|170%|175%|180%|185%|190%|195%|200%|5%|10%|15%|20%|25%|30%|35%|40%|45%|50%|55%|60%|65%|70%|75%|80%|85%|90%|95%" },

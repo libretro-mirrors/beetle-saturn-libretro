@@ -264,6 +264,7 @@ static void MapPorts(void)
    for(unsigned i = 0; i < 6; i++)
    {
     IODevice* const tsd = VirtualPorts[vp++];
+    if (!tsd) continue; // libretro fix - patch for multi-tap set on startup.
 
     if(SPorts[sp]->GetSubDevice(i) != tsd)
      tsd->Power();
