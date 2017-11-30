@@ -1,5 +1,6 @@
 
 #include "libretro.h"
+#include "libretro_settings.h"
 #include "mednafen/mednafen-types.h"
 #include "mednafen/ss/ss.h"
 #include "mednafen/ss/smpc.h"
@@ -13,9 +14,9 @@
 
 static retro_environment_t environ_cb; // cached during input_set_env
 
-#define MAX_CONTROLLERS		2
+#define MAX_CONTROLLERS		12 // 2x 6 player adapters
 
-static unsigned players = MAX_CONTROLLERS;
+static unsigned players = 2;
 
 static int astick_deadzone = 0;
 static int trigger_deadzone = 0;
@@ -221,51 +222,48 @@ void input_init_env( retro_environment_t _environ_cb )
 	// Cache this
 	environ_cb = _environ_cb;
 
+#define RETRO_DESCRIPTOR_BLOCK( _user )																				\
+		{ _user, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_UP,    "D-Pad Up" },								\
+		{ _user, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_DOWN,  "D-Pad Down" },								\
+		{ _user, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_LEFT,  "D-Pad Left" },								\
+		{ _user, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_RIGHT, "D-Pad Right" },								\
+		{ _user, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_B,     "A Button" },								\
+		{ _user, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_A,     "B Button" },								\
+		{ _user, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_R,     "C Button" },								\
+		{ _user, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_Y,     "X Button" },								\
+		{ _user, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_X,     "Y Button" },								\
+		{ _user, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_L,     "Z Button" },								\
+		{ _user, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_L2,    "L Button" },								\
+		{ _user, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_R2,    "R Button" },								\
+		{ _user, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_START, "Start Button" },							\
+		{ _user, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_SELECT, "Mode Switch" },							\
+		{ _user, RETRO_DEVICE_ANALOG, RETRO_DEVICE_INDEX_ANALOG_LEFT, RETRO_DEVICE_ID_ANALOG_X, "Analog X" },		\
+		{ _user, RETRO_DEVICE_ANALOG, RETRO_DEVICE_INDEX_ANALOG_LEFT, RETRO_DEVICE_ID_ANALOG_Y, "Analog Y" },		\
+		{ _user, RETRO_DEVICE_LIGHTGUN, 0, RETRO_DEVICE_ID_LIGHTGUN_TRIGGER, "Gun Trigger" },						\
+		{ _user, RETRO_DEVICE_LIGHTGUN, 0, RETRO_DEVICE_ID_LIGHTGUN_START, "Gun Start" },							\
+		{ _user, RETRO_DEVICE_LIGHTGUN, 0, RETRO_DEVICE_ID_LIGHTGUN_RELOAD, "Gun Reload" }
+
 	struct retro_input_descriptor desc[] =
 	{
-		{ 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_UP,    "D-Pad Up" },
-		{ 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_DOWN,  "D-Pad Down" },
-		{ 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_LEFT,  "D-Pad Left" },
-		{ 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_RIGHT, "D-Pad Right" },
-		{ 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_B,     "A Button" },
-		{ 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_A,     "B Button" },
-		{ 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_R,     "C Button" },
-		{ 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_Y,     "X Button" },
-		{ 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_X,     "Y Button" },
-		{ 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_L,     "Z Button" },
-		{ 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_L2,    "L Button" },
-		{ 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_R2,    "R Button" },
-		{ 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_START, "Start Button" },
-		{ 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_SELECT, "Mode Switch" },
-		{ 0, RETRO_DEVICE_ANALOG, RETRO_DEVICE_INDEX_ANALOG_LEFT, RETRO_DEVICE_ID_ANALOG_X, "Analog X" },
-		{ 0, RETRO_DEVICE_ANALOG, RETRO_DEVICE_INDEX_ANALOG_LEFT, RETRO_DEVICE_ID_ANALOG_Y, "Analog Y" },
-		{ 0, RETRO_DEVICE_LIGHTGUN, 0, RETRO_DEVICE_ID_LIGHTGUN_TRIGGER, "Gun Trigger" },
-		{ 0, RETRO_DEVICE_LIGHTGUN, 0, RETRO_DEVICE_ID_LIGHTGUN_START, "Gun Start" },
-		{ 0, RETRO_DEVICE_LIGHTGUN, 0, RETRO_DEVICE_ID_LIGHTGUN_RELOAD, "Gun Reload" },
-
-		{ 1, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_UP,    "D-Pad Up" },
-		{ 1, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_DOWN,  "D-Pad Down" },
-		{ 1, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_LEFT,  "D-Pad Left" },
-		{ 1, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_RIGHT, "D-Pad Right" },
-		{ 1, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_B,     "A Button" },
-		{ 1, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_A,     "B Button" },
-		{ 1, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_R,     "C Button" },
-		{ 1, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_Y,     "X Button" },
-		{ 1, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_X,     "Y Button" },
-		{ 1, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_L,     "Z Button" },
-		{ 1, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_L2,    "L Button" },
-		{ 1, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_R2,    "R Button" },
-		{ 1, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_START, "Start Button" },
-		{ 1, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_SELECT, "Mode Switch" },
-		{ 1, RETRO_DEVICE_ANALOG, RETRO_DEVICE_INDEX_ANALOG_LEFT, RETRO_DEVICE_ID_ANALOG_X, "Analog X" },
-		{ 1, RETRO_DEVICE_ANALOG, RETRO_DEVICE_INDEX_ANALOG_LEFT, RETRO_DEVICE_ID_ANALOG_Y, "Analog Y" },
-		{ 1, RETRO_DEVICE_LIGHTGUN, 0, RETRO_DEVICE_ID_LIGHTGUN_TRIGGER, "Gun Trigger" },
-		{ 1, RETRO_DEVICE_LIGHTGUN, 0, RETRO_DEVICE_ID_LIGHTGUN_START, "Gun Start" },
-		{ 1, RETRO_DEVICE_LIGHTGUN, 0, RETRO_DEVICE_ID_LIGHTGUN_RELOAD, "Gun Reload" },
+		RETRO_DESCRIPTOR_BLOCK( 0 ),
+		RETRO_DESCRIPTOR_BLOCK( 1 ),
+		RETRO_DESCRIPTOR_BLOCK( 2 ),
+		RETRO_DESCRIPTOR_BLOCK( 3 ),
+		RETRO_DESCRIPTOR_BLOCK( 4 ),
+		RETRO_DESCRIPTOR_BLOCK( 5 ),
+		RETRO_DESCRIPTOR_BLOCK( 6 ),
+		RETRO_DESCRIPTOR_BLOCK( 7 ),
+		RETRO_DESCRIPTOR_BLOCK( 8 ),
+		RETRO_DESCRIPTOR_BLOCK( 9 ),
+		RETRO_DESCRIPTOR_BLOCK( 10 ),
+		RETRO_DESCRIPTOR_BLOCK( 11 ),
 
 		{ 0 },
 	};
 
+#undef RETRO_DESCRIPTOR_BLOCK
+
+	// Send to front-end
 	environ_cb( RETRO_ENVIRONMENT_SET_INPUT_DESCRIPTORS, desc );
 }
 
@@ -275,15 +273,27 @@ void input_set_env( retro_environment_t environ_cb )
 	{
 		{ input_device_types, INPUT_DEVICE_TYPES_COUNT },
 		{ input_device_types, INPUT_DEVICE_TYPES_COUNT },
+		{ input_device_types, INPUT_DEVICE_TYPES_COUNT },
+		{ input_device_types, INPUT_DEVICE_TYPES_COUNT },
+		{ input_device_types, INPUT_DEVICE_TYPES_COUNT },
+		{ input_device_types, INPUT_DEVICE_TYPES_COUNT },
+		{ input_device_types, INPUT_DEVICE_TYPES_COUNT },
+		{ input_device_types, INPUT_DEVICE_TYPES_COUNT },
+		{ input_device_types, INPUT_DEVICE_TYPES_COUNT },
+		{ input_device_types, INPUT_DEVICE_TYPES_COUNT },
+		{ input_device_types, INPUT_DEVICE_TYPES_COUNT },
+		{ input_device_types, INPUT_DEVICE_TYPES_COUNT },
+
 		{ 0 },
 	};
 
+	// Send to front-end
 	environ_cb( RETRO_ENVIRONMENT_SET_CONTROLLER_INFO, (void*)ports );
 }
 
 void input_init()
 {
-	// Initialise to default and bind input buffers to SMPC emulation.
+	// Initialise to default pad type and bind input buffers to SMPC emulation.
 	for ( unsigned i = 0; i < MAX_CONTROLLERS; ++i )
 	{
 		input_type[ i ] = RETRO_DEVICE_JOYPAD;
@@ -637,7 +647,7 @@ int input_StateAction( StateMem* sm, const unsigned load, const bool data_only )
 
 	SFORMAT StateRegs[] =
 	{
-		SFARRAY16N( input_mode, MAX_CONTROLLERS, "mode" ),
+		SFARRAY16N( input_mode, MAX_CONTROLLERS, "pad-mode" ),
 		SFEND
 	};
 
@@ -702,6 +712,46 @@ void retro_set_controller_port_device( unsigned in_port, unsigned device )
 		}; // switch ( device )
 
 	}; // valid port?
+}
+
+void input_multitap( int port, bool enabled )
+{
+	switch ( port )
+	{
+		case 1: // PORT 1
+			if ( enabled != setting_multitap_port1 ) {
+				setting_multitap_port1 = enabled;
+				if ( setting_multitap_port1 ) {
+					log_cb( RETRO_LOG_INFO, "Connected 6Player Adaptor to Port 1\n" );
+				} else {
+					log_cb( RETRO_LOG_INFO, "Removed 6Player Adaptor from Port 1\n" );
+				}
+				SMPC_SetMultitap( 0, setting_multitap_port1 );
+			}
+			break;
+
+		case 2: // PORT 2
+			if ( enabled != setting_multitap_port2 ) {
+				setting_multitap_port2 = enabled;
+				if ( setting_multitap_port2 ) {
+					log_cb( RETRO_LOG_INFO, "Connected 6Player Adaptor to Port 2\n" );
+				} else {
+					log_cb( RETRO_LOG_INFO, "Removed 6Player Adaptor from Port 2\n" );
+				}
+				SMPC_SetMultitap( 1, setting_multitap_port2 );
+			}
+			break;
+
+	}; // switch ( port )
+
+	// Update players count
+	players = 2;
+	if ( setting_multitap_port1 ) {
+		players += 5;
+	}
+	if ( setting_multitap_port2 ) {
+		players += 5;
+	}
 }
 
 //==============================================================================

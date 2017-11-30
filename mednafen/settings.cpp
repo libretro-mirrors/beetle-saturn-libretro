@@ -67,8 +67,6 @@ bool MDFN_GetSettingB(const char *name)
       return int(setting_smpc_autortc);
    if (!strcmp("ss.bios_sanity", name))
       return true;
-   if (!strcmp("ss.cd_sanity", name))
-      return false;
    if (!strcmp("ss.midsync", name))
       return false;
    /* CDROM */
@@ -77,8 +75,6 @@ bool MDFN_GetSettingB(const char *name)
    /* FILESYS */
    if (!strcmp("filesys.untrusted_fip_check", name))
       return 0;
-   if (!strcmp("filesys.disablesavegz", name))
-      return 1;
    fprintf(stderr, "unhandled setting B: %s\n", name);
    return 0;
 }
