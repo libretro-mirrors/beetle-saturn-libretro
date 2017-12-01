@@ -125,8 +125,11 @@ static void CheckEventsByMemTS(void);
 
 SH7095 CPU[2]{ {"SH2-M", SS_EVENT_SH2_M_DMA, SCU_MSH2VectorFetch}, {"SH2-S", SS_EVENT_SH2_S_DMA, SCU_SSH2VectorFetch}};
 static uint16 BIOSROM[524288 / sizeof(uint16)];
-static uint16 WorkRAML[1024 * 1024 / sizeof(uint16)];
-static uint16 WorkRAMH[1024 * 1024 / sizeof(uint16)];	// Effectively 32-bit in reality, but 16-bit here because of CPU interpreter design(regarding fastmap).
+#define WORKRAM_BANK_SIZE_BYTES (1024*1024)
+static uint8 WorkRAM[2*WORKRAM_BANK_SIZE_BYTES]; // unified 2MB work ram for linear access.
+// Effectively 32-bit in reality, but 16-bit here because of CPU interpreter design(regarding fastmap).
+static uint16* WorkRAML = (uint16*)(WorkRAM + (WORKRAM_BANK_SIZE_BYTES*0));
+static uint16* WorkRAMH = (uint16*)(WorkRAM + (WORKRAM_BANK_SIZE_BYTES*1));
 static uint8 BackupRAM[32768];
 static bool BackupRAM_Dirty;
 static int64 BackupRAM_SaveDelay;
@@ -775,8 +778,7 @@ void SS_Reset(bool powering_up)
 
  if(powering_up)
  {
-  memset(WorkRAML, 0x00, sizeof(WorkRAML));	// TODO: Check
-  memset(WorkRAMH, 0x00, sizeof(WorkRAMH));	// TODO: Check
+   memset(WorkRAM, 0x00, sizeof(WorkRAM));	// TODO: Check real hardware
  }
 
  if(powering_up)
@@ -1070,10 +1072,10 @@ static bool InitCommon(const unsigned cpucache_emumode, const unsigned cart_type
    // Call InitFastMemMap() before functions like SOUND_Init()
    InitFastMemMap();
    SS_SetPhysMemMap(0x00000000, 0x000FFFFF, BIOSROM, sizeof(BIOSROM));
-   SS_SetPhysMemMap(0x00200000, 0x003FFFFF, WorkRAML, sizeof(WorkRAML), true);
-   SS_SetPhysMemMap(0x06000000, 0x07FFFFFF, WorkRAMH, sizeof(WorkRAMH), true);
-   MDFNMP_RegSearchable(0x00200000, sizeof(WorkRAML));
-   MDFNMP_RegSearchable(0x06000000, sizeof(WorkRAMH));
+   SS_SetPhysMemMap(0x00200000, 0x003FFFFF, WorkRAML, WORKRAM_BANK_SIZE_BYTES, true);
+   SS_SetPhysMemMap(0x06000000, 0x07FFFFFF, WorkRAMH, WORKRAM_BANK_SIZE_BYTES, true);
+   MDFNMP_RegSearchable(0x00200000, WORKRAM_BANK_SIZE_BYTES);
+   MDFNMP_RegSearchable(0x06000000, WORKRAM_BANK_SIZE_BYTES);
 
    CART_Init(cart_type);
 
@@ -1499,8 +1501,8 @@ MDFN_COLD int LibRetro_StateAction( StateMem* sm, const unsigned load, const boo
   SFVAR(SH7095_BusLock),
   SFVAR(SH7095_DB),
 
-  SFARRAY16(WorkRAML, sizeof(WorkRAML) / sizeof(WorkRAML[0])),
-  SFARRAY16(WorkRAMH, sizeof(WorkRAMH) / sizeof(WorkRAMH[0])),
+  SFARRAY16(WorkRAML, WORKRAM_BANK_SIZE_BYTES / sizeof(uint16_t)),
+  SFARRAY16(WorkRAMH, WORKRAM_BANK_SIZE_BYTES / sizeof(uint16_t)),
   SFARRAY(BackupRAM, sizeof(BackupRAM) / sizeof(BackupRAM[0])),
 
   SFEND
@@ -2426,12 +2428,30 @@ bool retro_unserialize(const void *data, size_t size)
 
 void *retro_get_memory_data(unsigned type)
 {
-   return NULL;
+	switch ( type & RETRO_MEMORY_MASK )
+	{
+
+	case RETRO_MEMORY_SYSTEM_RAM:
+		return WorkRAM;
+
+	}
+
+	// not supported
+	return NULL;
 }
 
 size_t retro_get_memory_size(unsigned type)
 {
-   return 0;
+	switch ( type & RETRO_MEMORY_MASK )
+	{
+
+	case RETRO_MEMORY_SYSTEM_RAM:
+		return sizeof(WorkRAM);
+
+	}
+
+	// not supported
+	return 0;
 }
 
 void retro_cheat_reset(void)
