@@ -37,14 +37,17 @@ static INPUT_DATA input_data[ MAX_CONTROLLERS ] = {0};
 static uint32_t input_type[ MAX_CONTROLLERS ] = {0};
 
 
-#define INPUT_MODE_3D_PAD_ANALOG		( 1 << 0 ) // Set means analog mode.
-#define INPUT_MODE_3D_PAD_PREVIOUS_MASK	( 1 << 1 ) // Edge trigger helper.
+#define INPUT_MODE_3D_PAD_ANALOG			( 1 << 0 ) // Set means analog mode.
+#define INPUT_MODE_3D_PAD_PREVIOUS_MASK		( 1 << 1 ) // Edge trigger helper.
+#define INPUT_MODE_MISSION_THROTTLE_LATCH	( 1 << 2 ) // Latch throttle enabled?
+#define INPUT_MODE_MISSION_THROTTLE_PREV	( 1 << 3 ) // Edge trigger helper.
 
 #define INPUT_MODE_DEFAULT				0
 #define INPUT_MODE_DEFAULT_3D_PAD		INPUT_MODE_3D_PAD_ANALOG
 
 // Mode switch for 3D Control Pad (per player)
 static uint16_t input_mode[ MAX_CONTROLLERS ] = {0};
+static int16_t input_throttle_latch[ MAX_CONTROLLERS ] = {0};
 
 
 
@@ -55,18 +58,25 @@ static uint16_t input_mode[ MAX_CONTROLLERS ] = {0};
 #define RETRO_DEVICE_SS_PAD			RETRO_DEVICE_SUBCLASS( RETRO_DEVICE_JOYPAD, 0 )
 #define RETRO_DEVICE_SS_3D_PAD		RETRO_DEVICE_SUBCLASS( RETRO_DEVICE_ANALOG, 0 )
 #define RETRO_DEVICE_SS_WHEEL		RETRO_DEVICE_SUBCLASS( RETRO_DEVICE_ANALOG, 1 )
+#define RETRO_DEVICE_SS_MISSION		RETRO_DEVICE_SUBCLASS( RETRO_DEVICE_ANALOG, 2 )
+#define RETRO_DEVICE_SS_MISSION2	RETRO_DEVICE_SUBCLASS( RETRO_DEVICE_ANALOG, 3 )
 #define RETRO_DEVICE_SS_MOUSE		RETRO_DEVICE_SUBCLASS( RETRO_DEVICE_MOUSE,  0 )
-#define RETRO_DEVICE_SS_GUN			RETRO_DEVICE_SUBCLASS( RETRO_DEVICE_LIGHTGUN, 0 )
+#define RETRO_DEVICE_SS_TWINSTICK	RETRO_DEVICE_SUBCLASS( RETRO_DEVICE_ANALOG, 4 )
+#define RETRO_DEVICE_SS_GUN_JP		RETRO_DEVICE_SUBCLASS( RETRO_DEVICE_LIGHTGUN, 0 )
+#define RETRO_DEVICE_SS_GUN_US		RETRO_DEVICE_SUBCLASS( RETRO_DEVICE_LIGHTGUN, 1 )
 
-enum { INPUT_DEVICE_TYPES_COUNT = 1 /*none*/ + 5 }; // <-- update me!
+enum { INPUT_DEVICE_TYPES_COUNT = 1 /*none*/ + 8 }; // <-- update me!
 
 static const struct retro_controller_description input_device_types[ INPUT_DEVICE_TYPES_COUNT ] =
 {
 	{ "Control Pad", RETRO_DEVICE_JOYPAD },
 	{ "3D Control Pad", RETRO_DEVICE_SS_3D_PAD },
 	{ "Arcade Racer", RETRO_DEVICE_SS_WHEEL },
+	{ "Mission Stick", RETRO_DEVICE_SS_MISSION },
 	{ "Mouse", RETRO_DEVICE_SS_MOUSE },
-	{ "Virtua Gun / Stunner", RETRO_DEVICE_SS_GUN },
+	{ "Stunner", RETRO_DEVICE_SS_GUN_US },
+	{ "Twin-Stick", RETRO_DEVICE_SS_TWINSTICK },
+	{ "Virtua Gun", RETRO_DEVICE_SS_GUN_JP },
 	{ NULL, 0 },
 };
 
@@ -141,11 +151,134 @@ static const unsigned input_map_wheel_shift_left =
 static const unsigned input_map_wheel_shift_right =
 	RETRO_DEVICE_ID_JOYPAD_R2;
 
+/* Mission Stick */
+enum { INPUT_MAP_MISSION_SIZE = 8 };
+static const unsigned input_map_mission[ INPUT_MAP_MISSION_SIZE ] =
+{
+	// libretro input				 at position	|| maps to Saturn		on bit
+	//-----------------------------------------------------------------------------
+	RETRO_DEVICE_ID_JOYPAD_A,		// A(right)		-> B					0
+	RETRO_DEVICE_ID_JOYPAD_R,		// R1			-> C					1
+	RETRO_DEVICE_ID_JOYPAD_B,		// B(down)		-> A					2
+	RETRO_DEVICE_ID_JOYPAD_START,	// Start		-> Start				3
+	RETRO_DEVICE_ID_JOYPAD_L,		// L1			-> Z					4
+	RETRO_DEVICE_ID_JOYPAD_X,		// X(top)		-> Y					5
+	RETRO_DEVICE_ID_JOYPAD_Y,		// Y(left)		-> X					6
+	RETRO_DEVICE_ID_JOYPAD_R2,		// R2			-> R					7
+};
+
+static const unsigned input_map_mission_left_shoulder =
+	RETRO_DEVICE_ID_JOYPAD_L2;		// L2			-> L					15
+
+static const unsigned input_map_mission_throttle_latch =
+	RETRO_DEVICE_ID_JOYPAD_R3;
+
+/* Twin-Stick */
+static const unsigned input_map_twinstick_left_trigger =
+	RETRO_DEVICE_ID_JOYPAD_L2;
+static const unsigned input_map_twinstick_left_button =
+	RETRO_DEVICE_ID_JOYPAD_L;
+static const unsigned input_map_twinstick_right_trigger =
+	RETRO_DEVICE_ID_JOYPAD_R2;
+static const unsigned input_map_twinstick_right_button =
+	RETRO_DEVICE_ID_JOYPAD_R;
 
 
 //------------------------------------------------------------------------------
 // Local Functions
 //------------------------------------------------------------------------------
+
+static void get_analog_axis( retro_input_state_t input_state_cb,
+							 int player_index,
+							 int stick,
+							 int axis,
+							 int* p_analog )
+{
+	int analog;
+
+	analog = input_state_cb( player_index, RETRO_DEVICE_ANALOG, stick, axis );
+
+	// Analog stick deadzone
+	if ( astick_deadzone > 0 )
+	{
+		static const int ASTICK_MAX = 0x8000;
+		const float scale = ((float)ASTICK_MAX/(float)(ASTICK_MAX - astick_deadzone));
+
+		if ( analog < -astick_deadzone )
+		{
+			// Re-scale analog stick range
+			float scaled = (-analog - astick_deadzone)*scale;
+
+			analog = (int)round(-scaled);
+			if (analog < -32767) {
+				analog = -32767;
+			}
+		}
+		else if ( analog > astick_deadzone )
+		{
+			// Re-scale analog stick range
+			float scaled = (analog - astick_deadzone)*scale;
+
+			analog = (int)round(scaled);
+			if (analog > +32767) {
+				analog = +32767;
+			}
+		}
+		else
+		{
+			analog = 0;
+		}
+	}
+
+	// output
+	*p_analog = analog;
+}
+
+static void get_analog_stick( retro_input_state_t input_state_cb,
+							  int player_index,
+							  int stick,
+							  int* p_analog_x,
+							  int* p_analog_y )
+{
+	int analog_x, analog_y;
+	analog_x = input_state_cb( player_index, RETRO_DEVICE_ANALOG, stick, RETRO_DEVICE_ID_ANALOG_X );
+	analog_y = input_state_cb( player_index, RETRO_DEVICE_ANALOG, stick, RETRO_DEVICE_ID_ANALOG_Y );
+
+	// Analog stick deadzone (borrowed code from parallel-n64 core)
+	if ( astick_deadzone > 0 )
+	{
+		static const int ASTICK_MAX = 0x8000;
+
+		// Convert cartesian coordinate analog stick to polar coordinates
+		double radius = sqrt(analog_x * analog_x + analog_y * analog_y);
+		double angle = atan2(analog_y, analog_x);
+
+		if (radius > astick_deadzone)
+		{
+			// Re-scale analog stick range to negate deadzone (makes slow movements possible)
+			radius = (radius - astick_deadzone)*((float)ASTICK_MAX/(ASTICK_MAX - astick_deadzone));
+
+			// Convert back to cartesian coordinates
+			analog_x = (int)round(radius * cos(angle));
+			analog_y = (int)round(radius * sin(angle));
+
+			// Clamp to correct range
+			if (analog_x > +32767) analog_x = +32767;
+			if (analog_x < -32767) analog_x = -32767;
+			if (analog_y > +32767) analog_y = +32767;
+			if (analog_y < -32767) analog_y = -32767;
+		}
+		else
+		{
+			analog_x = 0;
+			analog_y = 0;
+		}
+	}
+
+	// output
+	*p_analog_x = analog_x;
+	*p_analog_y = analog_y;
+}
 
 static uint16_t apply_trigger_deadzone( uint16_t input )
 {
@@ -239,6 +372,8 @@ void input_init_env( retro_environment_t _environ_cb )
 		{ _user, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_SELECT, "Mode Switch" },							\
 		{ _user, RETRO_DEVICE_ANALOG, RETRO_DEVICE_INDEX_ANALOG_LEFT, RETRO_DEVICE_ID_ANALOG_X, "Analog X" },		\
 		{ _user, RETRO_DEVICE_ANALOG, RETRO_DEVICE_INDEX_ANALOG_LEFT, RETRO_DEVICE_ID_ANALOG_Y, "Analog Y" },		\
+		{ _user, RETRO_DEVICE_ANALOG, RETRO_DEVICE_INDEX_ANALOG_RIGHT, RETRO_DEVICE_ID_ANALOG_X, "Analog X (Right)" },	\
+		{ _user, RETRO_DEVICE_ANALOG, RETRO_DEVICE_INDEX_ANALOG_RIGHT, RETRO_DEVICE_ID_ANALOG_Y, "Analog Y (Right)" },	\
 		{ _user, RETRO_DEVICE_LIGHTGUN, 0, RETRO_DEVICE_ID_LIGHTGUN_TRIGGER, "Gun Trigger" },						\
 		{ _user, RETRO_DEVICE_LIGHTGUN, 0, RETRO_DEVICE_ID_LIGHTGUN_START, "Gun Start" },							\
 		{ _user, RETRO_DEVICE_LIGHTGUN, 0, RETRO_DEVICE_ID_LIGHTGUN_RELOAD, "Gun Reload" }
@@ -298,6 +433,7 @@ void input_init()
 	{
 		input_type[ i ] = RETRO_DEVICE_JOYPAD;
 		input_mode[ i ] = INPUT_MODE_DEFAULT;
+		input_throttle_latch[ i ] = 0;
 
 		SMPC_SetInput( i, "gamepad", (uint8*)&input_data[ i ] );
 	}
@@ -353,6 +489,58 @@ void input_update( retro_input_state_t input_state_cb )
 			}
 			break;
 
+		case RETRO_DEVICE_SS_TWINSTICK:
+
+			{
+				int analog_lx, analog_ly;
+				get_analog_stick( input_state_cb, iplayer, RETRO_DEVICE_INDEX_ANALOG_LEFT, &analog_lx, &analog_ly );
+				int analog_rx, analog_ry;
+				get_analog_stick( input_state_cb, iplayer, RETRO_DEVICE_INDEX_ANALOG_RIGHT, &analog_rx, &analog_ry );
+
+				const int thresh = 16000;
+
+				// left-stick
+				if ( analog_ly <= -thresh )
+					p_input->buttons |= ( 1 << 4 ); // Up
+				if ( analog_lx >= thresh )
+					p_input->buttons |= ( 1 << 7 ); // Right
+				if ( analog_ly >= thresh )
+					p_input->buttons |= ( 1 << 5 ); // Down
+				if ( analog_lx <= -thresh )
+					p_input->buttons |= ( 1 << 6 ); // Left
+
+				// right-stick
+				if ( analog_ry <= -thresh )
+					p_input->buttons |= ( 1 << 1 ); // Up <-(Y)
+				if ( analog_rx >= thresh )
+					p_input->buttons |= ( 1 << 0 ); // Right <-(Z)
+				if ( analog_ry >= thresh )
+					p_input->buttons |= ( 1 << 8 ); // Down <-(B)
+				if ( analog_rx <= -thresh )
+					p_input->buttons |= ( 1 << 2 ); // Left <-(X)
+
+				// left trigger
+				p_input->buttons |=
+					input_state_cb( iplayer, RETRO_DEVICE_JOYPAD, 0, input_map_twinstick_left_trigger ) ? ( 1 << 15 ) : 0;
+
+				// left button
+				p_input->buttons |=
+					input_state_cb( iplayer, RETRO_DEVICE_JOYPAD, 0, input_map_twinstick_left_button ) ? ( 1 << 3 ) : 0;
+
+				// right trigger
+				p_input->buttons |=
+					input_state_cb( iplayer, RETRO_DEVICE_JOYPAD, 0, input_map_twinstick_right_trigger ) ? ( 1 << 10 ) : 0;
+
+				// right button
+				p_input->buttons |=
+					input_state_cb( iplayer, RETRO_DEVICE_JOYPAD, 0, input_map_twinstick_right_button ) ? ( 1 << 9 ) : 0;
+
+				// start
+				p_input->buttons |=
+					input_state_cb( iplayer, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_START ) ? ( 1 << 11 ) : 0;
+			}
+			break;
+
 		case RETRO_DEVICE_SS_3D_PAD:
 
 			{
@@ -367,43 +555,8 @@ void input_update( retro_input_state_t input_state_cb )
 				//
 				// -- analog stick
 
-				int analog_x = input_state_cb( iplayer, RETRO_DEVICE_ANALOG, RETRO_DEVICE_INDEX_ANALOG_LEFT,
-					RETRO_DEVICE_ID_ANALOG_X );
-
-				int analog_y = input_state_cb( iplayer, RETRO_DEVICE_ANALOG, RETRO_DEVICE_INDEX_ANALOG_LEFT,
-					RETRO_DEVICE_ID_ANALOG_Y );
-
-				// Analog stick deadzone (borrowed code from parallel-n64 core)
-				if ( astick_deadzone > 0 )
-				{
-					static const int ASTICK_MAX = 0x8000;
-
-					// Convert cartesian coordinate analog stick to polar coordinates
-					double radius = sqrt(analog_x * analog_x + analog_y * analog_y);
-					double angle = atan2(analog_y, analog_x);
-
-					if (radius > astick_deadzone)
-					{
-						// Re-scale analog stick range to negate deadzone (makes slow movements possible)
-						radius = (radius - astick_deadzone)*((float)ASTICK_MAX/(ASTICK_MAX - astick_deadzone));
-
-						// Convert back to cartesian coordinates
-						analog_x = (int)round(radius * cos(angle));
-						analog_y = (int)round(radius * sin(angle));
-
-						// Clamp to correct range
-						if (analog_x > +32767) analog_x = +32767;
-						if (analog_x < -32767) analog_x = -32767;
-						if (analog_y > +32767) analog_y = +32767;
-						if (analog_y < -32767) analog_y = -32767;
-					}
-					else
-					{
-						analog_x = 0;
-						analog_y = 0;
-					}
-				}
-
+				int analog_x, analog_y;
+				get_analog_stick( input_state_cb, iplayer, RETRO_DEVICE_INDEX_ANALOG_LEFT, &analog_x, &analog_y );
 
 				//
 				// -- triggers
@@ -491,40 +644,10 @@ void input_update( retro_input_state_t input_state_cb )
 				//
 				// -- analog wheel
 
-				int analog_x = input_state_cb( iplayer, RETRO_DEVICE_ANALOG, RETRO_DEVICE_INDEX_ANALOG_LEFT,
-					RETRO_DEVICE_ID_ANALOG_X );
-
-				// Analog stick deadzone
-				if ( astick_deadzone > 0 )
-				{
-					static const int ASTICK_MAX = 0x8000;
-					const float scale = ((float)ASTICK_MAX/(float)(ASTICK_MAX - astick_deadzone));
-
-					if ( analog_x < -astick_deadzone )
-					{
-						// Re-scale analog stick range
-						float scaled = (-analog_x - astick_deadzone)*scale;
-
-						analog_x = (int)round(-scaled);
-						if (analog_x < -32767) {
-							analog_x = -32767;
-						}
-					}
-					else if ( analog_x > astick_deadzone )
-					{
-						// Re-scale analog stick range
-						float scaled = (analog_x - astick_deadzone)*scale;
-
-						analog_x = (int)round(scaled);
-						if (analog_x > +32767) {
-							analog_x = +32767;
-						}
-					}
-					else
-					{
-						analog_x = 0;
-					}
-				}
+				int analog_x;
+				get_analog_axis( input_state_cb, iplayer,
+					RETRO_DEVICE_INDEX_ANALOG_LEFT,
+					RETRO_DEVICE_ID_ANALOG_X, &analog_x );
 
 				//
 				// -- format input data
@@ -578,7 +701,106 @@ void input_update( retro_input_state_t input_state_cb )
 
 			break;
 
-		case RETRO_DEVICE_SS_GUN:
+		case RETRO_DEVICE_SS_MISSION:
+
+			{
+				//
+				// -- mission stick buttons
+
+				// input_map_mission is configured to quickly map libretro buttons to the correct bits for the Saturn.
+				for ( int i = 0; i < INPUT_MAP_MISSION_SIZE; ++i ) {
+					p_input->buttons |= input_state_cb( iplayer, RETRO_DEVICE_JOYPAD, 0, input_map_mission[ i ] ) ? ( 1 << i ) : 0;
+				}
+				// .. the left trigger is a special case, there's a gap in the bits.
+				p_input->buttons |=
+					input_state_cb( iplayer, RETRO_DEVICE_JOYPAD, 0, input_map_mission_left_shoulder ) ? ( 1 << 11 ) : 0;
+
+				//
+				// -- analog stick
+
+				int analog_x, analog_y;
+				get_analog_stick( input_state_cb, iplayer, RETRO_DEVICE_INDEX_ANALOG_LEFT, &analog_x, &analog_y );
+
+				//
+				// -- throttle
+
+				int throttle_real;
+				get_analog_axis( input_state_cb, iplayer,
+					RETRO_DEVICE_INDEX_ANALOG_RIGHT,
+					RETRO_DEVICE_ID_ANALOG_Y, &throttle_real );
+
+				int16_t throttle;
+				if ( input_mode[iplayer] & INPUT_MODE_MISSION_THROTTLE_LATCH )
+				{
+					// Use latched value
+					throttle = input_throttle_latch[iplayer];
+				}
+				else
+				{
+					// Direct read
+					throttle = throttle_real;
+				}
+
+
+				//
+				// -- throttle latch switch
+
+				{
+					// Handle MODE button as a switch
+					uint16_t prev = ( input_mode[iplayer] & INPUT_MODE_MISSION_THROTTLE_PREV );
+					uint16_t held = input_state_cb( iplayer, RETRO_DEVICE_JOYPAD, 0, input_map_mission_throttle_latch )
+						? INPUT_MODE_MISSION_THROTTLE_PREV : 0;
+
+					// Rising edge trigger?
+					if ( !prev && held )
+					{
+						// Toggle 'state' bit: throttle latch enable/disable.
+						input_mode[ iplayer ] ^= INPUT_MODE_MISSION_THROTTLE_LATCH;
+
+						// Tell user
+						if ( input_mode[iplayer] & INPUT_MODE_MISSION_THROTTLE_LATCH ) {
+							log_cb( RETRO_LOG_INFO, "Controller %u: Latched Throttle at %d\n", (iplayer+1), throttle_real );
+							input_throttle_latch[iplayer] = (int16_t)throttle_real;
+						} else {
+							log_cb( RETRO_LOG_INFO, "Controller %u: Remove Throttle Latch\n", (iplayer+1) );
+						}
+					}
+
+					// Store held state in 'previous' bit.
+					input_mode[ iplayer ] = ( input_mode[ iplayer ] & ~INPUT_MODE_MISSION_THROTTLE_PREV ) | held;
+				}
+
+
+				//
+				// -- format input data
+
+				// Convert analog values into direction values.
+				uint16_t right = analog_x > 0 ?  analog_x : 0;
+				uint16_t left  = analog_x < 0 ? -analog_x : 0;
+				uint16_t down  = analog_y > 0 ?  analog_y : 0;
+				uint16_t up    = analog_y < 0 ? -analog_y : 0;
+				uint16_t th_up = throttle > 0 ?  throttle : 0;
+				uint16_t th_dn = throttle < 0 ? -throttle : 0;
+
+				p_input->u8[0x2] = 0; // todo: auto-fire controls.
+				p_input->u8[0x3] = ((left  >> 0) & 0xff);
+				p_input->u8[0x4] = ((left  >> 8) & 0xff);
+				p_input->u8[0x5] = ((right >> 0) & 0xff);
+				p_input->u8[0x6] = ((right >> 8) & 0xff);
+				p_input->u8[0x7] = ((up    >> 0) & 0xff);
+				p_input->u8[0x8] = ((up    >> 8) & 0xff);
+				p_input->u8[0x9] = ((down  >> 0) & 0xff);
+				p_input->u8[0xa] = ((down  >> 8) & 0xff);
+				p_input->u8[0xb] = ((th_up >> 0) & 0xff);
+				p_input->u8[0xc] = ((th_up >> 8) & 0xff);
+				p_input->u8[0xd] = ((th_dn >> 0) & 0xff);
+				p_input->u8[0xe] = ((th_dn >> 8) & 0xff);
+			}
+
+			break;
+
+		case RETRO_DEVICE_SS_GUN_JP:
+		case RETRO_DEVICE_SS_GUN_US:
 
 			{
 				uint8_t shot_type;
@@ -648,6 +870,7 @@ int input_StateAction( StateMem* sm, const unsigned load, const bool data_only )
 	SFORMAT StateRegs[] =
 	{
 		SFARRAY16N( input_mode, MAX_CONTROLLERS, "pad-mode" ),
+		SFARRAY16N( input_throttle_latch, MAX_CONTROLLERS, "throttle-latch" ),
 		SFEND
 	};
 
@@ -694,14 +917,29 @@ void retro_set_controller_port_device( unsigned in_port, unsigned device )
 			SMPC_SetInput( in_port, "wheel", (uint8*)&input_data[ in_port ] );
 			break;
 
+		case RETRO_DEVICE_SS_MISSION:
+			log_cb( RETRO_LOG_INFO, "Controller %u: Mission Stick\n", (in_port+1) );
+			SMPC_SetInput( in_port, "mission", (uint8*)&input_data[ in_port ] );
+			break;
+
 		case RETRO_DEVICE_SS_MOUSE:
 			log_cb( RETRO_LOG_INFO, "Controller %u: Mouse\n", (in_port+1) );
 			SMPC_SetInput( in_port, "mouse", (uint8*)&input_data[ in_port ] );
 			break;
 
-		case RETRO_DEVICE_SS_GUN:
+		case RETRO_DEVICE_SS_GUN_US:
+			log_cb( RETRO_LOG_INFO, "Controller %u: Stunner\n", (in_port+1) );
+			SMPC_SetInput( in_port, "gun", (uint8*)&input_data[ in_port ] );
+			break;
+
+		case RETRO_DEVICE_SS_GUN_JP:
 			log_cb( RETRO_LOG_INFO, "Controller %u: Virtua Gun\n", (in_port+1) );
 			SMPC_SetInput( in_port, "gun", (uint8*)&input_data[ in_port ] );
+			break;
+
+		case RETRO_DEVICE_SS_TWINSTICK:
+			log_cb( RETRO_LOG_INFO, "Controller %u: Twin-Stick\n", (in_port+1) );
+			SMPC_SetInput( in_port, "gamepad", (uint8*)&input_data[ in_port ] );
 			break;
 
 		default:
