@@ -65,7 +65,7 @@ static int16_t input_throttle_latch[ MAX_CONTROLLERS ] = {0};
 #define RETRO_DEVICE_SS_GUN_JP		RETRO_DEVICE_SUBCLASS( RETRO_DEVICE_LIGHTGUN, 0 )
 #define RETRO_DEVICE_SS_GUN_US		RETRO_DEVICE_SUBCLASS( RETRO_DEVICE_LIGHTGUN, 1 )
 
-enum { INPUT_DEVICE_TYPES_COUNT = 1 /*none*/ + 7 }; // <-- update me!
+enum { INPUT_DEVICE_TYPES_COUNT = 1 /*none*/ + 8 }; // <-- update me!
 
 static const struct retro_controller_description input_device_types[ INPUT_DEVICE_TYPES_COUNT ] =
 {
@@ -75,6 +75,7 @@ static const struct retro_controller_description input_device_types[ INPUT_DEVIC
 	{ "Mission Stick", RETRO_DEVICE_SS_MISSION },
 	{ "Mouse", RETRO_DEVICE_SS_MOUSE },
 	{ "Stunner", RETRO_DEVICE_SS_GUN_US },
+	{ "Twin-Stick", RETRO_DEVICE_SS_TWINSTICK },
 	{ "Virtua Gun", RETRO_DEVICE_SS_GUN_JP },
 	{ NULL, 0 },
 };
@@ -172,6 +173,15 @@ static const unsigned input_map_mission_left_shoulder =
 static const unsigned input_map_mission_throttle_latch =
 	RETRO_DEVICE_ID_JOYPAD_R3;
 
+/* Twin-Stick */
+static const unsigned input_map_twinstick_left_trigger =
+	RETRO_DEVICE_ID_JOYPAD_L2;
+static const unsigned input_map_twinstick_left_button =
+	RETRO_DEVICE_ID_JOYPAD_L;
+static const unsigned input_map_twinstick_right_trigger =
+	RETRO_DEVICE_ID_JOYPAD_R2;
+static const unsigned input_map_twinstick_right_button =
+	RETRO_DEVICE_ID_JOYPAD_R;
 
 
 //------------------------------------------------------------------------------
@@ -231,12 +241,8 @@ static void get_analog_stick( retro_input_state_t input_state_cb,
 							  int* p_analog_y )
 {
 	int analog_x, analog_y;
-
-	analog_x = input_state_cb( player_index, RETRO_DEVICE_ANALOG, RETRO_DEVICE_INDEX_ANALOG_LEFT,
-		RETRO_DEVICE_ID_ANALOG_X );
-
-	analog_y = input_state_cb( player_index, RETRO_DEVICE_ANALOG, RETRO_DEVICE_INDEX_ANALOG_LEFT,
-		RETRO_DEVICE_ID_ANALOG_Y );
+	analog_x = input_state_cb( player_index, RETRO_DEVICE_ANALOG, stick, RETRO_DEVICE_ID_ANALOG_X );
+	analog_y = input_state_cb( player_index, RETRO_DEVICE_ANALOG, stick, RETRO_DEVICE_ID_ANALOG_Y );
 
 	// Analog stick deadzone (borrowed code from parallel-n64 core)
 	if ( astick_deadzone > 0 )
@@ -366,6 +372,8 @@ void input_init_env( retro_environment_t _environ_cb )
 		{ _user, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_SELECT, "Mode Switch" },							\
 		{ _user, RETRO_DEVICE_ANALOG, RETRO_DEVICE_INDEX_ANALOG_LEFT, RETRO_DEVICE_ID_ANALOG_X, "Analog X" },		\
 		{ _user, RETRO_DEVICE_ANALOG, RETRO_DEVICE_INDEX_ANALOG_LEFT, RETRO_DEVICE_ID_ANALOG_Y, "Analog Y" },		\
+		{ _user, RETRO_DEVICE_ANALOG, RETRO_DEVICE_INDEX_ANALOG_RIGHT, RETRO_DEVICE_ID_ANALOG_X, "Analog X (Right)" },	\
+		{ _user, RETRO_DEVICE_ANALOG, RETRO_DEVICE_INDEX_ANALOG_RIGHT, RETRO_DEVICE_ID_ANALOG_Y, "Analog Y (Right)" },	\
 		{ _user, RETRO_DEVICE_LIGHTGUN, 0, RETRO_DEVICE_ID_LIGHTGUN_TRIGGER, "Gun Trigger" },						\
 		{ _user, RETRO_DEVICE_LIGHTGUN, 0, RETRO_DEVICE_ID_LIGHTGUN_START, "Gun Start" },							\
 		{ _user, RETRO_DEVICE_LIGHTGUN, 0, RETRO_DEVICE_ID_LIGHTGUN_RELOAD, "Gun Reload" }
@@ -478,6 +486,58 @@ void input_update( retro_input_state_t input_state_cb )
 				// .. the left trigger on the Saturn is a special case since there's a gap in the bits.
 				p_input->buttons |=
 					input_state_cb( iplayer, RETRO_DEVICE_JOYPAD, 0, input_map_pad_left_shoulder ) ? ( 1 << 15 ) : 0;
+			}
+			break;
+
+		case RETRO_DEVICE_SS_TWINSTICK:
+
+			{
+				int analog_lx, analog_ly;
+				get_analog_stick( input_state_cb, iplayer, RETRO_DEVICE_INDEX_ANALOG_LEFT, &analog_lx, &analog_ly );
+				int analog_rx, analog_ry;
+				get_analog_stick( input_state_cb, iplayer, RETRO_DEVICE_INDEX_ANALOG_RIGHT, &analog_rx, &analog_ry );
+
+				const int thresh = 16000;
+
+				// left-stick
+				if ( analog_ly <= -thresh )
+					p_input->buttons |= ( 1 << 4 ); // Up
+				if ( analog_lx >= thresh )
+					p_input->buttons |= ( 1 << 7 ); // Right
+				if ( analog_ly >= thresh )
+					p_input->buttons |= ( 1 << 5 ); // Down
+				if ( analog_lx <= -thresh )
+					p_input->buttons |= ( 1 << 6 ); // Left
+
+				// right-stick
+				if ( analog_ry <= -thresh )
+					p_input->buttons |= ( 1 << 1 ); // Up <-(Y)
+				if ( analog_rx >= thresh )
+					p_input->buttons |= ( 1 << 0 ); // Right <-(Z)
+				if ( analog_ry >= thresh )
+					p_input->buttons |= ( 1 << 8 ); // Down <-(B)
+				if ( analog_rx <= -thresh )
+					p_input->buttons |= ( 1 << 2 ); // Left <-(X)
+
+				// left trigger
+				p_input->buttons |=
+					input_state_cb( iplayer, RETRO_DEVICE_JOYPAD, 0, input_map_twinstick_left_trigger ) ? ( 1 << 15 ) : 0;
+
+				// left button
+				p_input->buttons |=
+					input_state_cb( iplayer, RETRO_DEVICE_JOYPAD, 0, input_map_twinstick_left_button ) ? ( 1 << 3 ) : 0;
+
+				// right trigger
+				p_input->buttons |=
+					input_state_cb( iplayer, RETRO_DEVICE_JOYPAD, 0, input_map_twinstick_right_trigger ) ? ( 1 << 10 ) : 0;
+
+				// right button
+				p_input->buttons |=
+					input_state_cb( iplayer, RETRO_DEVICE_JOYPAD, 0, input_map_twinstick_right_button ) ? ( 1 << 9 ) : 0;
+
+				// start
+				p_input->buttons |=
+					input_state_cb( iplayer, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_START ) ? ( 1 << 11 ) : 0;
 			}
 			break;
 
@@ -879,7 +939,7 @@ void retro_set_controller_port_device( unsigned in_port, unsigned device )
 
 		case RETRO_DEVICE_SS_TWINSTICK:
 			log_cb( RETRO_LOG_INFO, "Controller %u: Twin-Stick\n", (in_port+1) );
-			SMPC_SetInput( in_port, "twinstick", (uint8*)&input_data[ in_port ] );
+			SMPC_SetInput( in_port, "gamepad", (uint8*)&input_data[ in_port ] );
 			break;
 
 		default:
