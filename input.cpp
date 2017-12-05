@@ -65,7 +65,7 @@ static int16_t input_throttle_latch[ MAX_CONTROLLERS ] = {0};
 #define RETRO_DEVICE_SS_GUN_JP		RETRO_DEVICE_SUBCLASS( RETRO_DEVICE_LIGHTGUN, 0 )
 #define RETRO_DEVICE_SS_GUN_US		RETRO_DEVICE_SUBCLASS( RETRO_DEVICE_LIGHTGUN, 1 )
 
-enum { INPUT_DEVICE_TYPES_COUNT = 1 /*none*/ + 8 }; // <-- update me!
+enum { INPUT_DEVICE_TYPES_COUNT = 1 /*none*/ + 9 }; // <-- update me!
 
 static const struct retro_controller_description input_device_types[ INPUT_DEVICE_TYPES_COUNT ] =
 {
@@ -77,6 +77,7 @@ static const struct retro_controller_description input_device_types[ INPUT_DEVIC
 	{ "Stunner", RETRO_DEVICE_SS_GUN_US },
 	{ "Twin-Stick", RETRO_DEVICE_SS_TWINSTICK },
 	{ "Virtua Gun", RETRO_DEVICE_SS_GUN_JP },
+	{ "Dual Mission Sticks", RETRO_DEVICE_SS_MISSION2 }, /*"Panzer Dragoon Zwei" only!*/
 	{ NULL, 0 },
 };
 
@@ -799,6 +800,74 @@ void input_update( retro_input_state_t input_state_cb )
 
 			break;
 
+		case RETRO_DEVICE_SS_MISSION2:
+
+			{
+				//
+				// -- mission stick buttons
+
+				// input_map_mission is configured to quickly map libretro buttons to the correct bits for the Saturn.
+				for ( int i = 0; i < INPUT_MAP_MISSION_SIZE; ++i ) {
+					p_input->buttons |= input_state_cb( iplayer, RETRO_DEVICE_JOYPAD, 0, input_map_mission[ i ] ) ? ( 1 << i ) : 0;
+				}
+				// .. the left trigger is a special case, there's a gap in the bits.
+				p_input->buttons |=
+					input_state_cb( iplayer, RETRO_DEVICE_JOYPAD, 0, input_map_mission_left_shoulder ) ? ( 1 << 11 ) : 0;
+
+				//
+				// -- analog sticks
+
+				int analog1_x, analog1_y;
+				get_analog_stick( input_state_cb, iplayer, RETRO_DEVICE_INDEX_ANALOG_LEFT, &analog1_x, &analog1_y );
+
+				int analog2_x, analog2_y;
+				get_analog_stick( input_state_cb, iplayer, RETRO_DEVICE_INDEX_ANALOG_RIGHT, &analog2_x, &analog2_y );
+
+				//
+				// -- format input data
+
+				// Convert analog values into direction values.
+				uint16_t right1 = analog1_x > 0 ?  analog1_x : 0;
+				uint16_t left1  = analog1_x < 0 ? -analog1_x : 0;
+				uint16_t down1  = analog1_y > 0 ?  analog1_y : 0;
+				uint16_t up1    = analog1_y < 0 ? -analog1_y : 0;
+
+				uint16_t right2 = analog2_x > 0 ?  analog2_x : 0;
+				uint16_t left2  = analog2_x < 0 ? -analog2_x : 0;
+				uint16_t down2  = analog2_y > 0 ?  analog2_y : 0;
+				uint16_t up2    = analog2_y < 0 ? -analog2_y : 0;
+
+				p_input->u8[ 0x2] = 0; // todo: auto-fire controls.
+
+				p_input->u8[ 0x3] = ((left1  >> 0) & 0xff);
+				p_input->u8[ 0x4] = ((left1  >> 8) & 0xff);
+				p_input->u8[ 0x5] = ((right1 >> 0) & 0xff);
+				p_input->u8[ 0x6] = ((right1 >> 8) & 0xff);
+				p_input->u8[ 0x7] = ((up1    >> 0) & 0xff);
+				p_input->u8[ 0x8] = ((up1    >> 8) & 0xff);
+				p_input->u8[ 0x9] = ((down1  >> 0) & 0xff);
+				p_input->u8[ 0xa] = ((down1  >> 8) & 0xff);
+				p_input->u8[ 0xb] = 0; // todo: throttle1
+				p_input->u8[ 0xc] = 0;
+				p_input->u8[ 0xd] = 0;
+				p_input->u8[ 0xe] = 0;
+
+				p_input->u8[ 0xf] = ((left2  >> 0) & 0xff);
+				p_input->u8[0x10] = ((left2  >> 8) & 0xff);
+				p_input->u8[0x11] = ((right2 >> 0) & 0xff);
+				p_input->u8[0x12] = ((right2 >> 8) & 0xff);
+				p_input->u8[0x13] = ((up2    >> 0) & 0xff);
+				p_input->u8[0x14] = ((up2    >> 8) & 0xff);
+				p_input->u8[0x15] = ((down2  >> 0) & 0xff);
+				p_input->u8[0x16] = ((down2  >> 8) & 0xff);
+				p_input->u8[0x17] = 0; // todo: throttle2
+				p_input->u8[0x18] = 0;
+				p_input->u8[0x19] = 0;
+				p_input->u8[0x1a] = 0;
+			}
+
+			break;
+
 		case RETRO_DEVICE_SS_GUN_JP:
 		case RETRO_DEVICE_SS_GUN_US:
 
@@ -920,6 +989,11 @@ void retro_set_controller_port_device( unsigned in_port, unsigned device )
 		case RETRO_DEVICE_SS_MISSION:
 			log_cb( RETRO_LOG_INFO, "Controller %u: Mission Stick\n", (in_port+1) );
 			SMPC_SetInput( in_port, "mission", (uint8*)&input_data[ in_port ] );
+			break;
+
+		case RETRO_DEVICE_SS_MISSION2:
+			log_cb( RETRO_LOG_INFO, "Controller %u: Dual Mission Sticks\n", (in_port+1) );
+			SMPC_SetInput( in_port, "dmission", (uint8*)&input_data[ in_port ] );
 			break;
 
 		case RETRO_DEVICE_SS_MOUSE:
