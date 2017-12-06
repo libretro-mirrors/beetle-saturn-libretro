@@ -818,10 +818,12 @@ void input_update( retro_input_state_t input_state_cb )
 				// -- analog sticks
 
 				int analog1_x, analog1_y;
-				get_analog_stick( input_state_cb, iplayer, RETRO_DEVICE_INDEX_ANALOG_LEFT, &analog1_x, &analog1_y );
-
 				int analog2_x, analog2_y;
-				get_analog_stick( input_state_cb, iplayer, RETRO_DEVICE_INDEX_ANALOG_RIGHT, &analog2_x, &analog2_y );
+
+				// Default - patent shows first stick on right side, second added on left
+				// see: https://segaretro.org/images/a/a1/Patent_EP0745928A2.pdf
+				get_analog_stick( input_state_cb, iplayer, RETRO_DEVICE_INDEX_ANALOG_RIGHT, &analog1_x, &analog1_y );
+				get_analog_stick( input_state_cb, iplayer, RETRO_DEVICE_INDEX_ANALOG_LEFT, &analog2_x, &analog2_y );
 
 				//
 				// -- format input data
