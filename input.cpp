@@ -22,6 +22,9 @@ static int astick_deadzone = 0;
 static int trigger_deadzone = 0;
 static float mouse_sensitivity = 1.0f;
 
+static unsigned geometry_width = 0;
+static unsigned geometry_height = 0;
+
 typedef union
 {
 	uint8_t u8[ 32 ];
@@ -438,6 +441,14 @@ void input_init()
 
 		SMPC_SetInput( i, "gamepad", (uint8*)&input_data[ i ] );
 	}
+}
+
+void input_set_geometry( unsigned width, unsigned height )
+{
+	log_cb( RETRO_LOG_INFO, "input_set_geometry: %dx%d\n", width, height );
+
+	geometry_width = width;
+	geometry_height = height;
 }
 
 void input_set_deadzone_stick( int percent )
@@ -881,7 +892,9 @@ void input_update( retro_input_state_t input_state_cb )
 				forced_reload = input_state_cb( iplayer, RETRO_DEVICE_LIGHTGUN, 0, RETRO_DEVICE_ID_LIGHTGUN_RELOAD );
 
 				// off-screen?
-				if ( input_state_cb( iplayer, RETRO_DEVICE_LIGHTGUN, 0, RETRO_DEVICE_ID_LIGHTGUN_IS_OFFSCREEN ) || forced_reload )
+				if ( input_state_cb( iplayer, RETRO_DEVICE_LIGHTGUN, 0, RETRO_DEVICE_ID_LIGHTGUN_IS_OFFSCREEN ) ||
+					 forced_reload ||
+					 geometry_height == 0 )
 				{
 					shot_type = 0x4; // off-screen shot
 
@@ -897,15 +910,15 @@ void input_update( retro_input_state_t input_state_cb )
 					gun_y_raw = input_state_cb( iplayer, RETRO_DEVICE_LIGHTGUN, 0, RETRO_DEVICE_ID_LIGHTGUN_SCREEN_Y );
 
 					// .. scale into screen space:
-					// NOTE: the scaling here is semi-guesswork, need to re-write.
-					// TODO: Test with PAL games.
+					// NOTE: the scaling here is empirical-guesswork.
+					// Tested at 352x240 (ntsc) and 352x256 (pal)
 
 					const int scale_x = 21472;
-					const int offset_x = 60;
-					const int scale_y = 240;
+					const int scale_y = geometry_height;
+					const int offset_y = geometry_height - 240;
 
-					gun_x = ( ( gun_x_raw + offset_x + 0x7fff ) * scale_x ) / (0x7fff << 1);
-					gun_y = ( ( gun_y_raw + 0x7fff ) * scale_y ) / (0x7fff << 1);
+					gun_x = ( ( gun_x_raw + 0x7fff ) * scale_x ) / (0x7fff << 1);
+					gun_y = ( ( gun_y_raw + 0x7fff ) * scale_y ) / (0x7fff << 1) + offset_y;
 				}
 
 				// position

@@ -11,6 +11,8 @@ extern void input_init_env( retro_environment_t environ_cb );
 
 extern void input_init();
 
+extern void input_set_geometry( unsigned width, unsigned height );
+
 extern void input_set_env( retro_environment_t environ_cb );
 
 extern void input_set_deadzone_stick( int percent );
