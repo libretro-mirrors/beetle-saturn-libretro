@@ -2257,6 +2257,8 @@ void retro_run(void)
 
       game_width  = width;
       game_height = height;
+
+      input_set_geometry( width, height );
    }
 
    pix += surf->pitchinpix * (linevisfirst << PrevInterlaced) + overscan_mask;
