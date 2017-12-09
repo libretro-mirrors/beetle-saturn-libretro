@@ -2003,6 +2003,18 @@ static void check_variables(bool startup)
 
 static MDFNGI *MDFNI_LoadGame( const char *name )
 {
+	unsigned cpucache_emumode;
+	int cart_type;
+	unsigned region;
+
+	// .. safe defaults
+	region = SMPC_AREA_NA;
+	cart_type = CART_BACKUP_MEM;
+	cpucache_emumode = CPUCACHE_EMUMODE_DATA;
+
+	// always set this.
+	MDFNGameInfo = &EmulatedSS;
+
 	size_t name_len = strlen( name );
 
 	// check for a valid file extension
@@ -2017,14 +2029,9 @@ static MDFNGI *MDFNI_LoadGame( const char *name )
 			 (!strcasecmp( ext, ".toc" )) ||
 			 (!strcasecmp( ext, ".m3u" )) )
 		{
-			unsigned cpucache_emumode;
-			int cart_type;
-			unsigned region;
-
 			uint8 fd_id[16];
 			char sgid[16 + 1] = { 0 };
 
-			MDFNGameInfo = &EmulatedSS;
 			if ( disc_load_content( MDFNGameInfo, name, fd_id, sgid ) )
 			{
 				log_cb(RETRO_LOG_INFO, "Game ID is: %s\n", sgid );
@@ -2039,11 +2046,6 @@ static MDFNGI *MDFNI_LoadGame( const char *name )
 
 				if ( discs_ok )
 				{
-					// .. safe defaults
-					region = SMPC_AREA_NA;
-					cart_type = CART_BACKUP_MEM;
-					cpucache_emumode = CPUCACHE_EMUMODE_DATA;
-
 					disc_detect_region( &region );
 
 					DB_Lookup(nullptr, sgid, fd_id, &region, &cart_type, &cpucache_emumode );
@@ -2066,6 +2068,12 @@ static MDFNGI *MDFNI_LoadGame( const char *name )
 
 						return MDFNGameInfo;
 					}
+					else
+					{
+						// OK it's really bad. Probably don't have a BIOS if InitCommon
+						// fails. We can try again below for nothing, either way we're
+						// probably going to crash soon.
+					}
 
 				}; // discs okay?
 
@@ -2075,10 +2083,28 @@ static MDFNGI *MDFNI_LoadGame( const char *name )
 
 	}; // valid name?
 
-	// error
-	Cleanup();
-	MDFNGameInfo = NULL;
-	return NULL;
+	//
+	// -- Fail-safe
+
+	disc_cleanup();
+
+	// forced region setting?
+	if ( setting_region != 0 ) {
+		region = setting_region;
+	}
+
+	// forced cartridge setting?
+	if ( setting_cart != CART__RESERVED ) {
+		cart_type = setting_cart;
+	}
+
+	// Initialise with safe parameters
+	InitCommon( cpucache_emumode, cart_type, region );
+
+	MDFN_LoadGameCheats(NULL);
+	MDFNMP_InstallReadPatches();
+
+	return MDFNGameInfo;
 }
 
 bool retro_load_game(const struct retro_game_info *info)
@@ -2109,11 +2135,7 @@ bool retro_load_game(const struct retro_game_info *info)
 	//make sure shared memory cards and save states are enabled only at startup
 	shared_memorycards = shared_memorycards_toggle;
 
-	if (!MDFNI_LoadGame(retro_cd_path))
-	{
-		failed_init = true;
-		return false;
-	}
+	MDFNI_LoadGame(retro_cd_path);
 
 	MDFN_LoadGameCheats(NULL);
 	MDFNMP_InstallReadPatches();
