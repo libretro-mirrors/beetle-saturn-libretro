@@ -1,7 +1,7 @@
-/* Copyright  (C) 2010-2016 The RetroArch team
+/* Copyright  (C) 2010-2017 The RetroArch team
  *
  * ---------------------------------------------------------------------------------------
- * The following license statement only applies to this file (msvc_compat.h).
+ * The following license statement only applies to this file (msvc.h).
  * ---------------------------------------------------------------------------------------
  *
  * Permission is hereby granted, free of charge,
@@ -31,34 +31,22 @@ extern "C"  {
 
 /* Pre-MSVC 2015 compilers don't implement snprintf in a cross-platform manner. */
 #if _MSC_VER < 1900
-   #include <stdio.h>
+   #include <stdlib.h>
+   #ifndef snprintf
+      #define snprintf c99_snprintf_retro__
+   #endif
+
+   int c99_snprintf_retro__(char *outBuf, size_t size, const char *format, ...);
+#endif
+
+/* Pre-MSVC 2010 compilers don't implement vsnprintf in a cross-platform manner? Not sure about this one. */
+#if _MSC_VER < 1600
    #include <stdarg.h>
-   #define snprintf c99_snprintf
-   #define vsnprintf c99_vsnprintf
-
-   _inline int c99_vsnprintf(char *outBuf, size_t size, const char *format, va_list ap)
-   {
-      int count = -1;
-
-      if (size != 0)
-         count = _vsnprintf_s(outBuf, size, _TRUNCATE, format, ap);
-      if (count == -1)
-         count = _vscprintf(format, ap);
-
-      return count;
-   }
-
-   _inline int c99_snprintf(char *outBuf, size_t size, const char *format, ...)
-   {
-      int count;
-      va_list ap;
-
-      va_start(ap, format);
-      count = c99_vsnprintf(outBuf, size, format, ap);
-      va_end(ap);
-
-      return count;
-}
+   #include <stdlib.h>
+   #ifndef vsnprintf
+      #define vsnprintf c99_vsnprintf_retro__
+   #endif
+   int c99_vsnprintf_retro__(char *outBuf, size_t size, const char *format, va_list ap);
 #endif
 
 #ifdef __cplusplus
@@ -98,9 +86,37 @@ typedef int ssize_t;
 #pragma warning(disable : 4723)
 #pragma warning(disable : 4996)
 
-/* roundf is available since MSVC 2013 */
+/* roundf and va_copy is available since MSVC 2013 */
 #if _MSC_VER < 1800
 #define roundf(in) (in >= 0.0f ? floorf(in + 0.5f) : ceilf(in - 0.5f))
+#define va_copy(x, y) ((x) = (y))
+#endif
+
+#if _MSC_VER <= 1200
+   #ifndef __cplusplus
+      /* VC6 math.h doesn't define some functions when in C mode.
+       * Trying to define a prototype gives "undefined reference".
+       * But providing an implementation then gives "function already has body".
+       * So the equivalent of the implementations from math.h are used as
+       * defines here instead, and it seems to work.
+       */
+      #define cosf(x) ((float)cos((double)x))
+      #define powf(x, y) ((float)pow((double)x, (double)y))
+      #define sinf(x) ((float)sin((double)x))
+      #define ceilf(x) ((float)ceil((double)x))
+      #define floorf(x) ((float)floor((double)x))
+      #define sqrtf(x) ((float)sqrt((double)x))
+   #endif
+
+   #ifndef _vscprintf
+      #define _vscprintf c89_vscprintf_retro__
+      int c89_vscprintf_retro__(const char *format, va_list pargs);
+   #endif
+
+   #ifndef _strtoui64
+      #define _strtoui64(x, y, z) (_atoi64(x))
+   #endif
+
 #endif
 
 #ifndef PATH_MAX

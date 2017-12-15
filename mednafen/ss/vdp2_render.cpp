@@ -30,7 +30,7 @@
 #include "vdp2_common.h"
 #include "vdp2_render.h"
 
-#include <retro_miscellaneous.h>
+#include <retro_timers.h>
 #include <rthreads/rthreads.h>
 #include <array>
 #include <atomic>

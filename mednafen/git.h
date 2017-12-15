@@ -4,7 +4,7 @@
 #include <algorithm>
 #include <string>
 #include <vector>
-#include "../libretro.h"
+#include <libretro.h>
 
 #include "video.h"
 #include "state.h"
