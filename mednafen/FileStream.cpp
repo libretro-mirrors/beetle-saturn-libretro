@@ -108,10 +108,9 @@ uint64_t FileStream::tell(void)
 
 uint64_t FileStream::size(void)
 {
-   if (!original_path)
+   if (!fp)
       return -1;
-
-   return path_get_size(original_path);
+   return filestream_get_size(fp);
 }
 
 void FileStream::truncate(uint64_t length)

@@ -21,7 +21,6 @@
 #define __MDFN_FILESTREAM_H
 
 #include <streams/file_stream.h>
-#include <retro_stat.h>
 
 #include "Stream.h"
 
