@@ -31,15 +31,15 @@ static void ROM_Read(uint32 A, uint16* DB)
  *DB = *(uint16*)((uint8*)ROM + (A & 0x1FFFFE));
 }
 
-void CART_ROM_Init(CartInfo* c, Stream* str)
+void CART_ROM_Init(CartInfo* c, RFILE *str)
 {
- str->read(ROM, 0x200000);
+   filestream_read(str, ROM, 0x200000);
 
- for(unsigned i = 0; i < 0x100000; i++)
- {
-  ROM[i] = MDFN_de16msb<true>(&ROM[i]);
- }
+   for(unsigned i = 0; i < 0x100000; i++)
+   {
+      ROM[i] = MDFN_de16msb<true>(&ROM[i]);
+   }
 
- SS_SetPhysMemMap (0x02000000, 0x03FFFFFF, ROM, 0x200000, false);
- c->CS01_SetRW8W16(0x02000000, 0x03FFFFFF, ROM_Read);
+   SS_SetPhysMemMap (0x02000000, 0x03FFFFFF, ROM, 0x200000, false);
+   c->CS01_SetRW8W16(0x02000000, 0x03FFFFFF, ROM_Read);
 }

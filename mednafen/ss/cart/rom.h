@@ -22,6 +22,8 @@
 #ifndef __MDFN_SS_CART_ROM_H
 #define __MDFN_SS_CART_ROM_H
 
-void CART_ROM_Init(CartInfo* c, Stream* str) MDFN_COLD;
+#include <streams/file_stream.h>
+
+void CART_ROM_Init(CartInfo* c, RFILE* str) MDFN_COLD;
 
 #endif

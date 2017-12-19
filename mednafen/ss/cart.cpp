@@ -21,8 +21,8 @@
 
 #include "ss.h"
 #include <mednafen/mednafen.h>
-#include <mednafen/FileStream.h>
 #include <mednafen/general.h>
+#include <streams/file_stream.h>
 #include "../mednafen-endian.h"
 
 #include "cart.h"
@@ -158,23 +158,35 @@ void CART_Init(const int cart_type)
 
   case CART_KOF95:
   case CART_ULTRAMAN:
-	{
+   {
       const std::string path_cxx = MDFN_GetSettingS((cart_type == CART_KOF95) ? "ss.cart.kof95_path" : "ss.cart.ultraman_path");
       const char *path = MDFN_MakeFName(MDFNMKF_FIRMWARE, 0, path_cxx.c_str());
-      FileStream fp(path, MODE_READ);
+      RFILE      *fp   = filestream_open(path,
+            RETRO_VFS_FILE_ACCESS_READ,
+            RETRO_VFS_FILE_ACCESS_HINT_NONE);
 
-	 CART_ROM_Init(&Cart, &fp);
-	}
+      if (fp)
+      {
+         CART_ROM_Init(&Cart, fp);
+         filestream_close(fp);
+      }
+   }
 	break;
 
   case CART_AR4MP:
-	{
-     const std::string path_cxx = MDFN_GetSettingS("ss.cart.satar4mp_path");
-     const char *path = MDFN_MakeFName(MDFNMKF_FIRMWARE, 0, path_cxx.c_str());
-	 FileStream fp(path, MODE_READ);
+   {
+      const std::string path_cxx = MDFN_GetSettingS("ss.cart.satar4mp_path");
+      const char *path = MDFN_MakeFName(MDFNMKF_FIRMWARE, 0, path_cxx.c_str());
+      RFILE      *fp   = filestream_open(path,
+            RETRO_VFS_FILE_ACCESS_READ,
+            RETRO_VFS_FILE_ACCESS_HINT_NONE);
 
-	 CART_AR4MP_Init(&Cart, &fp);
-	}
+      if (fp)
+      {
+         CART_AR4MP_Init(&Cart, fp);
+         filestream_close(fp);
+      }
+   }
 	break;
 
   case CART_CS1RAM_16M:

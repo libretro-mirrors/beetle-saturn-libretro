@@ -120,7 +120,7 @@ static MDFN_COLD void Kill(void)
  }
 }
 
-void CART_AR4MP_Init(CartInfo* c, Stream* str)
+void CART_AR4MP_Init(CartInfo* c, RFILE* str)
 {
  std::unique_ptr<uint16[]> new_FLASH(new uint16[0x20000]);
  std::unique_ptr<uint16[]> new_ExtRAM(new uint16[0x200000]);
@@ -129,7 +129,7 @@ void CART_AR4MP_Init(CartInfo* c, Stream* str)
  ExtRAM = new_ExtRAM.get();
  //
  //
- str->read(FLASH, 0x40000);
+ filestream_read(str, FLASH, 0x40000);
 
  for(unsigned i = 0; i < 0x20000; i++)
  {
