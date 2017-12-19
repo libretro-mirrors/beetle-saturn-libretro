@@ -287,16 +287,22 @@ bool CDAccess_CCD::Load(const std::string& path, bool image_memcache)
    // Open subchannel stream
    {
       std::string sub_path = MDFN_EvalFIP(dir_path, file_base + std::string(".") + std::string(sub_extsd), true);
-      FileStream sub_stream(sub_path.c_str(), MODE_READ);
+      RFILE *sub_stream    = filestream_open(
+            sub_path.c_str(),
+            RETRO_VFS_FILE_ACCESS_READ,
+            RETRO_VFS_FILE_ACCESS_HINT_NONE);
 
-      if(sub_stream.size() != (uint64)img_numsectors * 96)
+      if(!sub_stream || filestream_get_size(sub_stream) != (uint64)img_numsectors * 96)
       {
          log_cb(RETRO_LOG_ERROR, "CCD SUB file size mismatch.\n");
+         if (sub_stream)
+            filestream_close(sub_stream);
          return false;
       }
 
       sub_data = new uint8_t[(uint64)img_numsectors * 96];
-      sub_stream.read(sub_data, (uint64)img_numsectors * 96);
+      filestream_read(sub_stream, sub_data, (uint64)img_numsectors * 96);
+      filestream_close(sub_stream);
    }
 
    CheckSubQSanity();

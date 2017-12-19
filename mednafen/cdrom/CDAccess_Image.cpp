@@ -308,35 +308,42 @@ bool CDAccess_Image::LoadSBI(const std::string& sbi_path)
    uint8_t header[4];
    uint8_t ed[4 + 10];
    uint8_t tmpq[12];
+   RFILE *sbis            = NULL;
+   const char *sbi_path_c = sbi_path.c_str();
 
-   log_cb(RETRO_LOG_INFO, "Loading SBI file \"%s\"...\n", sbi_path.c_str());
+   log_cb(RETRO_LOG_INFO, "Loading SBI file \"%s\"...\n", sbi_path_c);
 
    /* SBI file not available, but don't error out. */
-   if (!filestream_exists(sbi_path.c_str()))
+   if (!filestream_exists(sbi_path_c))
       return true;
 
-   FileStream sbis(sbi_path.c_str(), MODE_READ);
+   sbis = filestream_open(sbi_path_c,
+         RETRO_VFS_FILE_ACCESS_READ,
+         RETRO_VFS_FILE_ACCESS_HINT_NONE);
 
-   sbis.read(header, 4);
+   if (!sbis)
+      return true;
+
+   filestream_read(sbis, header, 4);
 
    if(memcmp(header, "SBI\0", 4))
    {
       log_cb(RETRO_LOG_ERROR, "Not recognized a valid SBI file.");
-      return false;
+      goto error;
    }
 
-   while(sbis.read(ed, sizeof(ed), false) == sizeof(ed))
+   while(filestream_read(sbis, ed, sizeof(ed)) == sizeof(ed))
    {
       if(!BCD_is_valid(ed[0]) || !BCD_is_valid(ed[1]) || !BCD_is_valid(ed[2]))
       {
          log_cb(RETRO_LOG_ERROR, "Bad BCD MSF offset in SBI file: %02x:%02x:%02x\n", ed[0], ed[1], ed[2]);
-         return false;
+         goto error;
       }
 
       if(ed[3] != 0x01)
       {
          log_cb(RETRO_LOG_ERROR, "Unrecognized boogly oogly in SBI file: %02x\n", ed[3]);
-         return false;
+         goto error;
       }
 
       memcpy(tmpq, &ed[4], 10);
@@ -357,8 +364,14 @@ bool CDAccess_Image::LoadSBI(const std::string& sbi_path)
       memcpy(SubQReplaceMap[aba].data(), tmpq, 12);
    }
 
+   filestream_close(sbis);
    log_cb(RETRO_LOG_INFO, "Loaded Q subchannel replacements for %zu sectors.\n", SubQReplaceMap.size());
    return true;
+
+error:
+   if (sbis)
+      filestream_close(sbis);
+   return false;
 }
 
 static bool StringToMSF(const char* str, unsigned* m, unsigned* s, unsigned* f)
