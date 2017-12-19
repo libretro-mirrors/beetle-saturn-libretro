@@ -1098,15 +1098,18 @@ static bool InitCommon(const unsigned cpucache_emumode, const unsigned cart_type
 
    {
       const std::string biospath = MDFN_MakeFName(MDFNMKF_FIRMWARE, 0, MDFN_GetSettingS(biospath_sname).c_str());
-      FileStream BIOSFile(biospath.c_str(), MODE_READ);
+      RFILE *BIOSFile            = filestream_open(biospath.c_str(),
+            RETRO_VFS_FILE_ACCESS_READ,
+            RETRO_VFS_FILE_ACCESS_HINT_NONE);
 
-      if(BIOSFile.size() != 524288)
+      if(!BIOSFile || filestream_get_size(BIOSFile) != 524288)
       {
          log_cb(RETRO_LOG_ERROR, "BIOS file \"%s\" is of an incorrect size.\n", biospath.c_str());
          return false;
       }
 
-      BIOSFile.read(BIOSROM, 512 * 1024);
+      filestream_read(BIOSFile, BIOSROM, 512 * 1024);
+      filestream_close(BIOSFile);
       BIOS_SHA256 = sha256(BIOSROM, 512 * 1024);
 
       if(MDFN_GetSettingB("ss.bios_sanity"))
@@ -1279,9 +1282,15 @@ static MDFN_COLD void SaveBackupRAM(void)
 
 static MDFN_COLD void LoadBackupRAM(void)
 {
- FileStream brs(MDFN_MakeFName(MDFNMKF_SAV, 0, "bkr"), MODE_READ);
+ RFILE *brs = filestream_open(MDFN_MakeFName(MDFNMKF_SAV, 0, "bkr"),
+       RETRO_VFS_FILE_ACCESS_READ,
+       RETRO_VFS_FILE_ACCESS_HINT_NONE);
 
- brs.read(BackupRAM, sizeof(BackupRAM));
+ if (!brs)
+    return;
+
+ filestream_read(brs, BackupRAM, sizeof(BackupRAM));
+ filestream_close(brs);
 }
 
 static MDFN_COLD void BackupBackupRAM(void)
@@ -1304,71 +1313,81 @@ static MDFN_COLD void BackupCartNV(void)
 
 static MDFN_COLD void LoadCartNV(void)
 {
- const char* ext = nullptr;
- void* nv_ptr = nullptr;
- bool nv16 = false;
- uint64 nv_size = 0;
+   uint64_t i;
+   RFILE *nvs      = NULL;
+   const char* ext = nullptr;
+   void* nv_ptr    = nullptr;
+   bool nv16       = false;
+   uint64 nv_size  = 0;
 
- CART_GetNVInfo(&ext, &nv_ptr, &nv16, &nv_size);
+   CART_GetNVInfo(&ext, &nv_ptr, &nv16, &nv_size);
 
- if(ext)
- {
-  FileStream nvs(MDFN_MakeFName(MDFNMKF_SAV, 0, ext), MODE_READ);
+   if (!ext)
+      return;
 
-  nvs.read(nv_ptr, nv_size);
+   nvs = filestream_open(
+         MDFN_MakeFName(MDFNMKF_SAV, 0, ext),
+         RETRO_VFS_FILE_ACCESS_READ,
+         RETRO_VFS_FILE_ACCESS_HINT_NONE);
 
-  if(nv16)
-  {
-   for(uint64 i = 0; i < nv_size; i += 2)
+   if (!nvs)
+      return;
+
+   filestream_read(nvs, nv_ptr, nv_size);
+   filestream_close(nvs);
+
+   if (!nv16)
+      return;
+
+   for(i = 0; i < nv_size; i += 2)
    {
-    void* p = (uint8*)nv_ptr + i;
+      void* p = (uint8*)nv_ptr + i;
 
-    MDFN_ennsb<uint16>(p, MDFN_de16msb(p));
+      MDFN_ennsb<uint16>(p, MDFN_de16msb(p));
    }
-  }
- }
 }
 
 static MDFN_COLD void SaveCartNV(void)
 {
- const char* ext = nullptr;
- void* nv_ptr = nullptr;
- bool nv16 = false;
- uint64 nv_size = 0;
+   const char* ext = nullptr;
+   void* nv_ptr = nullptr;
+   bool nv16 = false;
+   uint64 nv_size = 0;
 
- CART_GetNVInfo(&ext, &nv_ptr, &nv16, &nv_size);
+   CART_GetNVInfo(&ext, &nv_ptr, &nv16, &nv_size);
 
- if(ext)
- {
-  FileStream nvs(MDFN_MakeFName(MDFNMKF_SAV, 0, ext), MODE_WRITE_INPLACE);
+   if(ext)
+   {
+      FileStream nvs(MDFN_MakeFName(MDFNMKF_SAV, 0, ext), MODE_WRITE_INPLACE);
 
-  if(nv16)
-  {
-   // Slow...
-   for(uint64 i = 0; i < nv_size; i += 2)
-    nvs.put_BE<uint16>(MDFN_densb<uint16>((uint8*)nv_ptr + i));
-  }
-  else
-   nvs.write(nv_ptr, nv_size);
+      if(nv16)
+      {
+         uint64_t i;
+         /* Slow... */
+         for(i = 0; i < nv_size; i += 2)
+            nvs.put_BE<uint16>(MDFN_densb<uint16>((uint8*)nv_ptr + i));
+      }
+      else
+         nvs.write(nv_ptr, nv_size);
 
-  nvs.close();
- }
+      nvs.close();
+   }
 }
 
 static MDFN_COLD void SaveRTC(void)
 {
- FileStream sds(MDFN_MakeFName(MDFNMKF_SAV, 0, "smpc"), MODE_WRITE_INPLACE);
+   FileStream sds(MDFN_MakeFName(MDFNMKF_SAV, 0, "smpc"), MODE_WRITE_INPLACE);
 
- SMPC_SaveNV(&sds);
+   SMPC_SaveNV(&sds);
 
- sds.close();
+   sds.close();
 }
 
 static MDFN_COLD void LoadRTC(void)
 {
- FileStream sds(MDFN_MakeFName(MDFNMKF_SAV, 0, "smpc"), MODE_READ);
+   FileStream sds(MDFN_MakeFName(MDFNMKF_SAV, 0, "smpc"), MODE_READ);
 
- SMPC_LoadNV(&sds);
+   SMPC_LoadNV(&sds);
 }
 
 struct EventsPacker
