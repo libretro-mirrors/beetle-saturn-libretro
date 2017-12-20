@@ -28,17 +28,19 @@
 
 struct MDFNFILE *file_open(const char *path)
 {
+   ssize_t size          = 0;
    const char        *ld = NULL;
    struct MDFNFILE *file = (struct MDFNFILE*)calloc(1, sizeof(*file));
 
    if (!file)
       return NULL;
 
-   if (!filestream_read_file(path, (void**)&file->data, &file->size))
+   if (!filestream_read_file(path, (void**)&file->data, &size))
       goto error;
 
-   ld = (const char*)strrchr(path, '.');
-   file->ext = strdup(ld ? ld + 1 : "");
+   ld         = (const char*)strrchr(path, '.');
+   file->size = (int64_t)size;
+   file->ext  = strdup(ld ? ld + 1 : "");
 
    return file;
 
