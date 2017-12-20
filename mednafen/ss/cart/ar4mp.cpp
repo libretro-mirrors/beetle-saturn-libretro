@@ -97,7 +97,7 @@ static MDFN_COLD void StateAction(StateMem* sm, const unsigned load, const bool 
   SFEND
  };
 
- MDFNSS_StateAction(sm, load, data_only, StateRegs, "CART_AR4MP");
+ MDFNSS_StateAction(sm, load, data_only, StateRegs, "CART_AR4MP", false);
 
  if(load)
  {

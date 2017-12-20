@@ -1062,7 +1062,7 @@ void StateAction(StateMem* sm, const unsigned load, const bool data_only)
   SFEND
  };
 
- MDFNSS_StateAction(sm, load, data_only, StateRegs, "VDP2");
+ MDFNSS_StateAction(sm, load, data_only, StateRegs, "VDP2", false);
 
  if(load)
  {

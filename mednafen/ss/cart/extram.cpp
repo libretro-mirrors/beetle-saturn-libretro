@@ -63,7 +63,7 @@ static MDFN_COLD void StateAction(StateMem* sm, const unsigned load, const bool 
   SFEND
  };
 
- MDFNSS_StateAction(sm, load, data_only, StateRegs, "CART_EXTRAM");
+ MDFNSS_StateAction(sm, load, data_only, StateRegs, "CART_EXTRAM", false);
 }
 
 void CART_ExtRAM_Init(CartInfo* c, bool R4MiB)

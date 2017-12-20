@@ -1538,7 +1538,7 @@ MDFN_COLD int LibRetro_StateAction( StateMem* sm, const unsigned load, const boo
  SOUND_StateAction(sm, load, data_only);
  CART_StateAction(sm, load, data_only);
  //
-	success = MDFNSS_StateAction(sm, load, data_only, StateRegs, "MAIN");
+	success = MDFNSS_StateAction(sm, load, data_only, StateRegs, "MAIN", false);
 	if ( success == 0 ) {
 		log_cb( RETRO_LOG_ERROR, "Failed to load MAIN state objects.\n" );
 		return 0;

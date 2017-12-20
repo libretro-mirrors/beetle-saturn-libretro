@@ -2102,7 +2102,7 @@ static MDFN_COLD void SCU_StateAction(StateMem* sm, const unsigned load, const b
  //
  //
 
- MDFNSS_StateAction(sm, load, data_only, StateRegs, "SCU");
+ MDFNSS_StateAction(sm, load, data_only, StateRegs, "SCU", false);
 
  if(load)
  {

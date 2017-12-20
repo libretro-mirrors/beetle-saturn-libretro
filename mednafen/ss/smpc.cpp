@@ -574,7 +574,7 @@ void SMPC_StateAction(StateMem* sm, const unsigned load, const bool data_only)
   SFEND
  };
 
- MDFNSS_StateAction(sm, load, data_only, StateRegs, "SMPC");
+ MDFNSS_StateAction(sm, load, data_only, StateRegs, "SMPC", false);
 
  for(unsigned port = 0; port < 2; port++)
  {

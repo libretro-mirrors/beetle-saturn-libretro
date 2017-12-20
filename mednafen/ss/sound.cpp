@@ -243,7 +243,7 @@ void SOUND_StateAction(StateMem *sm, const unsigned load, const bool data_only)
    next_scsp_time -= SoundCPU.timestamp;
    run_until_time -= (int64)SoundCPU.timestamp << 32;
 
-   MDFNSS_StateAction(sm, load, data_only, StateRegs, "SOUND");
+   MDFNSS_StateAction(sm, load, data_only, StateRegs, "SOUND", false);
 
    next_scsp_time += SoundCPU.timestamp;
    run_until_time += (int64)SoundCPU.timestamp << 32;

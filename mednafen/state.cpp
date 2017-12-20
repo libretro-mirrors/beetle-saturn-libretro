@@ -342,87 +342,82 @@ static int WriteStateChunk(StateMem *st, const char *sname, SFORMAT *sf)
 }
 
 /* This function is called by the game driver(NES, GB, GBA) to save a state. */
-int MDFNSS_StateAction( void *st_p, int load, int data_only, std::vector <SSDescriptor> &sections )
+static int MDFNSS_StateAction_internal( void *st_p, int load, int data_only, SSDescriptor *section)
 {
 	StateMem *st = (StateMem*)st_p;
-	std::vector<SSDescriptor>::iterator section;
 
 	if ( load )
-	{
-		char sname[32];
+   {
+      char sname[32];
 
-		// For each section ...
-		for( section = sections.begin(); section != sections.end(); section++ )
-		{
-			int found = 0;
-			uint32_t tmp_size;
-			uint32_t total = 0;
+      int found = 0;
+      uint32_t tmp_size;
+      uint32_t total = 0;
 
-			while ( smem_read(st, (uint8_t *)sname, 32 ) == 32 )
-			{
-				int where_are_we = st->loc - 32;
+      while ( smem_read(st, (uint8_t *)sname, 32 ) == 32 )
+      {
+         int where_are_we = st->loc - 32;
 
-				if(smem_read32le(st, &tmp_size) != 4)
-					return(0);
+         if(smem_read32le(st, &tmp_size) != 4)
+            return(0);
 
-				total += tmp_size + 32 + 4;
+         total += tmp_size + 32 + 4;
 
-				// Yay, we found the section
-				if ( !strncmp(sname, section->name, 32 ) )
-				{
-					if(!ReadStateChunk(st, section->sf, tmp_size))
-					{
-						log_cb( RETRO_LOG_ERROR, "Error reading chunk: %s\n", section->name );
-						return(0);
-					}
+         // Yay, we found the section
+         if ( !strncmp(sname, section->name, 32 ) )
+         {
+            if(!ReadStateChunk(st, section->sf, tmp_size))
+            {
+               log_cb( RETRO_LOG_ERROR, "Error reading chunk: %s\n", section->name );
+               return(0);
+            }
 
-					found = 1;
-					break;
-				}
-				else
-				{
-					if ( smem_seek(st, tmp_size, SEEK_CUR ) < 0 )
-					{
-						log_cb( RETRO_LOG_ERROR, "Chunk seek failure.\n" );
-						return(0);
-					}
-				}
-			}
+            found = 1;
+            break;
+         }
+         else
+         {
+            if ( smem_seek(st, tmp_size, SEEK_CUR ) < 0 )
+            {
+               log_cb( RETRO_LOG_ERROR, "Chunk seek failure.\n" );
+               return(0);
+            }
+         }
+      }
 
-			if ( smem_seek(st, -total, SEEK_CUR) < 0 )
-			{
-				log_cb( RETRO_LOG_ERROR, "Reverse seek error.\n" );
-				return(0);
-			}
+      if ( smem_seek(st, -total, SEEK_CUR) < 0 )
+      {
+         log_cb( RETRO_LOG_ERROR, "Reverse seek error.\n" );
+         return(0);
+      }
 
-			if( !found && !section->optional ) // Not found.  We are sad!
-			{
-				log_cb( RETRO_LOG_ERROR, "Section missing:  %.32s\n", section->name);
-				return(0);
-			}
+      if( !found && !section->optional ) // Not found.  We are sad!
+      {
+         log_cb( RETRO_LOG_ERROR, "Section missing:  %.32s\n", section->name);
+         return(0);
+      }
 
-		}; // for each section.
-	}
+   }
 	else
-	{
-		// Write all the chunks.
-		for ( section = sections.begin(); section != sections.end(); section++ )
-		{
-			if ( !WriteStateChunk(st, section->name, section->sf ) )
-				return(0);
-		}
-	}
+   {
+      // Write all the chunks.
+      if ( !WriteStateChunk(st, section->name, section->sf ) )
+         return(0);
+   }
 
 	return(1);
 }
 
 int MDFNSS_StateAction(void *st_p, int load, int data_only, SFORMAT *sf, const char *name, bool optional)
 {
+   SSDescriptor love;
    StateMem *st = (StateMem*)st_p;
-   std::vector <SSDescriptor> love;
 
-   love.push_back(SSDescriptor(sf, name, optional));
-   return(MDFNSS_StateAction(st, load, 0, love));
+   love.sf       = sf;
+   love.name     = name;
+   love.optional = optional;
+
+   return(MDFNSS_StateAction_internal(st, load, 0, &love));
 }
 
 extern int LibRetro_StateAction( StateMem* sm, const unsigned load, const bool data_only );

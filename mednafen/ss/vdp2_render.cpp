@@ -3488,7 +3488,7 @@ void VDP2REND_StateAction(StateMem* sm, const unsigned load, const bool data_onl
   }
  }
 
- MDFNSS_StateAction(sm, load, data_only, StateRegs, "VDP2REND");
+ MDFNSS_StateAction(sm, load, data_only, StateRegs, "VDP2REND", false);
 
  if(load)
  {

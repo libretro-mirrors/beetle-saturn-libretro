@@ -1596,7 +1596,7 @@ void SS_SCSP::StateAction(StateMem* sm, const unsigned load, const bool data_onl
   SFEND
  };
 
- MDFNSS_StateAction(sm, load, data_only, StateRegs, "SCSP");
+ MDFNSS_StateAction(sm, load, data_only, StateRegs, "SCSP", false);
 
  if(load)
  {

@@ -944,7 +944,7 @@ void StateAction(StateMem* sm, const unsigned load, const bool data_only)
   SFEND
  };
 
- MDFNSS_StateAction(sm, load, data_only, StateRegs, "VDP1");
+ MDFNSS_StateAction(sm, load, data_only, StateRegs, "VDP1", false);
 
  if(load)
  {

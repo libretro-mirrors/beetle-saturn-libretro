@@ -59,7 +59,7 @@ static MDFN_COLD void StateAction(StateMem* sm, const unsigned load, const bool 
   SFEND
  };
 
- MDFNSS_StateAction(sm, load, data_only, StateRegs, "CART_CS1RAM");
+ MDFNSS_StateAction(sm, load, data_only, StateRegs, "CART_CS1RAM", false);
 }
 
 void CART_CS1RAM_Init(CartInfo* c)

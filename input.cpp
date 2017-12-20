@@ -958,7 +958,7 @@ int input_StateAction( StateMem* sm, const unsigned load, const bool data_only )
 		SFEND
 	};
 
-	success = MDFNSS_StateAction( sm, load, data_only, StateRegs, "LIBRETRO-INPUT" );
+	success = MDFNSS_StateAction( sm, load, data_only, StateRegs, "LIBRETRO-INPUT", false);
 
 	// ok?
 	return success;

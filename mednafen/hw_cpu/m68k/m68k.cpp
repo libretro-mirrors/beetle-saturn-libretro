@@ -103,7 +103,7 @@ void M68K::StateAction(StateMem* sm, const unsigned load, const bool data_only, 
   SFEND
  };
 
- MDFNSS_StateAction(sm, load, data_only, StateRegs, sname);
+ MDFNSS_StateAction(sm, load, data_only, StateRegs, sname, false);
 }
 
 void M68K::LoadOldState(const uint8* osm)

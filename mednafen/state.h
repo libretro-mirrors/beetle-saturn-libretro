@@ -155,26 +155,13 @@ static INLINE SFORMAT SFBASE_(T* const v, const uint32 count, const char* const 
 #include <vector>
 
 // State-Section Descriptor
-class SSDescriptor
+struct SSDescriptor
 {
-   public:
-      SSDescriptor(SFORMAT *n_sf, const char *n_name, bool n_optional = 0)
-      {
-         sf = n_sf;
-         name = n_name;
-         optional = n_optional;
-      }
-      ~SSDescriptor(void)
-      {
-
-      }
-
-      SFORMAT *sf;
-      const char *name;
-      bool optional;
+   SFORMAT *sf;
+   const char *name;
+   bool optional;
 };
 
-int MDFNSS_StateAction(void *st, int load, int data_only, std::vector <SSDescriptor> &sections);
-int MDFNSS_StateAction(void *st, int load, int data_only, SFORMAT *sf, const char *name, bool optional = 0);
+int MDFNSS_StateAction(void *st, int load, int data_only, SFORMAT *sf, const char *name, bool optional);
 
 #endif

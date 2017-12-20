@@ -3884,7 +3884,7 @@ void CDB_StateAction(StateMem* sm, const unsigned load, const bool data_only)
   SFEND
  };
 
- MDFNSS_StateAction(sm, load, data_only, StateRegs, "CDB");
+ MDFNSS_StateAction(sm, load, data_only, StateRegs, "CDB", false);
 
  if(load)
  {
