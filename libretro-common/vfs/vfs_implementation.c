@@ -24,6 +24,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
+#include <sys/types.h>
 
 #ifdef HAVE_CONFIG_H
 #include "config.h"
@@ -234,13 +235,18 @@ libretro_vfs_implementation_file *retro_vfs_file_open_impl(const char *path, uns
 #endif
          }
          break;
-         /* TODO/FIXME - implement */
       case RETRO_VFS_FILE_ACCESS_UPDATE_EXISTING:
-         break;
+         /* TODO/FIXME - implement */
+         goto error;
+      default:
+         goto error;
    }
 
-   if ((stream->hints & RFILE_HINT_UNBUFFERED) == 0 && mode_str)
+   if ((stream->hints & RFILE_HINT_UNBUFFERED) == 0)
    {
+      if (!mode_str)
+         goto error;
+
       stream->fp = fopen_utf8(path, mode_str);
 
       if (!stream->fp)
@@ -376,9 +382,23 @@ int64_t retro_vfs_file_tell_impl(libretro_vfs_implementation_file *stream)
    return 0;
 }
 
-int64_t retro_vfs_file_seek_impl(libretro_vfs_implementation_file *stream, int64_t offset, int whence)
+int64_t retro_vfs_file_seek_impl(libretro_vfs_implementation_file *stream, int64_t offset, int seek_position)
 {
-	return retro_vfs_file_seek_internal(stream, offset, whence);
+   int whence = -1;
+   switch (seek_position)
+   {
+   case RETRO_VFS_SEEK_POSITION_START:
+      whence = SEEK_SET;
+      break;
+   case RETRO_VFS_SEEK_POSITION_CURRENT:
+      whence = SEEK_CUR;
+      break;
+   case RETRO_VFS_SEEK_POSITION_END:
+      whence = SEEK_END;
+      break;
+   }
+
+   return retro_vfs_file_seek_internal(stream, offset, whence);
 }
 
 int64_t retro_vfs_file_read_impl(libretro_vfs_implementation_file *stream, void *s, uint64_t len)
@@ -433,7 +453,7 @@ int retro_vfs_file_flush_impl(libretro_vfs_implementation_file *stream)
 {
    if (!stream)
       return -1;
-   return fflush(stream->fp);
+   return fflush(stream->fp)==0 ? 0 : -1;
 }
 
 int retro_vfs_file_remove_impl(const char *path)
@@ -442,7 +462,7 @@ int retro_vfs_file_remove_impl(const char *path)
    wchar_t *path_wide  = NULL;
 
    if (!path || !*path)
-      return false;
+      return -1;
 
    (void)path_local;
    (void)path_wide;
@@ -457,7 +477,7 @@ int retro_vfs_file_remove_impl(const char *path)
       free(path_local);
 
       if (ret == 0)
-         return true;
+         return 0;
    }
 #else
    path_wide = utf8_to_utf16_string_alloc(path);
@@ -468,14 +488,14 @@ int retro_vfs_file_remove_impl(const char *path)
       free(path_wide);
 
       if (ret == 0)
-         return true;
+         return 0;
    }
 #endif
 #else
    if (remove(path) == 0)
-      return true;
+      return 0;
 #endif
-   return false;
+   return -1;
 }
 
 int retro_vfs_file_rename_impl(const char *old_path, const char *new_path)
@@ -505,7 +525,7 @@ int retro_vfs_file_rename_impl(const char *old_path, const char *new_path)
          int ret = rename(old_path_local, new_path_local);
          free(old_path_local);
          free(new_path_local);
-         return ret;
+         return ret==0 ? 0 : -1;
       }
 
       free(old_path_local);
@@ -524,7 +544,7 @@ int retro_vfs_file_rename_impl(const char *old_path, const char *new_path)
          int ret = _wrename(old_path_wide, new_path_wide);
          free(old_path_wide);
          free(new_path_wide);
-         return ret;
+         return ret==0 ? 0 : -1;
       }
 
       free(old_path_wide);
@@ -535,7 +555,7 @@ int retro_vfs_file_rename_impl(const char *old_path, const char *new_path)
 #endif
    return -1;
 #else
-   return rename(old_path, new_path);
+   return rename(old_path, new_path)==0 ? 0 : -1;
 #endif
 }
 

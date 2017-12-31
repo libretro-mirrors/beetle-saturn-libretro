@@ -55,7 +55,7 @@ static INLINE unsigned compat_clz_u16(uint16_t val)
 }
 
 /* Count Trailing Zero */
-#if defined(__GNUC__) && !defined(RARCH_CONSOLE)
+#if defined(__GNUC__) 
 static INLINE int compat_ctz(unsigned x)
 {
    return __builtin_ctz(x);
@@ -63,9 +63,9 @@ static INLINE int compat_ctz(unsigned x)
 #elif _MSC_VER >= 1400
 static INLINE int compat_ctz(unsigned x)
 {
-   unsigned long r = 0;
+   int r = 0;
    _BitScanReverse((unsigned long*)&r, x);
-   return (int)r;
+   return r;
 }
 #else
 /* Only checks at nibble granularity, 
