@@ -38,7 +38,7 @@
 #ifndef  _LOW_ACCURACY_
 /* 64 bit multiply */
 
-#if !(defined WIN32 && defined WINCE)
+#if !(defined _WIN32 && defined WINCE)
 #include <sys/types.h>
 #endif
 
