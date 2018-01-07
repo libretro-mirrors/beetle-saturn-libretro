@@ -215,9 +215,7 @@ SOURCES_CXX += \
 	$(CORE_DIR)/libretro.cpp \
 	$(CORE_DIR)/libretro_settings.cpp
 
-SOURCES_C += \
-	$(MEDNAFEN_DIR)/file.c \
-	$(MEDNAFEN_DIR)/mednafen-endian.c
+SOURCES_C += $(MEDNAFEN_DIR)/mednafen-endian.c
 
 SOURCES_CXX += $(MEDNAFEN_DIR)/hash/sha256.cpp \
 					$(MEDNAFEN_DIR)/hash/md5.cpp
