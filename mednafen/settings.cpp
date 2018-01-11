@@ -81,10 +81,6 @@ bool MDFN_GetSettingB(const char *name)
 
 std::string MDFN_GetSettingS(const char *name)
 {
-   if (!strcmp("ss.bios_jp", name))
-      return std::string("sega_101.bin");
-   if (!strcmp("ss.bios_na_eu", name))
-      return std::string("mpr-17933.bin");
    if (!strcmp("ss.cart.kof95_path", name))
       return std::string("mpr-18811-mx.ic1");
    if (!strcmp("ss.cart.ultraman_path", name))
