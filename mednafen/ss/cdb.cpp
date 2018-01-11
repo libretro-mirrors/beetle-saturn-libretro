@@ -951,6 +951,8 @@ static bool FLS_Run(void)
   goto Abort;
  }
 
+ static const char stdid[5] = { 'C', 'D', '0', '0', '1' };
+
  //
  FLS_PROLOGUE;
  //
@@ -963,7 +965,6 @@ static bool FLS_Run(void)
 
    for(;;)
    {
-    static const char stdid[5] = { 'C', 'D', '0', '0', '1' };
     FLS_WAIT_GRAB_BUF;
 
     if(memcmp(FLS.pbuf + 1, stdid, 5) || FLS.pbuf[0] == 0xFF)
