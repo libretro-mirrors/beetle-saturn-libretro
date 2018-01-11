@@ -121,7 +121,9 @@ static INLINE SFORMAT SFBASE_(T* const v, const uint32 count, const char* const 
 #define SFVAR1_(x)	   SFVARN((x), #x)
 #define SFVAR3_(x, tc, rs) SFVARN((x), tc, rs, #x)
 #define SFVAR_(a, b, c, d, ...)	d
-#define SFVAR(...) 	SFVAR_(__VA_ARGS__, SFVAR3_, SFVAR2_, SFVAR1_, SFVAR0_)(__VA_ARGS__)
+
+#define EXPAND( x ) x
+#define SFVAR(...) 	EXPAND(SFVAR_(__VA_ARGS__, SFVAR3_, SFVAR2_, SFVAR1_, SFVAR0_)(__VA_ARGS__))
 
 #if SIZEOF_DOUBLE != 8
  #error "sizeof(double) != 8"

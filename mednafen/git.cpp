@@ -23,6 +23,12 @@
 
 #include <math.h>
 
+#ifdef ANDROID
+#ifndef log2
+#define log2(n) (log(n) / log(2))
+#endif
+#endif
+
 const IDIISG IDII_Empty;
 
 IDIISG::IDIISG()
