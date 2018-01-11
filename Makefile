@@ -316,7 +316,7 @@ endif
 else ifneq (,$(findstring windows_msvc2017,$(platform)))
 
     NO_GCC := 1
-    FLAGS += -DHAVE__MKDIR -DNOMINMAX
+    FLAGS += -DHAVE__MKDIR -DNOMINMAX -D__PIC__
 
 	PlatformSuffix = $(subst windows_msvc2017_,,$(platform))
 	ifneq (,$(findstring desktop,$(PlatformSuffix)))
@@ -331,10 +331,20 @@ else ifneq (,$(findstring windows_msvc2017,$(platform)))
 		LIBS += WindowsApp.lib
 	endif
 
+	TargetArchMoniker = $(subst $(WinPartition)_,,$(PlatformSuffix))
+
+    ifneq (,$(findstring x64,$(TargetArchMoniker)))
+		MSVC2017CompileFlags += -D__x86_64__
+	endif
+    ifneq (,$(findstring x86,$(TargetArchMoniker)))
+		MSVC2017CompileFlags += -D__i386__
+	endif
+    ifneq (,$(findstring arm,$(TargetArchMoniker)))
+		MSVC2017CompileFlags += -D__arm__
+	endif
+
 	CFLAGS += $(MSVC2017CompileFlags)
 	CXXFLAGS += $(MSVC2017CompileFlags) -EHsc
-
-	TargetArchMoniker = $(subst $(WinPartition)_,,$(PlatformSuffix))
 
 	CC  = cl.exe
 	CXX = cl.exe
