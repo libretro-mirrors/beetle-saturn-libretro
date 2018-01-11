@@ -316,7 +316,7 @@ endif
 else ifneq (,$(findstring windows_msvc2017,$(platform)))
 
     NO_GCC := 1
-    FLAGS += -DHAVE__MKDIR
+    FLAGS += -DHAVE__MKDIR -DNOMINMAX
 
 	PlatformSuffix = $(subst windows_msvc2017_,,$(platform))
 	ifneq (,$(findstring desktop,$(PlatformSuffix)))
@@ -332,7 +332,7 @@ else ifneq (,$(findstring windows_msvc2017,$(platform)))
 	endif
 
 	CFLAGS += $(MSVC2017CompileFlags)
-	CXXFLAGS += $(MSVC2017CompileFlags)
+	CXXFLAGS += $(MSVC2017CompileFlags) -EHsc
 
 	TargetArchMoniker = $(subst $(WinPartition)_,,$(PlatformSuffix))
 
@@ -458,8 +458,12 @@ ifeq ($(HAVE_JIT),1)
    LDFLAGS += -ljit
 endif
 
-CXXFLAGS += $(FLAGS) -std=c++11
+CXXFLAGS += $(FLAGS)
 CFLAGS   += $(FLAGS)
+
+ifeq (,$(findstring msvc,$(platform)))
+    CXXFLAGS += -std=c++11
+endif
 
 OBJOUT   = -o
 LINKOUT  = -o 
