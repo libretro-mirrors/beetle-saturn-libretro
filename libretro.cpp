@@ -2517,6 +2517,10 @@ const char *MDFN_MakeFName(MakeFName_Type type, int id1, const char *cd1)
                (!shared_memorycards) ? retro_cd_base_name : "mednafen_saturn_libretro_shared",
                cd1);
          break;
+      case MDFNMKF_FIRMWARE:
+         snprintf(fullpath, sizeof(fullpath), "%s%c%s", retro_base_directory,
+               retro_slash, cd1);
+         break;
       default:
          break;
    }
