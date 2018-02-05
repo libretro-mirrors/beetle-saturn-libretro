@@ -69,6 +69,10 @@ ifneq (,$(findstring unix,$(platform)))
    ifneq ($(shell uname -p | grep -E '((i.|x)86|amd64)'),)
       IS_X86 = 1
    endif
+   ifneq (,$(findstring Haiku,$(shell uname -s)))
+   CXXFLAGS += -fpermissive
+   PTHREAD_FLAGS = -lpthread
+   endif
    LDFLAGS += $(PTHREAD_FLAGS)
    FLAGS += $(PTHREAD_FLAGS) -DHAVE_MKDIR
    ifeq ($(HAVE_OPENGL),1)
