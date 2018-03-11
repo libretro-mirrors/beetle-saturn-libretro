@@ -2259,6 +2259,8 @@ void retro_run(void)
       // This avoids inconsistent frame scales when game switches between interlaced and non-interlaced modes.
       av_info.geometry.base_width   = 352 - h_mask;
       av_info.geometry.base_height  = linevislast + 1 - linevisfirst;
+      av_info.geometry.max_width    = MEDNAFEN_CORE_GEOMETRY_MAX_W;
+      av_info.geometry.max_height   = MEDNAFEN_CORE_GEOMETRY_MAX_H;
       av_info.geometry.aspect_ratio = MEDNAFEN_CORE_GEOMETRY_ASPECT_RATIO;
       environ_cb(RETRO_ENVIRONMENT_SET_GEOMETRY, &av_info);
 
