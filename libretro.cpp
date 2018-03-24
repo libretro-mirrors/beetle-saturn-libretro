@@ -2324,7 +2324,11 @@ void retro_deinit(void)
 
 unsigned retro_get_region(void)
 {
-   return RETRO_REGION_NTSC;
+   If (content_is_pal == true){
+       return RETRO_REGION_PAL;  //Ben Swith PAL
+   }else{
+       return RETRO_REGION_NTSC;
+   }
 }
 
 unsigned retro_api_version(void)
