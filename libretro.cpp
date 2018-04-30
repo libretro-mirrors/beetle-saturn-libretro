@@ -824,17 +824,17 @@ static sscpu_timestamp_t MidSync(const sscpu_timestamp_t timestamp)
     //
     //printf("MidSync: %d\n", VDP2::PeekLine());
     {
-       espec->SoundBufSize += SOUND_FlushOutput();
-       espec->MasterCycles = timestamp * cur_clock_div;
+//       espec->SoundBufSize += SOUND_FlushOutput();
+//       espec->MasterCycles = timestamp * cur_clock_div;
     }
     //printf("%d\n", espec->SoundBufSize);
 
     SMPC_UpdateOutput();
-    //
-    //
-    //MDFN_MidSync(espec);
-    //
-    //
+
+    input_poll_cb();
+
+    input_update( input_state_cb );
+
     UpdateSMPCInput(timestamp);
 
     AllowMidSync = false;
@@ -848,7 +848,7 @@ static void Emulate(EmulateSpecStruct* espec_arg)
  int32 end_ts;
 
  espec = espec_arg;
- AllowMidSync = MDFN_GetSettingB("ss.midsync");
+ AllowMidSync = setting_midsync;
 
  cur_clock_div = SMPC_StartFrame(espec);
  UpdateSMPCInput(0);
@@ -1587,8 +1587,6 @@ static MDFNSetting SSSettings[] =
  { "ss.slstartp", MDFNSF_NOFLAGS, "First displayed scanline in PAL mode.", NULL, MDFNST_INT, "0", "-16", "271" },
  { "ss.slendp", MDFNSF_NOFLAGS, "Last displayed scanline in PAL mode.", NULL, MDFNST_INT, "255", "-16", "271" },
 
- { "ss.midsync", MDFNSF_NOFLAGS, "Enable mid-frame synchronization.", "Mid-frame synchronization can reduce input latency, but it will increase CPU requirements.", MDFNST_BOOL, "0" },
-
 #ifdef MDFN_SS_DEV_BUILD
  { "ss.dbg_mask", MDFNSF_NOFLAGS, "Debug printf mask.", NULL, MDFNST_UINT, "0x00001", "0x00000", "0xFFFFF" },
  { "ss.dbg_exe_cdpath", MDFNSF_SUPPRESS_DOC, "CD image to use with homebrew executable loading.", NULL, MDFNST_STRING, "" },
@@ -1875,6 +1873,16 @@ static void check_variables(bool startup)
       {
          old_cdimagecache = cdimage_cache;
       }
+   }
+
+   var.key = "beetle_saturn_midsync";
+
+   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+   {
+      if (!strcmp(var.value, "enabled"))
+         setting_midsync = true;
+      else if (!strcmp(var.value, "disabled"))
+         setting_midsync = false;
    }
 
    var.key = "beetle_saturn_autortc";
@@ -2353,6 +2361,7 @@ void retro_set_environment( retro_environment_t cb )
       { "beetle_saturn_mouse_sensitivity", "Mouse Sensitivity; 100%|105%|110%|115%|120%|125%|130%|135%|140%|145%|150%|155%|160%|165%|170%|175%|180%|185%|190%|195%|200%|5%|10%|15%|20%|25%|30%|35%|40%|45%|50%|55%|60%|65%|70%|75%|80%|85%|90%|95%" },
       { "beetle_saturn_virtuagun_crosshair", "Gun Crosshair; Cross|Dot|Off" },
       { "beetle_saturn_cdimagecache", "CD Image Cache (restart); disabled|enabled" },
+      { "beetle_saturn_midsync", "Mid-frame Input Synchronization; disabled|enabled" },
       { "beetle_saturn_autortc", "Automatically set RTC on game load; enabled|disabled" },
       { "beetle_saturn_autortc_lang", "BIOS language; english|german|french|spanish|italian|japanese" },
       { "beetle_saturn_horizontal_overscan", "Horizontal Overscan Mask; 0|2|4|6|8|10|12|14|16|18|20|22|24|26|28|30|32|34|36|38|40|42|44|46|48|50|52|54|56|58|60" },
