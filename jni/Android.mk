@@ -19,7 +19,7 @@ endif
 
 include $(CORE_DIR)/Makefile.common
 
-COREFLAGS := -funroll-loops $(INCFLAGS) -DMEDNAFEN_VERSION=\"0.9.26\" -DMEDNAFEN_VERSION_NUMERIC=926 -DPSS_STYLE=1 -D__LIBRETRO__ -D_LOW_ACCURACY_ -DINLINE="inline" $(FLAGS)
+COREFLAGS := -funroll-loops $(INCFLAGS) -DPSS_STYLE=1 -D__LIBRETRO__ -D_LOW_ACCURACY_ -DINLINE="inline" $(FLAGS)
 COREFLAGS += -DWANT_SATURN_EMU -DSIZEOF_DOUBLE=8
 
 GIT_VERSION := " $(shell git rev-parse --short HEAD || echo unknown)"
