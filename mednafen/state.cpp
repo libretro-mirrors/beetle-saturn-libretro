@@ -422,7 +422,7 @@ int MDFNSS_StateAction(void *st_p, int load, int data_only, SFORMAT *sf, const c
 
 extern int LibRetro_StateAction( StateMem* sm, const unsigned load, const bool data_only );
 
-int MDFNSS_SaveSM(void *st_p, int, int, const void*, const void*, const void*)
+int MDFNSS_SaveSM(void *st_p, uint32_t ver, const void*, const void*, const void*)
 {
 	int success;
 	uint8_t header[32];
@@ -433,7 +433,7 @@ int MDFNSS_SaveSM(void *st_p, int, int, const void*, const void*, const void*)
 	// Write header.
 	memset( header, 0, sizeof(header) );
 	memcpy( header, header_magic, 8 );
-	MDFN_en32lsb(header + 16, MEDNAFEN_VERSION_NUMERIC);
+	MDFN_en32lsb(header + 16, ver);
 	MDFN_en32lsb(header + 24, neowidth);
 	MDFN_en32lsb(header + 28, neoheight);
 	smem_write(st, header, 32);
@@ -450,7 +450,7 @@ int MDFNSS_SaveSM(void *st_p, int, int, const void*, const void*, const void*)
 	return success;
 }
 
-int MDFNSS_LoadSM(void *st_p, int, int)
+int MDFNSS_LoadSM(void *st_p, uint32_t ver)
 {
 	int success;
 	uint8_t header[32];
@@ -467,7 +467,7 @@ int MDFNSS_LoadSM(void *st_p, int, int)
 
 	// Different core version?
 	stateversion = MDFN_de32lsb( header + 16 );
-	if ( stateversion != MEDNAFEN_VERSION_NUMERIC ) {
+	if ( stateversion != ver ) {
 		log_cb( RETRO_LOG_ERROR, "[MDFNSS_LoadSM] Saved with a different core version.\n" );
 		return(0);
 	}

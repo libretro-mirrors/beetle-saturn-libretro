@@ -22,8 +22,8 @@ int32_t smem_seek(StateMem *st, uint32_t offset, int whence);
 int smem_write32le(StateMem *st, uint32_t b);
 int smem_read32le(StateMem *st, uint32_t *b);
 
-int MDFNSS_SaveSM(void *st, int, int, const void*, const void*, const void*);
-int MDFNSS_LoadSM(void *st, int, int);
+int MDFNSS_SaveSM(void *st, uint32_t ver, const void*, const void*, const void*);
+int MDFNSS_LoadSM(void *st, uint32_t ver);
 
 // Flag for a single, >= 1 byte native-endian variable
 #define MDFNSTATE_RLSB            0x80000000

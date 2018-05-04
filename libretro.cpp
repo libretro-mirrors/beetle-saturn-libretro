@@ -31,6 +31,7 @@
 
 #define MEDNAFEN_CORE_NAME                   "Beetle Saturn"
 #define MEDNAFEN_CORE_VERSION                "v0.9.48"
+#define MEDNAFEN_CORE_VERSION_NUMERIC        0x00094800 // 0x00102100
 #define MEDNAFEN_CORE_EXTENSIONS             "cue|ccd|chd|toc|m3u"
 #define MEDNAFEN_CORE_TIMING_FPS             59.82
 #define MEDNAFEN_CORE_GEOMETRY_BASE_W        320
@@ -2424,7 +2425,7 @@ size_t retro_serialize_size(void)
       st.malloced       = 0;
       st.initial_malloc = 0;
 
-      if ( MDFNSS_SaveSM( &st, 0, 0, NULL, NULL, NULL ) )
+      if ( MDFNSS_SaveSM( &st, MEDNAFEN_CORE_VERSION_NUMERIC, NULL, NULL, NULL ) )
       {
          // Cache and tidy up.
          serialize_size = st.len;
@@ -2451,7 +2452,7 @@ bool retro_serialize(void *data, size_t size)
    st.malloced       = size;
    st.initial_malloc = 0;
 
-   ret               = MDFNSS_SaveSM(&st, 0, 0, NULL, NULL, NULL);
+   ret               = MDFNSS_SaveSM(&st, MEDNAFEN_CORE_VERSION_NUMERIC, NULL, NULL, NULL);
 
    /* there are still some errors with the save states, the size seems to change on some games for now just log when this happens */
    if (st.len != size)
@@ -2461,6 +2462,7 @@ bool retro_serialize(void *data, size_t size)
    free(st.data);
    return ret;
 }
+
 bool retro_unserialize(const void *data, size_t size)
 {
    StateMem st;
@@ -2471,7 +2473,7 @@ bool retro_unserialize(const void *data, size_t size)
    st.malloced       = 0;
    st.initial_malloc = 0;
 
-   return MDFNSS_LoadSM(&st, 0, 0);
+   return MDFNSS_LoadSM(&st, MEDNAFEN_CORE_VERSION_NUMERIC);
 }
 
 void *retro_get_memory_data(unsigned type)
