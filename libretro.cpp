@@ -41,28 +41,16 @@
 #define MEDNAFEN_CORE_GEOMETRY_ASPECT_RATIO  (4.0 / 3.0)
 #define FB_WIDTH                             MEDNAFEN_CORE_GEOMETRY_MAX_W
 
+bool g_cropped_height = false;
+
 extern uint8 VRes; // in vdp2_render.cpp
-static const unsigned g_vertical_resolutions[ 4 ] =
-{
-	224,
-	240,
-	256,
-	288, // <-- invalid, safe default
-};
-static const unsigned g_vertical_line_skip_ntsc[ 4 ] =
-{
-	8,
-	0,
-	0,
-	0, // <-- invalid, safe default
-};
-static const unsigned g_vertical_line_skip_pal[ 4 ] =
-{
-	32,
-	24,
-	16,
-	0, // <-- invalid, safe default
-};
+
+static const unsigned g_vertical_resolutions[ 4 ] = { 224, 240, 256, 288 };
+static const unsigned g_vertical_line_skip_crop_ntsc[ 4 ] = { 8, 0, 0, 0 };
+static const unsigned g_vertical_line_skip_crop_pal[ 4 ] = { 32, 24, 16, 0 };
+
+static const unsigned g_vertical_line_skip_nocrop_ntsc[ 4 ] = { 0, 0, 0, 0 };
+static const unsigned g_vertical_line_skip_nocrop_pal[ 4 ] = { 0, 0, 0, 0 };
 
 struct retro_perf_callback perf_cb;
 retro_get_cpu_features_t perf_get_cpu_features_cb = NULL;
@@ -2228,10 +2216,25 @@ void retro_run(void)
    size_t pitch        = FB_WIDTH * sizeof(uint32_t);
 
    width          =  rects[0];
-   height         =  g_vertical_resolutions[VRes] << PrevInterlaced;
-   linevisfirst   =  is_pal ? g_vertical_line_skip_pal[VRes]
-   							: g_vertical_line_skip_ntsc[VRes];
-
+   
+   if ( g_cropped_height )
+   {
+      height =  g_vertical_resolutions[VRes] << PrevInterlaced;
+      
+      linevisfirst   =  is_pal ? g_vertical_line_skip_crop_pal[VRes]
+      						   : g_vertical_line_skip_crop_ntsc[VRes];
+   }
+   else
+   {   
+	   if ( is_pal )
+		   height = PrevInterlaced ? 576 : 288;
+	   else
+		   height = PrevInterlaced ? 480 : 240;
+       
+      linevisfirst   =  is_pal ? g_vertical_line_skip_nocrop_pal[VRes]
+      						   : g_vertical_line_skip_nocrop_ntsc[VRes];
+  }
+  
    // Changed?
    if (width != game_width || height != game_height)
    {
