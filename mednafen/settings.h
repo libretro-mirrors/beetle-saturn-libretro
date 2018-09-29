@@ -3,8 +3,6 @@
 
 #include <string>
 
-extern bool DoHBlend;
-
 // This should assert() or something if the setting isn't found, since it would
 // be a totally tubular error!
 uint64 MDFN_GetSettingUI(const char *name);

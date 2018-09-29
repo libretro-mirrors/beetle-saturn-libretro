@@ -40,9 +40,8 @@
 
 static EmulateSpecStruct* espec = NULL;
 static bool PAL;
-static bool CorrectAspect;
+static bool CorrectAspect = true;
 static bool ShowHOverscan = true;
-bool DoHBlend;
 static int LineVisFirst, LineVisLast;
 static uint32_t NextOutLine;
 static bool Clock28M;
@@ -51,7 +50,7 @@ static VDP2Rend_LIB LIB[256];
 static uint16 VRAM[262144];
 static uint16 CRAM[2048];
 
-static uint8 HRes, VRes;
+uint8 HRes, VRes;
 static bool BorderMode;
 static uint8 InterlaceMode;
 enum { IM_NONE, IM_ILLEGAL, IM_SINGLE, IM_DOUBLE };
@@ -2568,61 +2567,6 @@ static void (*MixIt[2][6][2][2])(uint32* target, const unsigned vdp2_line, const
  {  {  { T_MixIt<1, 0, 0, 0>, T_MixIt<1, 0, 0, 1>,  },  { T_MixIt<1, 0, 1, 0>, T_MixIt<1, 0, 1, 1>,  },  },  {  { T_MixIt<1, 1, 0, 0>, T_MixIt<1, 1, 0, 1>,  },  { T_MixIt<1, 1, 1, 0>, T_MixIt<1, 1, 1, 1>,  },  },  {  { T_MixIt<1, 2, 0, 0>, T_MixIt<1, 2, 0, 1>,  },  { T_MixIt<1, 2, 1, 0>, T_MixIt<1, 2, 1, 1>,  },  },  {  { T_MixIt<1, 3, 0, 0>, T_MixIt<1, 3, 0, 1>,  },  { T_MixIt<1, 3, 1, 0>, T_MixIt<1, 3, 1, 1>,  },  },  {  { T_MixIt<1, 4, 0, 0>, T_MixIt<1, 4, 0, 1>,  },  { T_MixIt<1, 4, 1, 0>, T_MixIt<1, 4, 1, 1>,  },  },  {  { T_MixIt<1, 5, 0, 0>, T_MixIt<1, 5, 0, 1>,  },  { T_MixIt<1, 5, 1, 0>, T_MixIt<1, 5, 1, 1>,  },  },  },
 };
 
-static int32 ApplyHBlend(uint32* const target, int32 w)
-{
- #define BHALF(m, n) ((((uint64)(m) + (n)) - (((m) ^ (n)) & 0x01010101)) >> 1)
-
- assert(w >= 4);
-
-#if 1
- if(!(HRes & 0x2))
- {
-  target[(w - 1) * 2 + 1] = target[w - 1];
-  target[(w - 1) * 2 + 0] = BHALF(BHALF(target[w - 2], target[w - 1]), target[w - 1]);
-
-  for(int32 x = w - 2; x > 0; x--)
-  {
-   uint32 ptxm1 = target[x - 1];
-   uint32 ptx = target[x];
-   uint32 ptxp1 = target[x + 1];
-   uint32 ptxm1_ptx = BHALF(ptxm1, ptx);
-   uint32 ptx_ptxp1 = BHALF(ptx, ptxp1);
-
-   target[x * 2 + 0] = BHALF(ptxm1_ptx, ptx);
-   target[x * 2 + 1] = BHALF(ptx_ptxp1, ptx);
-  }
-
-  target[1] = BHALF(BHALF(target[0], target[1]), target[0]);
-  target[0] = target[0];
-
-  return w << 1;
- }
- else
-#else
- if(!(HRes & 0x2))
- {
-  for(int32 x = w - 1; x >= 0; x--)
-   target[x * 2 + 0] = target[x * 2 + 1] = target[x];
-
-  w <<= 1;
- }
-#endif
- {
-  uint32 a = target[0];
-  for(int32 x = 0; x < w - 1; x++)
-  {
-   uint32 b = target[x];
-   uint32 c = target[x + 1];
-   uint32 ac = BHALF(a, c);
-   uint32 bac = BHALF(b, ac);
-
-   target[x] = bac;
-   a = b;
-  }
-  return w;
- }
- #undef BHALF
-}
 
 static void ReorderRGB(uint32* target, const unsigned w, const unsigned Rshift, const unsigned Gshift, const unsigned Bshift)
 {
@@ -2649,7 +2593,7 @@ static void ReorderRGB(uint32* target, const unsigned w, const unsigned Rshift, 
 static NO_INLINE void DrawLine(const uint16 out_line, const uint16 vdp2_line, const bool field)
 {
  uint32* target;
- const int32 tvdw = ((!CorrectAspect || Clock28M) ? 352 : 330) << ((HRes & 0x2) >> 1);
+ const int32 tvdw = ((!CorrectAspect || Clock28M) ? 352 : 320) << ((HRes & 0x2) >> 1);
  const unsigned rbg_w = ((HRes & 0x1) ? 352 : 320);
  const unsigned w = ((HRes & 0x1) ? 352 : 320) << ((HRes & 0x2) >> 1);
  const int32 tvxo = std::max<int32>(0, (int32)(tvdw - w) >> 1);
@@ -3127,17 +3071,6 @@ static NO_INLINE void DrawLine(const uint16 out_line, const uint16 vdp2_line, co
    MosaicVCount = 0;
   else
    MosaicVCount++;
- }
-
- //
- //
- //
- if(DoHBlend)
- {
-  espec->LineWidths[out_line] = ApplyHBlend(espec->surface->pixels + out_line * espec->surface->pitchinpix + espec->DisplayRect.x, espec->LineWidths[out_line]);
-
-  // Kind of late, but meh. ;p
-  assert((espec->DisplayRect.x + espec->LineWidths[out_line]) <= 704);
  }
 }
 
