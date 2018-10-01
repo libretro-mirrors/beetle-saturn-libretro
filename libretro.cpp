@@ -38,13 +38,47 @@
 #define MEDNAFEN_CORE_GEOMETRY_BASE_H        240
 #define MEDNAFEN_CORE_GEOMETRY_MAX_W         704
 #define MEDNAFEN_CORE_GEOMETRY_MAX_H         576
-#define MEDNAFEN_CORE_GEOMETRY_ASPECT_RATIO  (4.0 / 3.0)
 #define FB_WIDTH                             MEDNAFEN_CORE_GEOMETRY_MAX_W
 
 bool g_cropped_height = false;
 
 extern uint8 VRes; // in vdp2_render.cpp
 extern bool CorrectAspect; // in vdp2_render.cpp
+
+static float get_aspect_ratio( unsigned width, unsigned height, bool is_pal, bool interlaced )
+{
+   float aspect_h;
+   if ( CorrectAspect )
+   {
+     if ( width > 400 )
+          aspect_h = width * 4.0f / ( 704.0f );
+     else
+          aspect_h = width * 4.0f / ( 352.0f );
+   }
+   else
+   {
+      aspect_h = 4.0f;
+   }
+   
+   float aspect_v;
+   if ( g_cropped_height )
+   {
+      aspect_v = 3.0f * height;
+     
+      if ( is_pal )
+         aspect_v /= ( float )( 288 << interlaced );
+      else
+         aspect_v /= ( float )( 240 << interlaced );
+   }
+   else
+   {
+      aspect_v = 3.0f;
+   }
+   
+   log_cb(RETRO_LOG_INFO, "av_info.geometry.aspect_ratio : %f ( %g:%g )\n", aspect_h / aspect_v, aspect_h, aspect_v);
+   
+   return aspect_h / aspect_v;
+}
 
 static const unsigned g_vertical_resolutions[ 4 ] = { 224, 240, 256, 288 };
 static const unsigned g_vertical_line_skip_crop_ntsc[ 4 ] = { 8, 0, 0, 0 };
@@ -2243,17 +2277,17 @@ void retro_run(void)
       height =  g_vertical_resolutions[VRes] << PrevInterlaced;
       
       linevisfirst   =  is_pal ? g_vertical_line_skip_crop_pal[VRes]
-      						   : g_vertical_line_skip_crop_ntsc[VRes];
+                           : g_vertical_line_skip_crop_ntsc[VRes];
    }
    else
    {   
-	   if ( is_pal )
-		   height = PrevInterlaced ? 576 : 288;
-	   else
-		   height = PrevInterlaced ? 480 : 240;
+      if ( is_pal )
+         height = PrevInterlaced ? 576 : 288;
+      else
+         height = PrevInterlaced ? 480 : 240;
        
       linevisfirst   =  is_pal ? g_vertical_line_skip_nocrop_pal[VRes]
-      						   : g_vertical_line_skip_nocrop_ntsc[VRes];
+                           : g_vertical_line_skip_nocrop_ntsc[VRes];
   }
   
    // Changed?
@@ -2261,17 +2295,19 @@ void retro_run(void)
    {
       struct retro_system_av_info av_info;
 
+      game_width  = width;
+      game_height = height;
+
       av_info.geometry.base_width   = width;
       av_info.geometry.base_height  = height;
       av_info.geometry.max_width    = MEDNAFEN_CORE_GEOMETRY_MAX_W;
       av_info.geometry.max_height   = MEDNAFEN_CORE_GEOMETRY_MAX_H;
-      av_info.geometry.aspect_ratio = MEDNAFEN_CORE_GEOMETRY_ASPECT_RATIO;
+    
+      av_info.geometry.aspect_ratio = get_aspect_ratio( width, height, is_pal, PrevInterlaced );
+      
       environ_cb(RETRO_ENVIRONMENT_SET_GEOMETRY, &av_info);
 
-		log_cb(RETRO_LOG_INFO, "av_info.geometry.base_width/base_height : %d x %d (is_pal=%d)\n", width, height, is_pal);
-
-      game_width  = width;
-      game_height = height;
+      log_cb(RETRO_LOG_INFO, "av_info.geometry.base_width/base_height : %d x %d (is_pal=%d)\n", width, height, is_pal);
 
       input_set_geometry( width, height );
    }
@@ -2311,7 +2347,8 @@ void retro_get_system_av_info(struct retro_system_av_info *info)
    info->geometry.base_height  = MEDNAFEN_CORE_GEOMETRY_BASE_H;
    info->geometry.max_width    = MEDNAFEN_CORE_GEOMETRY_MAX_W;
    info->geometry.max_height   = MEDNAFEN_CORE_GEOMETRY_MAX_H;
-   info->geometry.aspect_ratio = MEDNAFEN_CORE_GEOMETRY_ASPECT_RATIO;
+   
+   info->geometry.aspect_ratio = 4.0f / 3.0f;
 
    if (retro_get_region() == RETRO_REGION_PAL)
       info->timing.fps            = 49.96;
