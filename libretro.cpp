@@ -44,6 +44,7 @@
 bool g_cropped_height = false;
 
 extern uint8 VRes; // in vdp2_render.cpp
+extern bool CorrectAspect; // in vdp2_render.cpp
 
 static const unsigned g_vertical_resolutions[ 4 ] = { 224, 240, 256, 288 };
 static const unsigned g_vertical_line_skip_crop_ntsc[ 4 ] = { 8, 0, 0, 0 };
@@ -1953,6 +1954,26 @@ static void check_variables(bool startup)
          setting_gun_crosshair = SETTING_GUN_CROSSHAIR_DOT;
       }
    }
+
+   var.key = "beetle_saturn_crop_h";
+
+   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+   {
+      if (!strcmp(var.value, "enabled"))
+         CorrectAspect = true;
+      else if (!strcmp(var.value, "disabled"))
+         CorrectAspect = false;
+   }
+
+   var.key = "beetle_saturn_crop_v";
+
+   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+   {
+      if (!strcmp(var.value, "enabled"))
+         g_cropped_height = true;
+      else if (!strcmp(var.value, "disabled"))
+         g_cropped_height = false;
+   }
 }
 
 static bool MDFNI_LoadGame( const char *name )
@@ -2340,6 +2361,8 @@ void retro_set_environment( retro_environment_t cb )
       { "beetle_saturn_midsync", "Mid-frame Input Synchronization; disabled|enabled" },
       { "beetle_saturn_autortc", "Automatically set RTC on game load; enabled|disabled" },
       { "beetle_saturn_autortc_lang", "BIOS language; english|german|french|spanish|italian|japanese" },
+      { "beetle_saturn_crop_h", "Remove Horizontal Borders; disabled|enabled" },
+      { "beetle_saturn_crop_v", "Remove Vertical Borders; disabled|enabled" },
       { NULL, NULL },
    };
 

@@ -40,7 +40,7 @@
 
 static EmulateSpecStruct* espec = NULL;
 static bool PAL;
-static bool CorrectAspect = true;
+bool CorrectAspect = true;
 static bool ShowHOverscan = true;
 static int LineVisFirst, LineVisLast;
 static uint32_t NextOutLine;
