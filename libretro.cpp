@@ -33,7 +33,6 @@
 #define MEDNAFEN_CORE_VERSION                "v0.9.48"
 #define MEDNAFEN_CORE_VERSION_NUMERIC        0x00094800 // 0x00102100
 #define MEDNAFEN_CORE_EXTENSIONS             "cue|ccd|chd|toc|m3u"
-#define MEDNAFEN_CORE_TIMING_FPS             59.82
 #define MEDNAFEN_CORE_GEOMETRY_BASE_W        320
 #define MEDNAFEN_CORE_GEOMETRY_BASE_H        240
 #define MEDNAFEN_CORE_GEOMETRY_MAX_W         704
@@ -2350,10 +2349,12 @@ void retro_get_system_av_info(struct retro_system_av_info *info)
    
    info->geometry.aspect_ratio = 4.0f / 3.0f;
 
-   if (retro_get_region() == RETRO_REGION_PAL)
+   if (is_pal)
       info->timing.fps            = 49.96;
    else
       info->timing.fps            = 59.88;
+      
+   log_cb(RETRO_LOG_INFO, "info->timing.fps = %f\n", info->timing.fps);
 }
 
 void retro_deinit(void)
