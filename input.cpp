@@ -12,9 +12,9 @@
 // Locals
 //------------------------------------------------------------------------------
 
-static retro_environment_t environ_cb; // cached during input_set_env
+static retro_environment_t environ_cb; /* cached during input_init_env */
 
-#define MAX_CONTROLLERS		12 // 2x 6 player adapters
+#define MAX_CONTROLLERS		12 /* 2x 6 player adaptors */
 
 static unsigned players = 2;
 
@@ -68,7 +68,7 @@ static int16_t input_throttle_latch[ MAX_CONTROLLERS ] = {0};
 #define RETRO_DEVICE_SS_GUN_JP		RETRO_DEVICE_SUBCLASS( RETRO_DEVICE_LIGHTGUN, 0 )
 #define RETRO_DEVICE_SS_GUN_US		RETRO_DEVICE_SUBCLASS( RETRO_DEVICE_LIGHTGUN, 1 )
 
-enum { INPUT_DEVICE_TYPES_COUNT = 1 /*none*/ + 9 }; // <-- update me!
+enum { INPUT_DEVICE_TYPES_COUNT = 1 /*none*/ + 9 }; /* <-- update me! */
 
 static const struct retro_controller_description input_device_types[ INPUT_DEVICE_TYPES_COUNT ] =
 {
@@ -82,6 +82,80 @@ static const struct retro_controller_description input_device_types[ INPUT_DEVIC
 	{ "Virtua Gun", RETRO_DEVICE_SS_GUN_JP },
 	{ "Dual Mission Sticks", RETRO_DEVICE_SS_MISSION2 }, /*"Panzer Dragoon Zwei" only!*/
 	{ NULL, 0 },
+};
+
+static const struct retro_controller_info ports_no_6player[ 1 + 1 + 1 ] =
+{
+	/* port one */
+	{ input_device_types, INPUT_DEVICE_TYPES_COUNT },
+	
+	/* port two */
+	{ input_device_types, INPUT_DEVICE_TYPES_COUNT },
+
+	{ 0 },
+};
+
+static const struct retro_controller_info ports_left_6player[ 6 + 1 + 1 ] =
+{
+	/* port one */
+	{ input_device_types, INPUT_DEVICE_TYPES_COUNT },
+	{ input_device_types, INPUT_DEVICE_TYPES_COUNT },
+	{ input_device_types, INPUT_DEVICE_TYPES_COUNT },
+	{ input_device_types, INPUT_DEVICE_TYPES_COUNT },
+	{ input_device_types, INPUT_DEVICE_TYPES_COUNT },
+	{ input_device_types, INPUT_DEVICE_TYPES_COUNT },
+
+	/* port two: 6player adaptor */
+	{ input_device_types, INPUT_DEVICE_TYPES_COUNT },
+	
+	{ 0 },
+};
+
+static const struct retro_controller_info ports_right_6player[ 1 + 6 + 1 ] =
+{
+	/* port one */
+	{ input_device_types, INPUT_DEVICE_TYPES_COUNT },
+	
+	/* port two: 6player adaptor */
+	{ input_device_types, INPUT_DEVICE_TYPES_COUNT },
+	{ input_device_types, INPUT_DEVICE_TYPES_COUNT },
+	{ input_device_types, INPUT_DEVICE_TYPES_COUNT },
+	{ input_device_types, INPUT_DEVICE_TYPES_COUNT },
+	{ input_device_types, INPUT_DEVICE_TYPES_COUNT },
+	{ input_device_types, INPUT_DEVICE_TYPES_COUNT },
+
+	{ 0 },
+};
+
+static const struct retro_controller_info ports_two_6player[ 6 + 6 + 1 ] =
+{
+	/* port one: 6player adaptor */
+	{ input_device_types, INPUT_DEVICE_TYPES_COUNT },
+	{ input_device_types, INPUT_DEVICE_TYPES_COUNT },
+	{ input_device_types, INPUT_DEVICE_TYPES_COUNT },
+	{ input_device_types, INPUT_DEVICE_TYPES_COUNT },
+	{ input_device_types, INPUT_DEVICE_TYPES_COUNT },
+	{ input_device_types, INPUT_DEVICE_TYPES_COUNT },
+	
+	/* port two: 6player adaptor */
+	{ input_device_types, INPUT_DEVICE_TYPES_COUNT },
+	{ input_device_types, INPUT_DEVICE_TYPES_COUNT },
+	{ input_device_types, INPUT_DEVICE_TYPES_COUNT },
+	{ input_device_types, INPUT_DEVICE_TYPES_COUNT },
+	{ input_device_types, INPUT_DEVICE_TYPES_COUNT },
+	{ input_device_types, INPUT_DEVICE_TYPES_COUNT },
+
+	{ 0 },
+};
+
+/* Lookup table to select ports info for all combinations
+   of 6player adaptor connection. */
+static const struct retro_controller_info* ports_lut[ 4 ] =
+{
+	ports_no_6player,
+	ports_left_6player,
+	ports_right_6player,
+	ports_two_6player
 };
 
 
@@ -402,31 +476,16 @@ void input_init_env( retro_environment_t _environ_cb )
 
 #undef RETRO_DESCRIPTOR_BLOCK
 
-	// Send to front-end
+	/* Send to front-end */
 	environ_cb( RETRO_ENVIRONMENT_SET_INPUT_DESCRIPTORS, desc );
 }
 
 void input_set_env( retro_environment_t environ_cb )
 {
-	static const struct retro_controller_info ports[ MAX_CONTROLLERS + 1 ] =
-	{
-		{ input_device_types, INPUT_DEVICE_TYPES_COUNT },
-		{ input_device_types, INPUT_DEVICE_TYPES_COUNT },
-		{ input_device_types, INPUT_DEVICE_TYPES_COUNT },
-		{ input_device_types, INPUT_DEVICE_TYPES_COUNT },
-		{ input_device_types, INPUT_DEVICE_TYPES_COUNT },
-		{ input_device_types, INPUT_DEVICE_TYPES_COUNT },
-		{ input_device_types, INPUT_DEVICE_TYPES_COUNT },
-		{ input_device_types, INPUT_DEVICE_TYPES_COUNT },
-		{ input_device_types, INPUT_DEVICE_TYPES_COUNT },
-		{ input_device_types, INPUT_DEVICE_TYPES_COUNT },
-		{ input_device_types, INPUT_DEVICE_TYPES_COUNT },
-		{ input_device_types, INPUT_DEVICE_TYPES_COUNT },
-
-		{ 0 },
-	};
-
-	// Send to front-end
+	/* Pick ports selection */
+	const struct retro_controller_info* ports = ports_lut[ setting_multitap_port1 + setting_multitap_port2 * 2 ];
+	
+	/* Send to front-end */
 	environ_cb( RETRO_ENVIRONMENT_SET_CONTROLLER_INFO, (void*)ports );
 }
 
@@ -1079,6 +1138,9 @@ void input_multitap( int port, bool enabled )
 	if ( setting_multitap_port2 ) {
 		players += 5;
 	}
+	
+	/*Tell front-end*/
+	input_set_env( environ_cb );
 }
 
 //==============================================================================
