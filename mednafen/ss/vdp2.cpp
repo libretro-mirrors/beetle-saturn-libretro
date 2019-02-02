@@ -534,6 +534,7 @@ sscpu_timestamp_t Update(sscpu_timestamp_t timestamp)
 
  //
  //
+ //
  if(MDFN_UNLIKELY(ExLatchPending))
  {
   LatchHV();

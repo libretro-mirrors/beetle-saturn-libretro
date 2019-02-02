@@ -28,6 +28,9 @@
 
 // TODO: Test 1x1 line, polyline, sprite, and polygon.
 
+// TODO: Framebuffer swap/auto drawing start happens a bit too early, should happen near
+//       end of hblank instead of the beginning.
+
 #include "ss.h"
 #include <mednafen/mednafen.h>
 #include <mednafen/FileStream.h>
@@ -166,7 +169,7 @@ void Reset(bool powering_up)
 
   SysClipX = 0;
   SysClipY = 0;
-
+ 
   LocalX = 0;
   LocalY = 0;
  }
@@ -226,7 +229,7 @@ int32 CMD_SetLocalCoord(const uint16* cmd_data)
 }
 
 template<unsigned ECDSPDMode>
-static uint32 TexFetch(uint32 x)
+static uint32 MDFN_FASTCALL TexFetch(uint32 x)
 {
  const uint32 base = LineSetup.tex_base;
  const bool ECD = ECDSPDMode & 0x10;
@@ -243,11 +246,11 @@ static uint32 TexFetch(uint32 x)
 
 	if(!ECD && rtd == 0xF)
 	{
-	 LineSetup.ec_count--;
+	 LineSetup.ec_count--;	
 	 return -1;
 	}
 	ret_or = LineSetup.cb_or;
-
+	
 	if(!SPD) ret_or |= (int32)(rtd - 1) >> 31;
 
 	return rtd | ret_or;
@@ -331,7 +334,7 @@ static uint32 TexFetch(uint32 x)
 }
 
 
-extern uint32 (*const TexFetchTab[0x20])(uint32 x) =
+extern uint32 (MDFN_FASTCALL *const TexFetchTab[0x20])(uint32 x) =
 {
  #define TF(a) (TexFetch<a>)
 
@@ -376,7 +379,7 @@ sscpu_timestamp_t Update(sscpu_timestamp_t timestamp)
   timestamp = lastts;
  }
  //
- //
+ // 
  //
  int32 cycles = timestamp - lastts;
  lastts = timestamp;
@@ -522,9 +525,9 @@ void SetHBVB(const sscpu_timestamp_t event_timestamp, const bool new_hb_status, 
     FBVBEraseLastTS = event_timestamp;
    }
   }
-  else /* Leaving v-blank */
+  else // Leaving v-blank
   {
-        // Run vblank erase at end of vblank all at once(not strictly accurate, but should only have visible side effects wrt the debugger and reset).
+   // Run vblank erase at end of vblank all at once(not strictly accurate, but should only have visible side effects wrt the debugger and reset).
    if(FBVBEraseActive)
    {
     int32 count = event_timestamp - FBVBEraseLastTS;
@@ -544,7 +547,6 @@ void SetHBVB(const sscpu_timestamp_t event_timestamp, const bool new_hb_status, 
       fbyptr += (y & 0x100);
 
      count -= 8;
-
      do
      {
       for(unsigned sub = 0; sub < 8; sub++)
@@ -563,15 +565,14 @@ void SetHBVB(const sscpu_timestamp_t event_timestamp, const bool new_hb_status, 
      } while(x < EraseParams.x_bound);
     } while(++y <= EraseParams.y_end);
 
-AbortVBErase:;
+    AbortVBErase:;
     //
     FBVBEraseActive = false;
    }
-
    //
    //
    //
-   ////
+   //
    if(!(FBCR & FBCR_FCM) || (FBManualPending && (FBCR & FBCR_FCT)))	// Swap framebuffers
    {
     if(DrawingActive)
@@ -718,7 +719,6 @@ bool GetLine(const int line, uint16* buf, unsigned w, uint32 rot_x, uint32 rot_y
 
  return ret;
 }
-
 
 void AdjustTS(const int32 delta)
 {

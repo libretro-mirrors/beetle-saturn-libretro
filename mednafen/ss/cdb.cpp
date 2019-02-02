@@ -137,192 +137,192 @@ static MDFN_COLD void GetCommandDetails(const uint16* CD, char* s, size_t sl)
  switch(CD[0] >> 8)
  {
   default:
-	snprintf(s, sl, "UNKNOWN: 0x%04x, 0x%04x, 0x%04x, 0x%04x", CD[0], CD[1], CD[2], CD[3]);
+	trio_snprintf(s, sl, "UNKNOWN: 0x%04x, 0x%04x, 0x%04x, 0x%04x", CD[0], CD[1], CD[2], CD[3]);
 	break;
 
   case COMMAND_GET_CDSTATUS:
-	snprintf(s, sl, "Get CD Status");
+	trio_snprintf(s, sl, "Get CD Status");
 	break;
 
   case COMMAND_GET_HWINFO:
-	snprintf(s, sl, "Get Hardware Info");
+	trio_snprintf(s, sl, "Get Hardware Info");
 	break;
 
   case COMMAND_GET_TOC:
-	snprintf(s, sl, "Get TOC");
+	trio_snprintf(s, sl, "Get TOC");
 	break;
 
   case COMMAND_GET_SESSINFO:
-	snprintf(s, sl, "Get Session Info; Type=0x%02x", CD[0] & 0xFF);
+	trio_snprintf(s, sl, "Get Session Info; Type=0x%02x", CD[0] & 0xFF);
 	break;
 
   case COMMAND_INIT:
-	snprintf(s, sl, "Initialize; Flags=0x%02x, StandbyTime=0x%04x, ECC=0x%02x, Retry=0x%02x", CD[0] & 0xFF, CD[1], CD[3] >> 8, CD[3] & 0xFF);
+	trio_snprintf(s, sl, "Initialize; Flags=0x%02x, StandbyTime=0x%04x, ECC=0x%02x, Retry=0x%02x", CD[0] & 0xFF, CD[1], CD[3] >> 8, CD[3] & 0xFF);
 	break;
 
   case COMMAND_OPEN:
-	snprintf(s, sl, "Open Tray");
+	trio_snprintf(s, sl, "Open Tray");
 	break;
 
   case COMMAND_END_DATAXFER:
-	snprintf(s, sl, "End Data Transfer");
+	trio_snprintf(s, sl, "End Data Transfer");
 	break;
 
   case COMMAND_PLAY:
-	snprintf(s, sl, "Play; Start=0x%06x, End=0x%06x, Mode=0x%02x", ((CD[0] & 0xFF) << 16) | CD[1], ((CD[2] & 0xFF) << 16) | CD[3], CD[2] >> 8);
+	trio_snprintf(s, sl, "Play; Start=0x%06x, End=0x%06x, Mode=0x%02x", ((CD[0] & 0xFF) << 16) | CD[1], ((CD[2] & 0xFF) << 16) | CD[3], CD[2] >> 8);
 	break;
 
   case COMMAND_SEEK:
 	// 0xFFFFFF=pause, 0=stop
-	snprintf(s, sl, "Seek; Target=0x%06x", ((CD[0] & 0xFF) << 16) | CD[1]);
+	trio_snprintf(s, sl, "Seek; Target=0x%06x", ((CD[0] & 0xFF) << 16) | CD[1]);
 	break;
 
   case COMMAND_SCAN:
-	snprintf(s, sl, "Scan; Direction=0x%02x", CD[0] & 0xFF);
+	trio_snprintf(s, sl, "Scan; Direction=0x%02x", CD[0] & 0xFF);
 	break;
 
   case COMMAND_GET_SUBCODE:
-	snprintf(s, sl, "Get Subcode; Type=0x%02x", CD[0] & 0xFF);
+	trio_snprintf(s, sl, "Get Subcode; Type=0x%02x", CD[0] & 0xFF);
 	break;
 
   case COMMAND_SET_CDDEVCONN:
-	snprintf(s, sl, "Set CD Device Connection; Filter=0x%02x", CD[2] >> 8);
+	trio_snprintf(s, sl, "Set CD Device Connection; Filter=0x%02x", CD[2] >> 8);
 	break;
 
   case COMMAND_GET_CDDEVCONN:
-	snprintf(s, sl, "Get CD Device Connection");
+	trio_snprintf(s, sl, "Get CD Device Connection");
 	break;
 
   case COMMAND_GET_LASTBUFDST:
-	snprintf(s, sl, "Get Last Buffer Destination");
+	trio_snprintf(s, sl, "Get Last Buffer Destination");
 	break;
 
   case COMMAND_SET_FILTRANGE:
-	snprintf(s, sl, "Set Filter Range; Filter=0x%02x, FAD=0x%06x, Count=0x%06x", CD[2] >> 8, ((CD[0] & 0xFF) << 16) | CD[1], ((CD[2] & 0xFF) << 16) | CD[3]);
+	trio_snprintf(s, sl, "Set Filter Range; Filter=0x%02x, FAD=0x%06x, Count=0x%06x", CD[2] >> 8, ((CD[0] & 0xFF) << 16) | CD[1], ((CD[2] & 0xFF) << 16) | CD[3]);
 	break;
 
   case COMMAND_GET_FILTRANGE:
-	snprintf(s, sl, "Get Filter Range; Filter=0x%02x", CD[2] >> 8);
+	trio_snprintf(s, sl, "Get Filter Range; Filter=0x%02x", CD[2] >> 8);
 	break;
 
   case COMMAND_SET_FILTSUBHC:
-	snprintf(s, sl, "Set Filter Subheader Conditions; Filter=0x%02x, Channel=0x%02x, Sub Mode: 0x%02x(Mask=0x%02x), Coding Info: 0x%02x(Mask=0x%02x), File: 0x%02x", (CD[2] >> 8), CD[0] & 0xFF, CD[3] >> 8, CD[1] >> 8, CD[3] & 0xFF, CD[1] & 0xFF, CD[2] & 0xFF);
+	trio_snprintf(s, sl, "Set Filter Subheader Conditions; Filter=0x%02x, Channel=0x%02x, Sub Mode: 0x%02x(Mask=0x%02x), Coding Info: 0x%02x(Mask=0x%02x), File: 0x%02x", (CD[2] >> 8), CD[0] & 0xFF, CD[3] >> 8, CD[1] >> 8, CD[3] & 0xFF, CD[1] & 0xFF, CD[2] & 0xFF);
 	break;
 
   case COMMAND_GET_FILTSUBHC:
-	snprintf(s, sl, "Get Filter Subheader Conditions; Filter=0x%02x", CD[2] >> 8);
+	trio_snprintf(s, sl, "Get Filter Subheader Conditions; Filter=0x%02x", CD[2] >> 8);
 	break;
 
   case COMMAND_SET_FILTMODE:
-	snprintf(s, sl, "Set Filter Mode; Filter=0x%02x, Mode=0x%02x", (CD[2] >> 8), CD[0] & 0xFF);
+	trio_snprintf(s, sl, "Set Filter Mode; Filter=0x%02x, Mode=0x%02x", (CD[2] >> 8), CD[0] & 0xFF);
 	break;
 
   case COMMAND_GET_FILTMODE:
-	snprintf(s, sl, "Get Filter Mode; Filter=0x%02x", CD[2] >> 8);
+	trio_snprintf(s, sl, "Get Filter Mode; Filter=0x%02x", CD[2] >> 8);
 	break;
 
   case COMMAND_SET_FILTCONN:
-	snprintf(s, sl, "Set Filter Connection; Filter=0x%02x, Flags=0x%02x, True=0x%02x, False=0x%02x", (CD[2] >> 8), (CD[0] & 0xFF), (CD[1] >> 8), (CD[1] & 0xFF));
+	trio_snprintf(s, sl, "Set Filter Connection; Filter=0x%02x, Flags=0x%02x, True=0x%02x, False=0x%02x", (CD[2] >> 8), (CD[0] & 0xFF), (CD[1] >> 8), (CD[1] & 0xFF));
 	break;
 
   case COMMAND_GET_FILTCONN:
-	snprintf(s, sl, "Get Filter Connection; Filter=0x%02x", CD[2] >> 8);
+	trio_snprintf(s, sl, "Get Filter Connection; Filter=0x%02x", CD[2] >> 8);
 	break;
 
   case COMMAND_RESET_SEL:
-	snprintf(s, sl, "Reset Selector; Flags=0x%02x, pn=0x%04x", CD[0] & 0xFF, CD[2] >> 8);
+	trio_snprintf(s, sl, "Reset Selector; Flags=0x%02x, pn=0x%04x", CD[0] & 0xFF, CD[2] >> 8);
 	break;
 
   case COMMAND_GET_BUFSIZE:
-	snprintf(s, sl, "Get Buffer Size");
+	trio_snprintf(s, sl, "Get Buffer Size");
 	break;
 
   case COMMAND_GET_SECNUM:
-	snprintf(s, sl, "Get Sector Number; Source=0x%02x", CD[2] >> 8);
+	trio_snprintf(s, sl, "Get Sector Number; Source=0x%02x", CD[2] >> 8);
 	break;
 
   case COMMAND_CALC_ACTSIZE:
-	snprintf(s, sl, "Calculate Actual Size; Source=0x%02x[0x%04x], Count=0x%02x", CD[2] >> 8, CD[1], CD[3]);
+	trio_snprintf(s, sl, "Calculate Actual Size; Source=0x%02x[0x%04x], Count=0x%02x", CD[2] >> 8, CD[1], CD[3]);
 	break;
 
   case COMMAND_GET_ACTSIZE:
-	snprintf(s, sl, "Get Actual Size");
+	trio_snprintf(s, sl, "Get Actual Size");
 	break;
 
   case COMMAND_GET_SECINFO:
-	snprintf(s, sl, "Get Sector Info; Source=0x%02x[0x%04x]", CD[2] >> 8, CD[1]);
+	trio_snprintf(s, sl, "Get Sector Info; Source=0x%02x[0x%04x]", CD[2] >> 8, CD[1]);
 	break;
 
   case COMMAND_EXEC_FADSRCH:
-	snprintf(s, sl, "Execute FAD Search; Source=0x%02x[0x%04x], FAD=0x%06x", CD[2] >> 8, CD[1], ((CD[2] & 0xFF) << 16) | CD[3]);
+	trio_snprintf(s, sl, "Execute FAD Search; Source=0x%02x[0x%04x], FAD=0x%06x", CD[2] >> 8, CD[1], ((CD[2] & 0xFF) << 16) | CD[3]);
 	break;
 
   case COMMAND_GET_FADSRCH:
-	snprintf(s, sl, "Get FAD Search Results");
+	trio_snprintf(s, sl, "Get FAD Search Results");
 	break;
 
   case COMMAND_SET_SECLEN:
-	snprintf(s, sl, "Set Sector Length; Get: 0x%02x, Put: 0x%02x", (CD[0] & 0xFF), (CD[1] >> 8));
+	trio_snprintf(s, sl, "Set Sector Length; Get: 0x%02x, Put: 0x%02x", (CD[0] & 0xFF), (CD[1] >> 8));
 	break;
 
   case COMMAND_GET_SECDATA:
-	snprintf(s, sl, "Get Sector Data; Source=0x%02x[0x%04x], Count=0x%04x", CD[2] >> 8, CD[1], CD[3]);
+	trio_snprintf(s, sl, "Get Sector Data; Source=0x%02x[0x%04x], Count=0x%04x", CD[2] >> 8, CD[1], CD[3]);
 	break;
 
   case COMMAND_DEL_SECDATA:
-	snprintf(s, sl, "Delete Sector Data; Source=0x%02x[0x%04x], Count=0x%04x", CD[2] >> 8, CD[1], CD[3]);
+	trio_snprintf(s, sl, "Delete Sector Data; Source=0x%02x[0x%04x], Count=0x%04x", CD[2] >> 8, CD[1], CD[3]);
 	break;
 
   case COMMAND_GETDEL_SECDATA:
-	snprintf(s, sl, "Get and Delete Sector Data; Source=0x%02x[0x%04x], Count=0x%04x", CD[2] >> 8, CD[1], CD[3]);
+	trio_snprintf(s, sl, "Get and Delete Sector Data; Source=0x%02x[0x%04x], Count=0x%04x", CD[2] >> 8, CD[1], CD[3]);
 	break;
 
   case COMMAND_PUT_SECDATA:
-	snprintf(s, sl, "Put Sector Data; Filter=0x%02x, Count=0x%04x", CD[2] >> 8, CD[3]);
+	trio_snprintf(s, sl, "Put Sector Data; Filter=0x%02x, Count=0x%04x", CD[2] >> 8, CD[3]);
 	break;
 
   case COMMAND_COPY_SECDATA:
-	snprintf(s, sl, "Copy Sector Data; Source=0x%02x[0x%04x], Dest=0x%02x, Count=0x%04x", CD[2] >> 8, CD[1], CD[0] & 0xFF, CD[3]);
+	trio_snprintf(s, sl, "Copy Sector Data; Source=0x%02x[0x%04x], Dest=0x%02x, Count=0x%04x", CD[2] >> 8, CD[1], CD[0] & 0xFF, CD[3]);
 	break;
 
   case COMMAND_MOVE_SECDATA:
-	snprintf(s, sl, "Move Sector Data; Source=0x%02x[0x%04x], Dest=0x%02x, Count=0x%04x", CD[2] >> 8, CD[1], CD[0] & 0xFF, CD[3]);
+	trio_snprintf(s, sl, "Move Sector Data; Source=0x%02x[0x%04x], Dest=0x%02x, Count=0x%04x", CD[2] >> 8, CD[1], CD[0] & 0xFF, CD[3]);
 	break;
 
   case COMMAND_GET_COPYERR:
-	snprintf(s, sl, "Get Copy Error");
+	trio_snprintf(s, sl, "Get Copy Error");
 	break;
 
   case COMMAND_CHANGE_DIR:
-	snprintf(s, sl, "Change Directory; ID=0x%06x, Filter: 0x%02x", ((CD[2] & 0xFF) << 16) | CD[3], (CD[2] >> 8));
+	trio_snprintf(s, sl, "Change Directory; ID=0x%06x, Filter: 0x%02x", ((CD[2] & 0xFF) << 16) | CD[3], (CD[2] >> 8));
 	break;
 
   case COMMAND_READ_DIR:
-	snprintf(s, sl, "Read Directory; ID=0x%06x, Filter=0x%02x", ((CD[2] & 0xFF) << 16) | CD[3], (CD[2] >> 8));
+	trio_snprintf(s, sl, "Read Directory; ID=0x%06x, Filter=0x%02x", ((CD[2] & 0xFF) << 16) | CD[3], (CD[2] >> 8));
 	break;
 
   case COMMAND_GET_FSSCOPE:
-	snprintf(s, sl, "Get Filesystem Scope");
+	trio_snprintf(s, sl, "Get Filesystem Scope");
 	break;
 
   case COMMAND_GET_FINFO:
-	snprintf(s, sl, "Get File Info; ID=0x%06x", ((CD[2] & 0xFF) << 16) | CD[3]);
+	trio_snprintf(s, sl, "Get File Info; ID=0x%06x", ((CD[2] & 0xFF) << 16) | CD[3]);
 	break;
 
   case COMMAND_READ_FILE:
-	snprintf(s, sl, "Read File; Offset=0x%06x, ID=0x%06x, Filter=0x%02x\n", ((CD[0] & 0xFF) << 16) | CD[1], ((CD[2] & 0xFF) << 16) | CD[3], CD[2] >> 8);
+	trio_snprintf(s, sl, "Read File; Offset=0x%06x, ID=0x%06x, Filter=0x%02x\n", ((CD[0] & 0xFF) << 16) | CD[1], ((CD[2] & 0xFF) << 16) | CD[3], CD[2] >> 8);
 	break;
 
   case COMMAND_ABORT_FILE:
-	snprintf(s, sl, "Abort File");
+	trio_snprintf(s, sl, "Abort File");
 	break;
 
   case COMMAND_AUTH_DEVICE:
-	snprintf(s, sl, "Authenticate Device; Type=0x%04x, Filter=0x%02x", CD[1], CD[2] >> 8);
+	trio_snprintf(s, sl, "Authenticate Device; Type=0x%04x, Filter=0x%02x", CD[1], CD[2] >> 8);
 	break;
 
   case COMMAND_GET_AUTH:
-	snprintf(s, sl, "Get Device Authentication Status");
+	trio_snprintf(s, sl, "Get Device Authentication Status");
 	break;
  }
 }
@@ -379,7 +379,7 @@ static bool SWResetPending;
 static uint8 CDDevConn;
 static uint8 LastBufDest;
 
-enum { NumBuffers = 0xC8 };
+enum : int { NumBuffers = 0xC8 };
 static struct BufferT
 {
  uint8 Data[2352];
@@ -507,7 +507,7 @@ enum
 };
 static int64 DriveCounter;
 static int64 PeriodicIdleCounter;
-enum { PeriodicIdleCounter_Reload = (int64)187065 << 32 };
+enum : int64 { PeriodicIdleCounter_Reload = (int64)187065 << 32 };
 
 static uint8 PlayRepeatCounter;
 static uint8 CurPlayRepeat;
@@ -520,8 +520,8 @@ static uint32 PlayEndIRQType;
 static uint32 PlayCmdStartPos, PlayCmdEndPos;
 static uint8 PlayCmdRepCnt;
 
-enum { CDDABuf_PrefillCount = 4 };
-enum { CDDABuf_MaxCount = 4 + 588 + 4 };
+enum : int { CDDABuf_PrefillCount = 4 };
+enum : int { CDDABuf_MaxCount = 4 + 588 + 4 };
 static uint16 CDDABuf[CDDABuf_MaxCount][2];
 static uint32 CDDABuf_RP, CDDABuf_WP;
 static uint32 CDDABuf_Count;
@@ -861,7 +861,7 @@ static struct
 } FLS;
 
 
-enum { FLSPhaseBias = __COUNTER__ + 1 };
+enum : int { FLSPhaseBias = __COUNTER__ + 1 };
 
 #define FLS_PROLOGUE	 switch(FLS.Phase + FLSPhaseBias) { for(;;) { default: case __COUNTER__: ;
 #define FLS_EPILOGUE  }	} FLSGetOut:;
@@ -951,8 +951,6 @@ static bool FLS_Run(void)
   goto Abort;
  }
 
- static const char stdid[5] = { 'C', 'D', '0', '0', '1' };
-
  //
  FLS_PROLOGUE;
  //
@@ -965,6 +963,7 @@ static bool FLS_Run(void)
 
    for(;;)
    {
+    static const char stdid[5] = { 'C', 'D', '0', '0', '1' };
     FLS_WAIT_GRAB_BUF;
 
     if(memcmp(FLS.pbuf + 1, stdid, 5) || FLS.pbuf[0] == 0xFF)
@@ -1276,7 +1275,7 @@ static INLINE void TriggerIRQ(unsigned bs)
  RecalcIRQOut();
 }
 
-enum { CommandPhaseBias = __COUNTER__ + 1 };
+enum : int { CommandPhaseBias = __COUNTER__ + 1 };
 
 #define CMD_YIELD	   {							\
 			    CommandPhase = __COUNTER__ - CommandPhaseBias + 1;	\
@@ -1386,7 +1385,7 @@ static uint8 FilterBuf(const unsigned fnum, const unsigned bfsidx)
  unsigned max_iter = 0x18;
  //uint32 done = 0;
 
- SS_DBG(SS_DBG_CDB, "[CDB] DT FilterBuf: fad=0x%08x -- %02x %02x --- %02x %02x\n", AMSF_to_ABA(BCD_to_U8(Buffers[bfsidx].Data[12 + 0]), BCD_to_U8(Buffers[bfsidx].Data[12 + 1]), BCD_to_U8(Buffers[bfsidx].Data[12 + 2])), fnum, bfsidx, Filters[fnum].TrueConn, Filters[fnum].FalseConn);
+ SS_DBG(SS_DBG_CDB, "[CDB] DT FilterBuf: fad=0x%08x -- %02x %02x --- %02x %02x\n", AMSF_to_ABA(BCD_to_U8(Buffers[bfsidx].Data[12 + 0]), BCD_to_U8(Buffers[bfsidx].Data[12 + 1]), BCD_to_U8(Buffers[bfsidx].Data[12 + 2])), fnum, bfsidx, (fnum == 0xFF) ? 0xFF : Filters[fnum].TrueConn, (fnum == 0xFF) ? 0xFF : Filters[fnum].FalseConn);
 
  while(cur != 0xFF && max_iter--)
  {
@@ -1817,7 +1816,7 @@ static void Drive_Run(int64 clocks)
 	  CurPosInfo.status = STATUS_PAUSE;
 
 #ifdef HAVE_DEBUG
-     if(SecPreBuf_In > 0)
+	  if(SecPreBuf_In > 0)
 	   SS_DBG(SS_DBG_CDB, "[CDB] SB Overflow\n");
 #endif
 	 }
@@ -2020,7 +2019,6 @@ sscpu_timestamp_t CDB_Update(sscpu_timestamp_t timestamp)
      CTR.CD[i] = CData[i];
 
     CTR.Command = CTR.CD[0] >> 8;
-
 #ifdef HAVE_DEBUG
     if(MDFN_UNLIKELY(ss_dbg_mask & SS_DBG_CDB))
     {
@@ -2029,8 +2027,8 @@ sscpu_timestamp_t CDB_Update(sscpu_timestamp_t timestamp)
      SS_DBG(SS_DBG_CDB, "[CDB] Command: %s --- HIRQ=0x%04x, HIRQ_Mask=0x%04x\n", cdet, HIRQ, HIRQ_Mask);
     }
 #endif
-	//
-	//
+    //
+    //
     CMD_EAT_CLOCKS(84);
 
     //
@@ -3939,3 +3937,5 @@ void CDB_StateAction(StateMem* sm, const unsigned load, const bool data_only)
   FLS.finfo_offs %= 256 + 1;
  }
 }
+
+

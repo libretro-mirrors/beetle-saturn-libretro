@@ -2,7 +2,7 @@
 /* Mednafen Sega Saturn Emulation Module                                      */
 /******************************************************************************/
 /* vdp2_render.h:
-**  Copyright (C) 2016 Mednafen Team
+**  Copyright (C) 2016-2017 Mednafen Team
 **
 ** This program is free software; you can redistribute it and/or
 ** modify it under the terms of the GNU General Public License
@@ -53,5 +53,6 @@ void VDP2REND_DrawLine(int vdp2_line, const uint32 crt_line, const bool field);
 
 void VDP2REND_Write8_DB(uint32 A, uint16 DB);
 void VDP2REND_Write16_DB(uint32 A, uint16 DB);
+
 
 #endif

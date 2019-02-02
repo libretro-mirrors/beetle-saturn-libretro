@@ -2,7 +2,7 @@
 /* Mednafen Sega Saturn Emulation Module                                      */
 /******************************************************************************/
 /* vdp1.h:
-**  Copyright (C) 2015-2016 Mednafen Team
+**  Copyright (C) 2015-2017 Mednafen Team
 **
 ** This program is free software; you can redistribute it and/or
 ** modify it under the terms of the GNU General Public License
@@ -24,6 +24,7 @@
 
 #include <mednafen/state.h>
 
+
 namespace VDP1
 {
 
@@ -36,9 +37,9 @@ void Reset(bool powering_up) MDFN_COLD;
 sscpu_timestamp_t Update(sscpu_timestamp_t timestamp);
 void AdjustTS(const int32 delta);
 
-void Write8_DB(uint32 A, uint16 DB);
-void Write16_DB(uint32 A, uint16 DB);
-uint16 Read16_DB(uint32 A);
+void Write8_DB(uint32 A, uint16 DB) MDFN_HOT;
+void Write16_DB(uint32 A, uint16 DB) MDFN_HOT;
+uint16 Read16_DB(uint32 A) MDFN_HOT;
 
 void SetHBVB(const sscpu_timestamp_t event_timestamp, const bool new_hb_status, const bool new_vb_status);
 
@@ -77,8 +78,10 @@ INLINE void PokeFB(const bool which, const uint32 addr, const uint8 val)
 }
 
 #ifdef HAVE_DEBUG
-void MakeDump(const std::string& path);
+void MakeDump(const std::string& path) MDFN_COLD;
 #endif
+
 }
+
 
 #endif
