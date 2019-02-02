@@ -233,10 +233,9 @@ void IODevice::UpdateOutput(uint8* data) { }
 void IODevice::StateAction(StateMem* sm, const unsigned load, const bool data_only, const char* sname_prefix) { }
 void IODevice::Draw(MDFN_Surface* surface, const MDFN_Rect& drect, const int32* lw, int ifield, float gun_x_scale, float gun_x_offs) const { }
 uint8 IODevice::UpdateBus(const sscpu_timestamp_t timestamp, const uint8 smpc_out, const uint8 smpc_out_asserted) { return smpc_out; }
- 
+
 void IODevice::ResetTS(void) { if(NextEventTS < SS_EVENT_DISABLED_TS) { NextEventTS -= LastTS; assert(NextEventTS >= 0); } LastTS = 0; }
 void IODevice::LineHook(const sscpu_timestamp_t timestamp, int32 out_line, int32 div, int32 coord_adj) { }
-
 //
 //
 
@@ -245,7 +244,7 @@ static void UpdateIOBus(unsigned port, const sscpu_timestamp_t timestamp)
  IOBusState[port] = IOPorts[port]->UpdateBus(timestamp, (DataOut[port][DirectModeEn[port]] | ~DataDir[port][DirectModeEn[port]]) & 0x7F, DataDir[port][DirectModeEn[port]]);
  assert(!(IOBusState[port] & 0x80));
 
-{
+ {
   bool tmp = (!(IOBusState[0] & 0x40) & ExLatchEn[0]) | (!(IOBusState[1] & 0x40) & ExLatchEn[1]);
 
   SCU_SetInt(SCU_INT_PAD, tmp);
@@ -286,10 +285,10 @@ static void MapPorts(void)
 
 void SMPC_SetMultitap(unsigned sport, bool enabled)
 {
-   assert(sport < 2);
+ assert(sport < 2);
 
-   SPorts[sport] = (enabled ? &PossibleMultitaps[sport] : nullptr);
-   MapPorts();
+ SPorts[sport] = (enabled ? &PossibleMultitaps[sport] : nullptr);
+ MapPorts();
 }
 
 void SMPC_SetCrosshairsColor(unsigned port, uint32 color)
@@ -301,17 +300,17 @@ void SMPC_SetCrosshairsColor(unsigned port, uint32 color)
 
 void SMPC_SetInput(unsigned port, const char* type, uint8* ptr)
 {
-   assert(port < 13);
+ assert(port < 13);
 
-   if(port == 12) 
-   {
-      MiscInputPtr = ptr;
-      return;
-   }
-   //
-   //
-   //
-   IODevice* nd = nullptr;
+ if(port == 12) 
+ {
+  MiscInputPtr = ptr;
+  return;
+ }
+ //
+ //
+ //
+ IODevice* nd = nullptr;
 
    if(!strcmp(type, "none"))
       nd = &PossibleDevices[port].none;
@@ -336,10 +335,10 @@ void SMPC_SetInput(unsigned port, const char* type, uint8* ptr)
    else
       abort();
 
-   VirtualPorts[port] = nd;
-   VirtualPortsDPtr[port] = ptr;
+ VirtualPorts[port] = nd;
+ VirtualPortsDPtr[port] = ptr;
 
-   MapPorts();
+ MapPorts();
 }
 
 #if 0
@@ -952,7 +951,7 @@ static void RTC_IncTime(void)
   RTC.second = RTC_BCDInc(RTC.second);
 }
 
-enum { SubPhaseBias = __COUNTER__ + 1 };
+enum : int { SubPhaseBias = __COUNTER__ + 1 };
 sscpu_timestamp_t SMPC_Update(sscpu_timestamp_t timestamp)
 {
  int64 clocks;
@@ -975,7 +974,7 @@ sscpu_timestamp_t SMPC_Update(sscpu_timestamp_t timestamp)
  UpdateIOBus(0, timestamp);
  UpdateIOBus(1, timestamp);
 
-  //
+ //
  sscpu_timestamp_t next_event_ts;
 
  switch(SubPhase + SubPhaseBias)
@@ -1110,8 +1109,6 @@ sscpu_timestamp_t SMPC_Update(sscpu_timestamp_t timestamp)
      SMPC_WAIT_UNTIL_COND(!PendingClockDivisor);
      SMPC_WAIT_UNTIL_COND(!vb);
      SMPC_WAIT_UNTIL_COND(vb);
-
-
      SMPC_WAIT_UNTIL_COND(vsync);
 
      // Send NMI to master SH-2
@@ -1197,7 +1194,7 @@ sscpu_timestamp_t SMPC_Update(sscpu_timestamp_t timestamp)
 	{													\
 	 DataDir[JRS.CurPort][0] = ((th >= 0) << 6) | ((tr >= 0) << 5);						\
 	 DataOut[JRS.CurPort][0] = (DataOut[JRS.CurPort][0] & 0x1F) | (((th) > 0) << 6) | (((tr) > 0) << 5);	\
-    UpdateIOBus(JRS.CurPort, timestamp); \
+	 UpdateIOBus(JRS.CurPort, timestamp);									\
 	}
 
       JR_WAIT(!vb);
@@ -1260,153 +1257,152 @@ sscpu_timestamp_t SMPC_Update(sscpu_timestamp_t timestamp)
 
        if(JRS.ID1 == 0xB)
        {
-          // Saturn digital pad.
-          JR_TH_TR(1, 0)
-             JR_EAT(50);
-          JRS.work[2] = JR_BS;
+	// Saturn digital pad.
+	JR_TH_TR(1, 0)
+	JR_EAT(50);
+	JRS.work[2] = JR_BS;
 
-          JR_TH_TR(0, 0)
-             JR_EAT(50);
-          JRS.work[3] = JR_BS;
+	JR_TH_TR(0, 0)
+	JR_EAT(50);
+	JRS.work[3] = JR_BS;
 
-          JR_EAT(30);
+	JR_EAT(30);
 
-          JR_WRNYB(0xF);	// Multitap ID
-          JR_EAT(21);
+	JR_WRNYB(0xF);	// Multitap ID
+	JR_EAT(21);
 
-          JR_WRNYB(0x1);	// Number of connected devices behind multitap
-          JR_EAT(21);
+	JR_WRNYB(0x1);	// Number of connected devices behind multitap
+	JR_EAT(21);
 
-          JR_WRNYB(0x0);	// Peripheral ID-2.
-          JR_EAT(21);
+	JR_WRNYB(0x0);	// Peripheral ID-2.
+	JR_EAT(21);
 
-          JR_WRNYB(0x2);	// Data size.
-          JR_EAT(21);
+	JR_WRNYB(0x2);	// Data size.
+	JR_EAT(21);
 
-          JR_WRNYB(JRS.work[1] & 0xF);
-          JR_EAT(21);
+	JR_WRNYB(JRS.work[1] & 0xF);
+	JR_EAT(21);
 
-          JR_WRNYB(JRS.work[2] & 0xF);
-          JR_EAT(21);
+	JR_WRNYB(JRS.work[2] & 0xF);
+	JR_EAT(21);
 
-          JR_WRNYB(JRS.work[3] & 0xF);
-          JR_EAT(21);
+	JR_WRNYB(JRS.work[3] & 0xF);
+	JR_EAT(21);
 
-          JR_WRNYB((JRS.work[0] & 0xF) | 0x7);
-          JR_EAT(21);
+	JR_WRNYB((JRS.work[0] & 0xF) | 0x7);
+	JR_EAT(21);
 
-          //JR_EAT();
+	//JR_EAT();
 
-          //
-          //
-          //
+	//
+	//
+	//
        }
-       else if (JRS.ID1 == 0x3 || JRS.ID1 == 0x5)
+       else if(JRS.ID1 == 0x3 || JRS.ID1 == 0x5)
        {
-          JR_TH_TR(0, 0)
-          JR_EAT(50);
-          JR_WAIT(!(JR_BS & 0x10));
-          JRS.ID2 = ((JR_BS & 0xF) << 4);
+	JR_TH_TR(0, 0)
+	JR_EAT(50);
+	JR_WAIT(!(JR_BS & 0x10));
+	JRS.ID2 = ((JR_BS & 0xF) << 4);
 
-          JR_TH_TR(0, 1)
-             JR_EAT(50);
-          JR_WAIT(JR_BS & 0x10);
-          JRS.ID2 |= ((JR_BS & 0xF) << 0);
+	JR_TH_TR(0, 1)
+	JR_EAT(50);
+	JR_WAIT(JR_BS & 0x10);
+	JRS.ID2 |= ((JR_BS & 0xF) << 0);
 
-          //printf("%d, %02x %02x\n", JRS.CurPort, JRS.ID1, JRS.ID2);
+	//printf("%d, %02x %02x\n", JRS.CurPort, JRS.ID1, JRS.ID2);
 
-          if(JRS.ID1 == 0x3)
-             JRS.ID2 = 0xE3;
+	if(JRS.ID1 == 0x3)
+	 JRS.ID2 = 0xE3;
 
-          if((JRS.ID2 & 0xF0) == 0x40) // Multitap
-          {
-             JR_TH_TR(0, 0)
-                JR_EAT(50);
-             JR_WAIT(!(JR_BS & 0x10));
-             JRS.IDTap = ((JRS.ID2 & 0xF) << 4) | (JR_BS & 0xF);
+        if((JRS.ID2 & 0xF0) == 0x40) // Multitap
+        {
+	 JR_TH_TR(0, 0)
+	 JR_EAT(50);
+	 JR_WAIT(!(JR_BS & 0x10));
+	 JRS.IDTap = ((JRS.ID2 & 0xF) << 4) | (JR_BS & 0xF);
 
-             JR_TH_TR(0, 1)
-                JR_EAT(50);
-             JR_WAIT(JR_BS & 0x10);
-          }
-          else
-             JRS.IDTap = 0xF1;
+	 JR_TH_TR(0, 1)
+	 JR_EAT(50);
+	 JR_WAIT(JR_BS & 0x10);
+        }
+	else
+	 JRS.IDTap = 0xF1;
 
-          JRS.TapCounter = 0;
-          JRS.TapCount = (JRS.IDTap & 0xF);
-          while(JRS.TapCounter < JRS.TapCount)
-          {
-             if(JRS.TapCount > 1)
-             {
-                JR_TH_TR(0, 0)
-                   JR_EAT(50);
-                JR_WAIT(!(JR_BS & 0x10));
-                JRS.ID2 = ((JR_BS & 0xF) << 4);
+        JRS.TapCounter = 0;
+        JRS.TapCount = (JRS.IDTap & 0xF);
+        while(JRS.TapCounter < JRS.TapCount)
+        {
+         if(JRS.TapCount > 1)
+         {
+	  JR_TH_TR(0, 0)
+	  JR_EAT(50);
+	  JR_WAIT(!(JR_BS & 0x10));
+	  JRS.ID2 = ((JR_BS & 0xF) << 4);
 
-                JR_TH_TR(0, 1)
-                   JR_EAT(50);
-                JR_WAIT(JR_BS & 0x10);
-                JRS.ID2 |= ((JR_BS & 0xF) << 0);
-             }
-             JRS.ReadCounter = 0;
-             JRS.ReadCount = ((JRS.ID2 & 0xF0) == 0xF0) ? 0 : (JRS.ID2 & 0xF);
-             while(JRS.ReadCounter < JRS.ReadCount)
-             {
-                JR_TH_TR(0, 0)
-                   JR_EAT(50);
-                JR_WAIT(!(JR_BS & 0x10));
-                JRS.ReadBuffer[JRS.ReadCounter] = ((JR_BS & 0xF) << 4);
+	  JR_TH_TR(0, 1)
+	  JR_EAT(50);
+	  JR_WAIT(JR_BS & 0x10);
+	  JRS.ID2 |= ((JR_BS & 0xF) << 0);
+         }
+	 JRS.ReadCounter = 0;
+         JRS.ReadCount = ((JRS.ID2 & 0xF0) == 0xF0) ? 0 : (JRS.ID2 & 0xF);
+	 while(JRS.ReadCounter < JRS.ReadCount)
+	 {
+	  JR_TH_TR(0, 0)
+	  JR_EAT(50);
+	  JR_WAIT(!(JR_BS & 0x10));
+	  JRS.ReadBuffer[JRS.ReadCounter] = ((JR_BS & 0xF) << 4);
 
-                JR_TH_TR(0, 1)
-                   JR_EAT(50);
-                JR_WAIT(JR_BS & 0x10);
-                JRS.ReadBuffer[JRS.ReadCounter] |= ((JR_BS & 0xF) << 0);
-                JRS.ReadCounter++;
-             }
+	  JR_TH_TR(0, 1)
+	  JR_EAT(50);
+	  JR_WAIT(JR_BS & 0x10);
+	  JRS.ReadBuffer[JRS.ReadCounter] |= ((JR_BS & 0xF) << 0);
+	  JRS.ReadCounter++;
+	 }
 
-             if(!JRS.TapCounter)
-             {
-                JR_WRNYB(JRS.IDTap >> 4);
-                JR_EAT(21);
+         if(!JRS.TapCounter)
+         {
+	  JR_WRNYB(JRS.IDTap >> 4);
+	  JR_EAT(21);
 
-                JR_WRNYB(JRS.IDTap >> 0);
-                JR_EAT(21);
-             }
+	  JR_WRNYB(JRS.IDTap >> 0);
+	  JR_EAT(21);
+         }
 
-             //printf("What: %d, %02x\n", JRS.TapCounter, JRS.ID2);
+         //printf("What: %d, %02x\n", JRS.TapCounter, JRS.ID2);
 
-             JR_WRNYB(JRS.ID2 >> 4);
-             JR_EAT(21);
+	 JR_WRNYB(JRS.ID2 >> 4);
+	 JR_EAT(21);
 
-             JR_WRNYB(JRS.ID2 >> 0);
-             JR_EAT(21);
+	 JR_WRNYB(JRS.ID2 >> 0);
+	 JR_EAT(21);
 
-             JRS.WriteCounter = 0;
-             while(JRS.WriteCounter < JRS.ReadCounter)
-             {
-                JR_WRNYB(JRS.ReadBuffer[JRS.WriteCounter] >> 4);
-                JR_EAT(21);
+	 JRS.WriteCounter = 0;
+	 while(JRS.WriteCounter < JRS.ReadCounter)
+	 {
+	  JR_WRNYB(JRS.ReadBuffer[JRS.WriteCounter] >> 4);
+ 	  JR_EAT(21);
 
-                JR_WRNYB(JRS.ReadBuffer[JRS.WriteCounter] >> 0);
-                JR_EAT(21);
+	  JR_WRNYB(JRS.ReadBuffer[JRS.WriteCounter] >> 0);
+ 	  JR_EAT(21);
 
-                JRS.WriteCounter++;
-             }
-             JRS.TapCounter++;
-          }
-          // Saturn analog joystick, keyboard, multitap
-          // OREG[0x0] = 0xF1;	// Upper nybble, multitap ID.  Lower nybble, number of connected devices behind multitap.
-          // OREG[0x1] = 0x02;	// Upper nybble, peripheral ID 2.  Lower nybble, data size.
+          JRS.WriteCounter++;
+	 }
+	 JRS.TapCounter++;
+	}
+	// Saturn analog joystick, keyboard, multitap
+        // OREG[0x0] = 0xF1;	// Upper nybble, multitap ID.  Lower nybble, number of connected devices behind multitap.
+        // OREG[0x1] = 0x02;	// Upper nybble, peripheral ID 2.  Lower nybble, data size.
        }
        else
        {
-          JR_WRNYB(JRS.ID1);
-          JR_WRNYB(0x0);
+	JR_WRNYB(JRS.ID1);
+	JR_WRNYB(0x0);
        }
        JR_EAT(26);
        JR_TH_TR(-1, -1);
       }
-
       JRS.CurPort = 0; // For save state sanitization consistency.
 
       SR = (SR & ~SR_NPE);
@@ -1459,7 +1455,7 @@ sscpu_timestamp_t SMPC_Update(sscpu_timestamp_t timestamp)
    continue;
   }
  }
-Breakout:;
+ Breakout:;
 
  return std::min<sscpu_timestamp_t>(next_event_ts, std::min<sscpu_timestamp_t>(IOPorts[0]->NextEventTS, IOPorts[1]->NextEventTS));
 }
@@ -1487,7 +1483,7 @@ void SMPC_LineHook(sscpu_timestamp_t event_timestamp, int32 out_line, int32 div,
  sscpu_timestamp_t nets = std::min<sscpu_timestamp_t>(events[SS_EVENT_SMPC].event_time, std::min<sscpu_timestamp_t>(IOPorts[0]->NextEventTS, IOPorts[1]->NextEventTS));
 
  SS_SetEventNT(&events[SS_EVENT_SMPC], nets);
- }
+}
 
 static const std::vector<InputDeviceInfoStruct> InputDeviceInfoSSVPort =
 {
@@ -1504,7 +1500,7 @@ static const std::vector<InputDeviceInfoStruct> InputDeviceInfoSSVPort =
   "gamepad",
   "Digital Gamepad",
   "Standard Saturn digital gamepad.",
-  IODevice_Gamepad_IDII,
+  IODevice_Gamepad_IDII
  },
 
  // 3D Gamepad
@@ -1512,7 +1508,7 @@ static const std::vector<InputDeviceInfoStruct> InputDeviceInfoSSVPort =
   "3dpad",
   "3D Control Pad",
   "3D Control Pad",
-  IODevice_3DPad_IDII,
+  IODevice_3DPad_IDII
  },
 
  // Mouse
@@ -1520,7 +1516,7 @@ static const std::vector<InputDeviceInfoStruct> InputDeviceInfoSSVPort =
   "mouse",
   "Mouse",
   "Mouse",
-  IODevice_Mouse_IDII,
+  IODevice_Mouse_IDII
  },
 
  // Steering Wheel
@@ -1538,15 +1534,7 @@ static const std::vector<InputDeviceInfoStruct> InputDeviceInfoSSVPort =
   "Mission Stick",
   IODevice_Mission_IDII
  },
-#if 0
- // Mission Stick (No Autofire)
- {
-  "missionwoa",
-  "Mission (No AF)",
-  "Mission Stick, without autofire functionality(for less things to map).",
-  IODevice_MissionNoAF_IDII
- },
-#endif
+
  // Dual Mission Stick
  {
   "dmission",
@@ -1554,16 +1542,6 @@ static const std::vector<InputDeviceInfoStruct> InputDeviceInfoSSVPort =
   "Dual Mission Sticks, useful for \"Panzer Dragoon Zwei\".  With 30 inputs to map, don't get distracted by..LOOK A LOBSTER!",
   IODevice_DualMission_IDII
  },
-
-#if 0
- // Dual Mission Stick (No Autofire)
- {
-  "dmissionwoa",
-  "Dual Mission (No AF)",
-  "Dual Mission Sticks (No Autofire)",
-  IODevice_DualMissionNoAF_IDII
- },
-#endif
 
  // Gun(Virtua Gun/Stunner)
  {
@@ -1585,11 +1563,11 @@ static const std::vector<InputDeviceInfoStruct> InputDeviceInfoSSVPort =
 #if 0
  // Keyboard (Japanese)
  {
-    "jpkeyboard",
-    "Keyboard (JP)",
-    "89-key Japanese keyboard.",
-    IODevice_JPKeyboard_IDII,
-    InputDeviceInfoStruct::FLAG_KEYBOARD
+  "jpkeyboard",
+  "Keyboard (JP)",
+  "89-key Japanese keyboard(e.g. HSS-0129).",
+  IODevice_JPKeyboard_IDII,
+  InputDeviceInfoStruct::FLAG_KEYBOARD
  },
 #endif
 };
@@ -1627,3 +1605,5 @@ const std::vector<InputPortInfoStruct> SMPC_PortInfo =
 
  { "builtin", "Builtin", InputDeviceInfoBuiltin, "builtin" },
 };
+
+

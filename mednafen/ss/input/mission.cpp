@@ -61,9 +61,9 @@ void IODevice_Mission::UpdateInput(const uint8* data, const int32 time_elapsed)
  {
   for(unsigned axis = 0; axis < 3; axis++)
   {
-   int32 tmp = 32767 + MDFN_de16lsb(&data[0x3 + ((axis + (stick * 3)) * 4) + 2]) - MDFN_de16lsb(&data[0x3 + ((axis + (stick * 3)) * 4) + 0]);
+   int32 tmp = MDFN_de16lsb(&data[0x3 + ((axis + (stick * 3)) * 2)]);
 
-   axes[stick][axis] = (tmp * 255 + 32767) / 65534;
+   axes[stick][axis] = (tmp * 255 + 32767) / 65535;
   }
  }
 
@@ -91,7 +91,7 @@ void IODevice_Mission::StateAction(StateMem* sm, const unsigned load, const bool
   SFEND
  };
  char section_name[64];
- snprintf(section_name, sizeof(section_name), "%s_Mission", sname_prefix);
+ trio_snprintf(section_name, sizeof(section_name), "%s_Mission", sname_prefix);
 
  if(!MDFNSS_StateAction(sm, load, data_only, StateRegs, section_name, true) && load)
   Power();
@@ -253,55 +253,6 @@ IDIISG IODevice_Mission_IDII =
  { "throttle_down", "Throttle Down (Analog)", 5, IDIT_BUTTON_ANALOG },
  { "throttle_up", "Throttle Up (Analog)", 4, IDIT_BUTTON_ANALOG },
 };
-
-IDIISG IODevice_MissionNoAF_IDII =
-{
- // 0
- { "b", "B (Stick Left Button)", 6, IDIT_BUTTON },
- { "c", "C (Stick Right Button)", 8, IDIT_BUTTON },
- { "a", "A (Stick Trigger)", 7, IDIT_BUTTON },
- { "start", "START", 9, IDIT_BUTTON },
-
- // 4
- { "z", "Z", 13, IDIT_BUTTON },
- { "y", "Y", 12, IDIT_BUTTON },
- { "x", "X", 11, IDIT_BUTTON },
- { "r", "R", 14, IDIT_BUTTON },
-
- // 8
- { NULL, "empty", 0, IDIT_BUTTON },
- { NULL, "empty", 0, IDIT_BUTTON },
- { NULL, "empty", 0, IDIT_BUTTON },
- { "l", "L", 10, IDIT_BUTTON },
-
- // 12
- { NULL, "empty", 0, IDIT_BUTTON },
- { NULL, "empty", 0, IDIT_BUTTON },
- { NULL, "empty", 0, IDIT_BUTTON },
- { NULL, "empty", 0, IDIT_BUTTON },
-
- // 16
- { NULL, "empty", 0, IDIT_BUTTON },
- { NULL, "empty", 0, IDIT_BUTTON },
- { NULL, "empty", 0, IDIT_BUTTON },
- { NULL, "empty", 0, IDIT_BUTTON },
-
- // 20
- { NULL, "empty", 0, IDIT_BUTTON },
- { NULL, "empty", 0, IDIT_BUTTON },
- { NULL, "empty", 0, IDIT_BUTTON },
- { NULL, "empty", 0, IDIT_BUTTON },
-
- // 24
- { "stick_left", "Stick LEFT ← (Analog)", 2, IDIT_BUTTON_ANALOG },
- { "stick_right", "Stick RIGHT → (Analog)", 3, IDIT_BUTTON_ANALOG },
- { "stick_fore", "Stick FORE ↑ (Analog)", 0, IDIT_BUTTON_ANALOG },
- { "stick_back", "Stick BACK ↓ (Analog)", 1, IDIT_BUTTON_ANALOG },
-
- { "throttle_down", "Throttle Down (Analog)", 5, IDIT_BUTTON_ANALOG },
- { "throttle_up", "Throttle Up (Analog)", 4, IDIT_BUTTON_ANALOG },
-};
-
 
 IDIISG IODevice_DualMission_IDII =
 {

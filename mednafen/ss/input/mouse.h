@@ -25,10 +25,10 @@
 class IODevice_Mouse final : public IODevice
 {
  public:
- IODevice_Mouse();
- virtual ~IODevice_Mouse() override;
+ IODevice_Mouse() MDFN_COLD;
+ virtual ~IODevice_Mouse() override MDFN_COLD;
 
- virtual void Power(void) override;
+ virtual void Power(void) override MDFN_COLD;
  virtual void UpdateInput(const uint8* data, const int32 time_elapsed) override;
  virtual void StateAction(StateMem* sm, const unsigned load, const bool data_only, const char* sname_prefix) override;
 
@@ -47,5 +47,6 @@ class IODevice_Mouse final : public IODevice
 
 
 extern IDIISG IODevice_Mouse_IDII;
+
 
 #endif

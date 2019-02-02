@@ -76,7 +76,7 @@ void IODevice_Wheel::StateAction(StateMem* sm, const unsigned load, const bool d
   SFEND
  };
  char section_name[64];
- snprintf(section_name, sizeof(section_name), "%s_Wheel", sname_prefix);
+ trio_snprintf(section_name, sizeof(section_name), "%s_Wheel", sname_prefix);
 
  if(!MDFNSS_StateAction(sm, load, data_only, StateRegs, section_name, true) && load)
   Power();

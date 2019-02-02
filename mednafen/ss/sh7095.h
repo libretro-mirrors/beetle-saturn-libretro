@@ -182,15 +182,15 @@ class SH7095 final
  //
  uint32 IBuffer;
 
- uint32 (*MRFPI[8])(uint32 A);
+ uint32 (MDFN_FASTCALL *MRFPI[8])(uint32 A);
 
- uint8 (*MRFP8[8])(uint32 A);
- uint16 (*MRFP16[8])(uint32 A);
- uint32 (*MRFP32[8])(uint32 A);
+ uint8 (MDFN_FASTCALL *MRFP8[8])(uint32 A);
+ uint16 (MDFN_FASTCALL *MRFP16[8])(uint32 A);
+ uint32 (MDFN_FASTCALL *MRFP32[8])(uint32 A);
 
- void (*MWFP8[8])(uint32 A, uint8);
- void (*MWFP16[8])(uint32 A, uint16);
- void (*MWFP32[8])(uint32 A, uint32);
+ void (MDFN_FASTCALL *MWFP8[8])(uint32 A, uint8);
+ void (MDFN_FASTCALL *MWFP16[8])(uint32 A, uint16);
+ void (MDFN_FASTCALL *MWFP32[8])(uint32 A, uint32);
 
  //
  //
