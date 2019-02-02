@@ -1131,8 +1131,8 @@ static bool InitCommon(const unsigned cpucache_emumode, const unsigned cart_type
    SCU_Init();
    SMPC_Init(smpc_area, MasterClock);
    VDP1::Init();
-   VDP2::Init(PAL, sls, sle);
-   VDP2::FillVideoParams(&EmulatedSS);
+   VDP2::Init(PAL);
+   VDP2::SetGetVideoParams(&EmulatedSS, true, sls, sle, true, DoHBlend);
    CDB_Init();
    SOUND_Init();
 
@@ -1141,24 +1141,6 @@ static bool InitCommon(const unsigned cpucache_emumode, const unsigned cart_type
 
 #ifdef HAVE_DEBUG
    DBG_Init();
-#endif
-
-#if 0
-   MDFN_printf("\n");
-   {
-      const bool correct_aspect = MDFN_GetSettingB("ss.correct_aspect");
-      const bool h_overscan = MDFN_GetSettingB("ss.h_overscan");
-      const bool h_blend = MDFN_GetSettingB("ss.h_blend");
-
-      MDFN_printf(_("Displayed scanlines: [%u,%u]\n"), sls, sle);
-      MDFN_printf(_("Correct Aspect Ratio: %s\n"), correct_aspect ? _("Enabled") : _("Disabled"));
-      MDFN_printf(_("Show H Overscan: %s\n"), h_overscan ? _("Enabled") : _("Disabled"));
-      MDFN_printf(_("H Blend: %s\n"), h_blend ? _("Enabled") : _("Disabled"));
-
-      VDP2::SetGetVideoParams(&EmulatedSS, correct_aspect, sls, sle, h_overscan, h_blend);
-   }
-
-   MDFN_printf("\n");
 #endif
 
    // Apply multi-tap state to SMPC

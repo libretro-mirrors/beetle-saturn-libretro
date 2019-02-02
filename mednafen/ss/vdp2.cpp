@@ -78,11 +78,18 @@ static uint32 RPTA;
 static uint8 RPRCTL[2];
 static uint8 KTAOF[2];
 
+static struct
+{
+ uint16 YStart, YEnd;
+ bool YEndMet;
+ bool YIn;
+} Window[2];
+
 static uint16 VRAM[262144];
 
 static uint16 CRAM[2048];
 
-static struct RotParam
+static struct
 {
  // Signed values are stored sign-extended to the full 32 bits.
  int32 Xst, Yst, Zst;	// 1.12.10
@@ -110,7 +117,7 @@ static void FetchRotParams(const bool field)
 
  for(unsigned i = 0; i < 2; i++)
  {
-  RotParam &rp = RotParams[i];
+  auto& rp = RotParams[i];
 
   rp.Xst = sign_x_to_s32(23, ne16_rbo_be<uint32>(VRAM, ((a + 0x00) & 0x3FFFF) << 1) >> 6);
   rp.Yst = sign_x_to_s32(23, ne16_rbo_be<uint32>(VRAM, ((a + 0x02) & 0x3FFFF) << 1) >> 6);
@@ -207,7 +214,7 @@ static uint32 VPhase;
 static bool InternalVB;
 static bool Odd;
 
-static uint32_t CRTLineCounter;
+static uint32 CRTLineCounter;
 static bool Clock28M;
 //
 static int SurfInterlaceField;
@@ -234,14 +241,14 @@ static INLINE void RecalcVRAMPenalty(void)
 
   for(unsigned vcp_type = 0; vcp_type < 0x10; vcp_type++)
   {
-     bool penalty;
+   bool penalty;
 
-     if((vcp_type < 0x8) || vcp_type == 0xC || vcp_type == 0xD)
-        penalty = (bool)(BGON & (1U << (vcp_type & 0x3)));
-     else
-        penalty = false;
+   if((vcp_type < 0x8) || vcp_type == 0xC || vcp_type == 0xD)
+    penalty = (bool)(BGON & (1U << (vcp_type & 0x3)));
+   else
+    penalty = false;
 
-     vcp_type_penalty[vcp_type] = penalty;
+   vcp_type_penalty[vcp_type] = penalty;
   }
 
   for(unsigned bank = 0; bank < 4; bank++)
@@ -261,15 +268,15 @@ static INLINE void RecalcVRAMPenalty(void)
      tmp = 8;
     else if(BGON & 0x0F)
     {
-       tmp += vcp_type_penalty[VCPRegs[esb][0]];
-       tmp += vcp_type_penalty[VCPRegs[esb][1]];
-       tmp += vcp_type_penalty[VCPRegs[esb][2]];
-       tmp += vcp_type_penalty[VCPRegs[esb][3]];
+     tmp += vcp_type_penalty[VCPRegs[esb][0]];
+     tmp += vcp_type_penalty[VCPRegs[esb][1]];
+     tmp += vcp_type_penalty[VCPRegs[esb][2]];
+     tmp += vcp_type_penalty[VCPRegs[esb][3]];
 
-       tmp += vcp_type_penalty[VCPRegs[esb][sh + 0]];
-       tmp += vcp_type_penalty[VCPRegs[esb][sh + 1]];
-       tmp += vcp_type_penalty[VCPRegs[esb][sh + 2]];
-       tmp += vcp_type_penalty[VCPRegs[esb][sh + 3]];
+     tmp += vcp_type_penalty[VCPRegs[esb][sh + 0]];
+     tmp += vcp_type_penalty[VCPRegs[esb][sh + 1]];
+     tmp += vcp_type_penalty[VCPRegs[esb][sh + 2]];
+     tmp += vcp_type_penalty[VCPRegs[esb][sh + 3]];
     }
    }
 
@@ -306,27 +313,32 @@ static bool HVIsExLatched;
 bool ExLatchIn;
 bool ExLatchPending;
 
+
+static INLINE unsigned GetNLVCounter(void)
+{
+ unsigned ret;
+
+ if(VPhase >= VPHASE_VSYNC)
+  ret = VCounter + (0x200 - VTimings[PAL][VRes][VPHASE__COUNT - 1]);
+ else
+  ret = VCounter;
+
+ if(InterlaceMode == IM_DOUBLE)
+  ret = (ret << 1) | !Odd;
+
+ return ret;
+}
+
 static void LatchHV(void)
 {
- {
-  unsigned vtmp;
-
-  if(VPhase >= VPHASE_VSYNC)
-     vtmp = VCounter + (0x200 - VTimings[PAL][VRes][VPHASE__COUNT - 1]);
-  else
-   vtmp = VCounter;
-
-  if(InterlaceMode == IM_DOUBLE)
-   vtmp = (vtmp << 1) | !Odd;
-
-  Latched_VCNT = vtmp;
- }
+ Latched_VCNT = GetNLVCounter();
 
  if(HPhase >= HPHASE_HSYNC)
   Latched_HCNT = (HCounter + (0x200 - HTimings[HRes & 1][HPHASE__COUNT - 1])) << 1;
  else
   Latched_HCNT = HCounter << 1;
 }
+
 //
 //
 void GetGunXTranslation(const bool clock28m, float* scale, float* offs)
@@ -346,10 +358,15 @@ void StartFrame(EmulateSpecStruct* espec, const bool clock28m)
 //
 static INLINE void IncVCounter(const sscpu_timestamp_t event_timestamp)
 {
+ const unsigned prev_nlvc = GetNLVCounter();
+ //
  VCounter = (VCounter + 1) & 0x1FF;
 
  if(VCounter == (VTimings[PAL][VRes][VPHASE__COUNT - 1] - 1))
+ {
   Out_VB = false;
+  Window[0].YEndMet = Window[1].YEndMet = false;
+ }
 
  // - 1, so the CPU loop will  have plenty of time to exit before we reach non-hblank top border area
  // (exit granularity could be large if program is executing from SCSP RAM space, for example).
@@ -408,6 +425,32 @@ static INLINE void IncVCounter(const sscpu_timestamp_t event_timestamp)
   }
  }
 
+ //
+ //
+ {
+  const unsigned nlvc = GetNLVCounter();
+  const unsigned mask = (InterlaceMode == IM_DOUBLE) ? 0x1FE : 0x1FF;
+
+  for(unsigned d = 0; d < 2; d++)
+  {
+   if((nlvc & mask) == (Window[d].YStart & mask))
+   {
+    //printf("Window%d YStartMet at VC=0x%03x ---- %03x %03x\n", d, nlvc, Window[d].YStart, Window[d].YEnd);
+    Window[d].YIn = true;
+   }
+
+   if((prev_nlvc & mask) == (Window[d].YEnd & mask))
+   {
+    //printf("Window%d YEndMet at VC=0x%03x ---- %03x %03x\n", d, nlvc, Window[d].YStart, Window[d].YEnd);
+    Window[d].YEndMet = true;
+   }
+
+   Window[d].YIn &= !Window[d].YEndMet;
+  }
+ }
+ //
+ //
+
  RecalcVRAMPenalty();
 
  SMPC_SetVBVS(event_timestamp, Out_VB, VPhase == VPHASE_VSYNC);
@@ -417,10 +460,8 @@ static INLINE int32 AddHCounter(const sscpu_timestamp_t event_timestamp, int32 c
 {
  HCounter += count;
 
-#if 0
- if(HCounter > HTimings[HRes & 1][HPhase])
-    printf("VDP2 oops: %d %d\n", HCounter, HTimings[HRes & 1][HPhase]);
-#endif
+ //if(HCounter > HTimings[HRes & 1][HPhase])
+ // printf("VDP2 oops: %d %d\n", HCounter, HTimings[HRes & 1][HPhase]);
 
  while(HCounter >= HTimings[HRes & 1][HPhase])
  {
@@ -447,6 +488,9 @@ static INLINE int32 AddHCounter(const sscpu_timestamp_t event_timestamp, int32 c
    {
     VDP2Rend_LIB* lib = VDP2REND_GetLIB(VCounter);
 
+    lib->win_ymet[0] = Window[0].YIn;
+    lib->win_ymet[1] = Window[1].YIn;
+
     if(!InternalVB)
     {
      if(BGON & 0x30)
@@ -459,7 +503,7 @@ static INLINE int32 AddHCounter(const sscpu_timestamp_t event_timestamp, int32 c
 
      for(unsigned i = 0; i < 2; i++)
      {
-      RotParam const& rp = RotParams[i];
+      auto const& rp = RotParams[i];
       auto& r = lib->rv[i];
 
       r.Xsp = ((int64)rp.RotMatrix[0] * ((int32)rp.XstAccum - (rp.Px * 1024)) +
@@ -497,8 +541,8 @@ static INLINE int32 AddHCounter(const sscpu_timestamp_t event_timestamp, int32 c
    }
    else if(VPhase == VPHASE_TOP_BORDER || VPhase == VPHASE_BOTTOM_BORDER)
    {
-      VDP2REND_DrawLine(-1, CRTLineCounter, !Odd);
-      CRTLineCounter++;
+    VDP2REND_DrawLine(-1, CRTLineCounter, !Odd);
+    CRTLineCounter++;
    }
   }
   else if(HPhase == HPHASE_HSYNC)
@@ -576,7 +620,7 @@ static INLINE void RegsWrite(uint32 A, uint16 V)
 	//
 	InternalVB |= !DisplayOn;
 	//
-   SS_SetEventNT(&events[SS_EVENT_VDP2], Update(SH7095_mem_timestamp));
+	SS_SetEventNT(&events[SS_EVENT_VDP2], Update(SH7095_mem_timestamp));
 	break;
 
   case 0x02:
@@ -639,6 +683,12 @@ static INLINE void RegsWrite(uint32 A, uint16 V)
   case 0xBE:
 	RPTA = (RPTA & ~0xFFFF) | (V & 0xFFFE);
 	break;
+
+  case 0xC2: Window[0].YStart = V & 0x1FF; break;
+  case 0xC6: Window[0].YEnd = V & 0x1FF; break;
+
+  case 0xCA: Window[1].YStart = V & 0x1FF; break;
+  case 0xCE: Window[1].YEnd = V & 0x1FF; break;
  }
 }
 
@@ -656,13 +706,13 @@ static INLINE uint16 RegsRead(uint32 A)
   case 0x02:
 	if(!ExLatchEnable)
 	{
-    SS_SetEventNT(&events[SS_EVENT_VDP2], Update(SH7095_mem_timestamp));
+	 SS_SetEventNT(&events[SS_EVENT_VDP2], Update(SH7095_mem_timestamp));
  	 LatchHV();
 	}
 	return (ExLatchEnable << 9) | (ExSyncEnable << 8) | (DispAreaSelect << 1) | (ExBGEnable << 0);
 
   case 0x04:
-   SS_SetEventNT(&events[SS_EVENT_VDP2], Update(SH7095_mem_timestamp));
+	SS_SetEventNT(&events[SS_EVENT_VDP2], Update(SH7095_mem_timestamp));
 	{
 	 // TODO: EXSYFG
 	 uint16 ret = (HVIsExLatched << 9) | (InternalVB << 3) | ((HPhase > HPHASE_ACTIVE) << 2) | (Odd << 1) | (PAL << 0);
@@ -827,7 +877,7 @@ void AdjustTS(const int32 delta)
 }
 
 
-void Init(const bool IsPAL, const int sls, const int sle)
+void Init(const bool IsPAL)
 {
  SurfInterlaceField = -1;
  PAL = IsPAL;
@@ -837,17 +887,17 @@ void Init(const bool IsPAL, const int sls, const int sle)
 
  ExLatchIn = false;
 
- VDP2REND_Init(IsPAL, sls, sle);
+ VDP2REND_Init(IsPAL);
 }
 
-void FillVideoParams(MDFNGI* gi)
+void SetGetVideoParams(MDFNGI* gi, const bool caspect, const int sls, const int sle, const bool show_h_overscan, const bool dohblend)
 {
  if(PAL)
-   gi->fps = 65536 * 256 * (1734687500.0 / 61 / 4 / 455 / ((313 + 312.5) / 2.0));
+  gi->fps = 65536 * 256 * (1734687500.0 / 61 / 4 / 455 / ((313 + 312.5) / 2.0));
  else
-   gi->fps = 65536 * 256 * (1746818181.8 / 61 / 4 / 455 / ((263 + 262.5) / 2.0));
+  gi->fps = 65536 * 256 * (1746818181.8 / 61 / 4 / 455 / ((263 + 262.5) / 2.0));
 
- VDP2REND_FillVideoParams(gi);
+ VDP2REND_SetGetVideoParams(gi, caspect, sls, sle, show_h_overscan, dohblend);
 }
 
 void Kill(void)
@@ -893,6 +943,13 @@ void Reset(bool powering_up)
  RPTA = 0;
  memset(RotParams, 0, sizeof(RotParams));
 
+ for(unsigned w = 0; w < 2; w++)
+ {
+  Window[w].YStart = 0;
+  Window[w].YEnd = 0;
+  Window[w].YEndMet = false;
+  Window[w].YIn = false;
+ }
  //
  //
  //
@@ -906,7 +963,6 @@ void Reset(bool powering_up)
   HVIsExLatched = false;
   ExLatchPending = false;
  }
-
  //
  // FIXME(init values), also in VDP2REND.
  if(powering_up)
@@ -1060,6 +1116,11 @@ void StateAction(StateMem* sm, const unsigned load, const bool data_only)
   SFVAR(ExLatchIn),
   SFVAR(ExLatchPending),
 
+  SFVAR(Window->YStart, 2, sizeof(*Window), Window),
+  SFVAR(Window->YEnd, 2, sizeof(*Window), Window),
+  SFVAR(Window->YEndMet, 2, sizeof(*Window), Window),
+  SFVAR(Window->YIn, 2, sizeof(*Window), Window),
+
   SFEND
  };
 
@@ -1067,7 +1128,22 @@ void StateAction(StateMem* sm, const unsigned load, const bool data_only)
 
  if(load)
  {
+  if(load < 0x00102100)
+  {
+   Window[0].YStart = RawRegs[0xC2 >> 1] & 0x1FF;
+   Window[0].YEnd = RawRegs[0xC6 >> 1] & 0x1FF;
 
+   Window[1].YStart = RawRegs[0xCA >> 1] & 0x1FF;
+   Window[1].YEnd = RawRegs[0xCE >> 1] & 0x1FF;
+
+   //printf("%08x %03x:%03x, %03x:%03x\n", load, Window[0].YStart, Window[0].YEnd, Window[1].YStart, Window[1].YEnd);
+
+   for(unsigned d = 0; d < 2; d++)
+   {
+    Window[d].YEndMet = false;
+    Window[d].YIn = false;
+   }
+  }
  }
 
  VDP2REND_StateAction(sm, load, data_only, RawRegs, CRAM, VRAM);

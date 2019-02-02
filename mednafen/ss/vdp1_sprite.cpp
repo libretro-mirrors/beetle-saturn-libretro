@@ -29,7 +29,7 @@ namespace VDP1
 
 static int32 (*LineFuncTab[2][3][0x20][8 + 1])(void) =
 {
-   #define LINEFN_BC(die, bpp8, b, c)	\
+ #define LINEFN_BC(die, bpp8, b, c)	\
 	DrawLine<true, die, bpp8, c == 0x8, (bool)(b & 0x10), (b & 0x10) && (b & 0x08), (bool)(b & 0x04), (bool)(b & 0x02), (bool)(b & 0x01), true, (bool)(c & 0x4), (!bpp8) && (c & 0x2), (bool)(c & 0x1)>
 
  #define LINEFN_B(die, bpp8, b)									\
@@ -256,7 +256,7 @@ static INLINE int32 SpriteBase(const uint16* cmd_data)
 
  tex_base = cmd_data[0x4] << 2;
  if(cm == 5) // RGB
-    tex_base &= ~0x7;
+  tex_base &= ~0x7;
 
  {
   const bool v_inv = dir & 2;
