@@ -113,6 +113,7 @@ ifneq ($(HAVE_GRIFFIN), 1)
 	$(CORE_EMU_DIR)/input/multitap.cpp \
 	$(CORE_EMU_DIR)/input/mission.cpp \
 	$(CORE_EMU_DIR)/input/keyboard.cpp \
+	$(CORE_EMU_DIR)/input/jpkeyboard.cpp \
 	$(CORE_EMU_DIR)/input/wheel.cpp
 
 SOURCES_CXX += \

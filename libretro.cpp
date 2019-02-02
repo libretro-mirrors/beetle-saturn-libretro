@@ -20,7 +20,7 @@
 #include <mednafen/hash/sha256.h>
 #include "mednafen/hash/md5.h"
 #include "mednafen/ss/ss.h"
-#include "mednafen/ss/debug.inc"
+static INLINE bool DBG_NeedCPUHooks(void) { return false; } // <-- replaces debug.inc
 
 #include <ctype.h>
 #include <time.h>

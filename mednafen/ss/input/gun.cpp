@@ -308,10 +308,12 @@ void IODevice_Gun::LineHook(const sscpu_timestamp_t timestamp, int32 out_line, i
 
 IDIISG IODevice_Gun_IDII =
 {
- { "x_axis", "X Axis", -1, IDIT_X_AXIS },
- { "y_axis", "Y Axis", -1, IDIT_Y_AXIS },
+ { "x_axis", "X Axis", -1, IDIT_POINTER_X },
+ { "y_axis", "Y Axis", -1, IDIT_POINTER_Y },
 
- { "trigger", "Trigger", 0, IDIT_BUTTON },
- { "start", "START", 1, IDIT_BUTTON },
- { "offscreen_shot", "Offscreen Shot(Simulated)", 2, IDIT_BUTTON },
+ IDIIS_Button("trigger", "Trigger", 0),
+ IDIIS_Button("start", "START", 1),
+ IDIIS_Button("offscreen_shot", "Offscreen Shot(Simulated)", 2),
 };
+
+

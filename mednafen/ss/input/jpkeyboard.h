@@ -1,8 +1,8 @@
 /******************************************************************************/
 /* Mednafen Sega Saturn Emulation Module                                      */
 /******************************************************************************/
-/* 3dpad.h:
-**  Copyright (C) 2016-2017 Mednafen Team
+/* jpkeyboard.h:
+**  Copyright (C) 2017-2018 Mednafen Team
 **
 ** This program is free software; you can redistribute it and/or
 ** modify it under the terms of the GNU General Public License
@@ -19,15 +19,15 @@
 ** 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 */
 
-#ifndef __MDFN_SS_INPUT_3DPAD_H
-#define __MDFN_SS_INPUT_3DPAD_H
+#ifndef __MDFN_SS_INPUT_JPKEYBOARD_H
+#define __MDFN_SS_INPUT_JPKEYBOARD_H
 
 
-class IODevice_3DPad final : public IODevice
+class IODevice_JPKeyboard final : public IODevice
 {
  public:
- IODevice_3DPad() MDFN_COLD;
- virtual ~IODevice_3DPad() override MDFN_COLD;
+ IODevice_JPKeyboard() MDFN_COLD;
+ virtual ~IODevice_JPKeyboard() override MDFN_COLD;
 
  virtual void Power(void) override MDFN_COLD;
  virtual void UpdateInput(const uint8* data, const int32 time_elapsed) override;
@@ -36,19 +36,36 @@ class IODevice_3DPad final : public IODevice
  virtual uint8 UpdateBus(const sscpu_timestamp_t timestamp, const uint8 smpc_out, const uint8 smpc_out_asserted) override;
 
  private:
- uint16 dbuttons;
- uint8 thumb[2];
- uint8 shoulder[2];
 
- uint8 buffer[0x10];
+ uint64 phys[4];
+ uint64 processed[4];
+ uint8 lock;
+ uint8 lock_pend;
+ uint16 simbutt;
+ uint16 simbutt_pend;
+ enum { fifo_size = 16 };
+ uint16 fifo[fifo_size];
+ uint8 fifo_rdp;
+ uint8 fifo_wrp;
+ uint8 fifo_cnt;
+ enum
+ {
+  LOCK_SCROLL = 0x01,
+  LOCK_CAPS = 0x04
+ };
+
+ uint8 rep_sc;
+ uint8 rep_sc_pend;
+ uint8 rep_dcnt;
+ uint8 rep_dcnt_pend;
+
+ int16 mkbrk_pend;
+ uint8 buffer[12];
  uint8 data_out;
  bool tl;
  int8 phase;
- bool mode;
 };
 
-
-extern IDIISG IODevice_3DPad_IDII;
-
+extern const IDIISG IODevice_JPKeyboard_IDII;
 
 #endif

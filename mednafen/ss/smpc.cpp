@@ -45,7 +45,7 @@
 #include "input/mission.h"
 #include "input/gun.h"
 #include "input/keyboard.h"
-//#include "input/jpkeyboard.h"
+#include "input/jpkeyboard.h"
 
 #include <time.h>
 #include "input/multitap.h"
@@ -214,7 +214,7 @@ static struct
  IODevice_Mission dualmission{true};
  IODevice_Gun gun;
  IODevice_Keyboard keyboard;
- // IODevice_Keyboard jpkeyboard;
+ IODevice_JPKeyboard jpkeyboard;
 } PossibleDevices[12];
 
 static IODevice_Multitap PossibleMultitaps[2];
@@ -312,28 +312,28 @@ void SMPC_SetInput(unsigned port, const char* type, uint8* ptr)
  //
  IODevice* nd = nullptr;
 
-   if(!strcmp(type, "none"))
-      nd = &PossibleDevices[port].none;
-   else if(!strcmp(type, "gamepad"))
-      nd = &PossibleDevices[port].gamepad;
-   else if(!strcmp(type, "3dpad"))
-      nd = &PossibleDevices[port].threedpad;
-   else if(!strcmp(type, "mouse"))
-      nd = &PossibleDevices[port].mouse;
-   else if(!strcmp(type, "wheel"))
-      nd = &PossibleDevices[port].wheel;
-   else if(!strcmp(type, "mission") || !strcmp(type, "missionwoa"))
-      nd = &PossibleDevices[port].mission;
-   else if(!strcmp(type, "dmission") || !strcmp(type, "dmissionwoa"))
-      nd = &PossibleDevices[port].dualmission;
-   else if(!strcmp(type, "gun"))
-      nd = &PossibleDevices[port].gun;
-   else if(!strcmp(type, "keyboard"))
-      nd = &PossibleDevices[port].keyboard;
-   // else if(!strcmp(type, "jpkeyboard"))
-   //  nd = &PossibleDevices[port].jpkeyboard;
-   else
-      abort();
+ if(!strcmp(type, "none"))
+  nd = &PossibleDevices[port].none;
+ else if(!strcmp(type, "gamepad"))
+  nd = &PossibleDevices[port].gamepad;
+ else if(!strcmp(type, "3dpad"))
+  nd = &PossibleDevices[port].threedpad;
+ else if(!strcmp(type, "mouse"))
+  nd = &PossibleDevices[port].mouse;
+ else if(!strcmp(type, "wheel"))
+  nd = &PossibleDevices[port].wheel;
+ else if(!strcmp(type, "mission") || !strcmp(type, "missionwoa"))
+  nd = &PossibleDevices[port].mission;
+ else if(!strcmp(type, "dmission") || !strcmp(type, "dmissionwoa"))
+  nd = &PossibleDevices[port].dualmission;
+ else if(!strcmp(type, "gun"))
+  nd = &PossibleDevices[port].gun;
+ else if(!strcmp(type, "keyboard"))
+  nd = &PossibleDevices[port].keyboard;
+ else if(!strcmp(type, "jpkeyboard"))
+  nd = &PossibleDevices[port].jpkeyboard;
+ else
+  abort();
 
  VirtualPorts[port] = nd;
  VirtualPortsDPtr[port] = ptr;
@@ -464,6 +464,7 @@ void SMPC_Reset(bool powering_up)
  memset(IREG, 0, sizeof(IREG));
  memset(OREG, 0, sizeof(OREG));
  PendingCommand = -1;
+ ExecutingCommand = -1;
  SF = 0;
 
  BusBuffer = 0x00;
@@ -492,7 +493,6 @@ void SMPC_Reset(bool powering_up)
  memset(&JRS, 0, sizeof(JRS));
 }
 
- 
 void SMPC_StateAction(StateMem* sm, const unsigned load, const bool data_only)
 {
  SFORMAT StateRegs[] =
@@ -686,9 +686,9 @@ void SMPC_Write(const sscpu_timestamp_t timestamp, uint8 A, uint8 V)
   case 0x06:
 #ifdef HAVE_DEBUG
 	if(MDFN_UNLIKELY(ExecutingCommand >= 0))
- 	{
+	{
 	 SS_DBGTI(SS_DBG_WARNING | SS_DBG_SMPC, "[SMPC] Input register %u port written with 0x%02x while command 0x%02x is executing.", A, V, ExecutingCommand);
- 	}
+	}
 #endif
 
 	IREG[A] = V;
@@ -696,10 +696,10 @@ void SMPC_Write(const sscpu_timestamp_t timestamp, uint8 A, uint8 V)
 
   case 0x0F:
 #ifdef HAVE_DEBUG
-   if(MDFN_UNLIKELY(ExecutingCommand >= 0))
-   {
-      SS_DBGTI(SS_DBG_WARNING | SS_DBG_SMPC, "[SMPC] Command port written with 0x%02x while command 0x%02x is still executing.", V, ExecutingCommand);
-   }
+	if(MDFN_UNLIKELY(ExecutingCommand >= 0))
+	{
+	 SS_DBGTI(SS_DBG_WARNING | SS_DBG_SMPC, "[SMPC] Command port written with 0x%02x while command 0x%02x is still executing.", V, ExecutingCommand);
+	}
 #endif
 
 	PendingCommand = V;
@@ -721,30 +721,30 @@ void SMPC_Write(const sscpu_timestamp_t timestamp, uint8 A, uint8 V)
   //
   case 0x3A:
 	DataOut[0][1] = V & 0x7F;
-   UpdateIOBus(0, SH7095_mem_timestamp);
+	UpdateIOBus(0, SH7095_mem_timestamp);
 	break;
 
   case 0x3B:
 	DataOut[1][1] = V & 0x7F;
-   UpdateIOBus(1, SH7095_mem_timestamp);
+	UpdateIOBus(1, SH7095_mem_timestamp);
 	break;
 
   case 0x3C:
 	DataDir[0][1] = V & 0x7F;
-   UpdateIOBus(0, SH7095_mem_timestamp);
+	UpdateIOBus(0, SH7095_mem_timestamp);
 	break;
 
   case 0x3D:
 	DataDir[1][1] = V & 0x7F;
-   UpdateIOBus(1, SH7095_mem_timestamp);
+	UpdateIOBus(1, SH7095_mem_timestamp);
 	break;
 
   case 0x3E:
 	DirectModeEn[0] = (bool)(V & 0x1);
-   UpdateIOBus(0, SH7095_mem_timestamp);
+	UpdateIOBus(0, SH7095_mem_timestamp);
 
 	DirectModeEn[1] = (bool)(V & 0x2);
-   UpdateIOBus(1, SH7095_mem_timestamp);
+	UpdateIOBus(1, SH7095_mem_timestamp);
 	break;
 
   case 0x3F:
@@ -826,10 +826,10 @@ uint8 SMPC_Read(const sscpu_timestamp_t timestamp, uint8 A)
 
 void SMPC_ResetTS(void)
 {
-   for(unsigned p = 0; p < 2; p++)
-      IOPorts[p]->ResetTS();
+ for(unsigned p = 0; p < 2; p++)
+  IOPorts[p]->ResetTS();
 
-   lastts = 0;
+ lastts = 0;
 }
 
 #define SMPC_WAIT_UNTIL_COND(cond)  {					\
@@ -838,8 +838,8 @@ void SMPC_ResetTS(void)
 			    if(!(cond))					\
 			    {						\
 			     SubPhase = __COUNTER__ - SubPhaseBias - 1;	\
-              next_event_ts = timestamp + 1000;		\
-              goto Breakout;				\
+			     next_event_ts = timestamp + 1000;		\
+			     goto Breakout;				\
 			    }						\
 			   }
 
@@ -850,7 +850,7 @@ void SMPC_ResetTS(void)
 		 if(!(cond) && ClockCounter < 0)						\
 		 {										\
 		  SubPhase = __COUNTER__ - SubPhaseBias - 1;					\
-        next_event_ts = timestamp + (-ClockCounter + SMPC_ClockRatio - 1) / SMPC_ClockRatio;		\
+		  next_event_ts = timestamp + (-ClockCounter + SMPC_ClockRatio - 1) / SMPC_ClockRatio;		\
 		  goto Breakout;								\
 		 }										\
 		 ClockCounter = 0;								\
@@ -863,7 +863,7 @@ void SMPC_ResetTS(void)
 		 if(ClockCounter < 0)								\
 		 {										\
 		  SubPhase = __COUNTER__ - SubPhaseBias - 1;					\
-        next_event_ts = timestamp + (-ClockCounter + SMPC_ClockRatio - 1) / SMPC_ClockRatio;		\
+		  next_event_ts = timestamp + (-ClockCounter + SMPC_ClockRatio - 1) / SMPC_ClockRatio;		\
 		  goto Breakout;								\
 		 }										\
 		 /*printf("%f\n", (double)ClockCounter / (1LL << 32));*/			\
@@ -1560,7 +1560,6 @@ static const std::vector<InputDeviceInfoStruct> InputDeviceInfoSSVPort =
   InputDeviceInfoStruct::FLAG_KEYBOARD
  },
 
-#if 0
  // Keyboard (Japanese)
  {
   "jpkeyboard",
@@ -1569,13 +1568,12 @@ static const std::vector<InputDeviceInfoStruct> InputDeviceInfoSSVPort =
   IODevice_JPKeyboard_IDII,
   InputDeviceInfoStruct::FLAG_KEYBOARD
  },
-#endif
 };
 
 static IDIISG IDII_Builtin =
 {
- { "reset", "Reset", -1, IDIT_RESET_BUTTON },
- { "smpc_reset", "SMPC Reset", -1, IDIT_BUTTON },
+ IDIIS_ResetButton(),
+ IDIIS_Button("smpc_reset", "SMPC Reset", -1),
 };
 
 static const std::vector<InputDeviceInfoStruct> InputDeviceInfoBuiltin =

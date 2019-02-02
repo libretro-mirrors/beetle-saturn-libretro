@@ -211,100 +211,117 @@ static const IDIIS_SwitchPos AFSwitchPositions[] =
 IDIISG IODevice_Mission_IDII =
 {
  // 0
- { "b", "B (Stick Left Button)", 6, IDIT_BUTTON },
- { "c", "C (Stick Right Button)", 8, IDIT_BUTTON },
- { "a", "A (Stick Trigger)", 7, IDIT_BUTTON },
- { "start", "START", 9, IDIT_BUTTON },
+ IDIIS_Button("b", "B (Stick Left Button)", 6),
+ IDIIS_Button("c", "C (Stick Right Button)", 8),
+ IDIIS_Button("a", "A (Stick Trigger)", 7),
+ IDIIS_Button("start", "START", 9),
 
  // 4
- { "z", "Z", 13, IDIT_BUTTON },
- { "y", "Y", 12, IDIT_BUTTON },
- { "x", "X", 11, IDIT_BUTTON },
- { "r", "R", 14, IDIT_BUTTON },
+ IDIIS_Button("z", "Z", 13),
+ IDIIS_Button("y", "Y", 12),
+ IDIIS_Button("x", "X", 11),
+ IDIIS_Button("r", "R", 14),
 
  // 8
- { NULL, "empty", 0, IDIT_BUTTON },
- { NULL, "empty", 0, IDIT_BUTTON },
- { NULL, "empty", 0, IDIT_BUTTON },
- { "l", "L", 10, IDIT_BUTTON },
+ IDIIS_Padding<3>(),
+ IDIIS_Button("l", "L", 10),
 
  // 12
- IDIIS_Switch("afb", "B AF", 20, AFSwitchPositions, sizeof(AFSwitchPositions) / sizeof(AFSwitchPositions[0])),
- IDIIS_Switch("afc", "C AF", 21, AFSwitchPositions, sizeof(AFSwitchPositions) / sizeof(AFSwitchPositions[0])),
- IDIIS_Switch("afa", "A AF", 19, AFSwitchPositions, sizeof(AFSwitchPositions) / sizeof(AFSwitchPositions[0])),
- { NULL, "empty", 0, IDIT_BUTTON },
+ IDIIS_Switch("afb", "B AF", 20, AFSwitchPositions),
+ IDIIS_Switch("afc", "C AF", 21, AFSwitchPositions),
+ IDIIS_Switch("afa", "A AF", 19, AFSwitchPositions),
+ IDIIS_Padding<1>(),
 
  // 16
- IDIIS_Switch("afz", "Z AF", 17, AFSwitchPositions, sizeof(AFSwitchPositions) / sizeof(AFSwitchPositions[0])),
- IDIIS_Switch("afy", "Y AF", 16, AFSwitchPositions, sizeof(AFSwitchPositions) / sizeof(AFSwitchPositions[0])),
- IDIIS_Switch("afx", "X AF", 15, AFSwitchPositions, sizeof(AFSwitchPositions) / sizeof(AFSwitchPositions[0])),
- IDIIS_Switch("afr", "R AF", 22, AFSwitchPositions, sizeof(AFSwitchPositions) / sizeof(AFSwitchPositions[0])),
+ IDIIS_Switch("afz", "Z AF", 17, AFSwitchPositions),
+ IDIIS_Switch("afy", "Y AF", 16, AFSwitchPositions),
+ IDIIS_Switch("afx", "X AF", 15, AFSwitchPositions),
+ IDIIS_Switch("afr", "R AF", 22, AFSwitchPositions),
 
  // 20
- IDIIS_Switch("afspeed", "AF Speed", 23, SpeedSwitchPositions, sizeof(SpeedSwitchPositions) / sizeof(SpeedSwitchPositions[0])),
- IDIIS_Switch("afl", "L AF", 18, AFSwitchPositions, sizeof(AFSwitchPositions) / sizeof(AFSwitchPositions[0])),
+ IDIIS_Switch("afspeed", "AF Speed", 23, SpeedSwitchPositions),
+ IDIIS_Switch("afl", "L AF", 18, AFSwitchPositions),
 
  // 24
- { "stick_left", "Stick LEFT ← (Analog)", 2, IDIT_BUTTON_ANALOG },
- { "stick_right", "Stick RIGHT → (Analog)", 3, IDIT_BUTTON_ANALOG },
- { "stick_fore", "Stick FORE ↑ (Analog)", 0, IDIT_BUTTON_ANALOG },
- { "stick_back", "Stick BACK ↓ (Analog)", 1, IDIT_BUTTON_ANALOG },
+ IDIIS_Axis(	"stick", "Stick",
+		"left", "LEFT ← (Analog)",
+		"right", "RIGHT → (Analog)", 1),
 
- { "throttle_down", "Throttle Down (Analog)", 5, IDIT_BUTTON_ANALOG },
- { "throttle_up", "Throttle Up (Analog)", 4, IDIT_BUTTON_ANALOG },
+ // 40
+ IDIIS_Axis(	"stick", "Stick",
+		"fore", "FORE ↑ (Analog)",
+		"back", "BACK ↓ (Analog)", 0),
+
+ // 56
+ IDIIS_Axis(	"throttle", "Throttle",
+		"down", "Down (Analog)",
+		"up", "Up (Analog)", 2, true),
 };
 
 IDIISG IODevice_DualMission_IDII =
 {
  // 0
- { "b", "B (R Stick Left Button)", 15, IDIT_BUTTON },
- { "c", "C (R Stick Right Button)", 17, IDIT_BUTTON },
- { "a", "A (R Stick Trigger)", 16, IDIT_BUTTON },
- { "start", "START", 18, IDIT_BUTTON },
+ IDIIS_Button("b", "B (R Stick Left Button)", 15),
+ IDIIS_Button("c", "C (R Stick Right Button)", 17),
+ IDIIS_Button("a", "A (R Stick Trigger)", 16),
+ IDIIS_Button("start", "START", 18),
 
  // 4
- { "z", "Z (L Stick Right Button)", 8, IDIT_BUTTON },
- { "y", "Y (L Stick Left Button)", 6, IDIT_BUTTON },
- { "x", "X (L Stick Trigger)", 7, IDIT_BUTTON },
- { "r", "R", 20, IDIT_BUTTON },
+ IDIIS_Button("z", "Z (L Stick Right Button)", 8),
+ IDIIS_Button("y", "Y (L Stick Left Button)", 6),
+ IDIIS_Button("x", "X (L Stick Trigger)", 7),
+ IDIIS_Button("r", "R", 20),
 
  // 8
- { NULL, "empty", 0, IDIT_BUTTON },
- { NULL, "empty", 0, IDIT_BUTTON },
- { NULL, "empty", 0, IDIT_BUTTON },
- { "l", "L", 19, IDIT_BUTTON },
+ IDIIS_Padding<3>(),
+ IDIIS_Button("l", "L", 19),
 
  // 12
- IDIIS_Switch("afb", "B AF", 26, AFSwitchPositions, sizeof(AFSwitchPositions) / sizeof(AFSwitchPositions[0])),
- IDIIS_Switch("afc", "C AF", 27, AFSwitchPositions, sizeof(AFSwitchPositions) / sizeof(AFSwitchPositions[0])),
- IDIIS_Switch("afa", "A AF", 25, AFSwitchPositions, sizeof(AFSwitchPositions) / sizeof(AFSwitchPositions[0])),
- { NULL, "empty", 0, IDIT_BUTTON },
+ IDIIS_Switch("afb", "B AF", 26, AFSwitchPositions),
+ IDIIS_Switch("afc", "C AF", 27, AFSwitchPositions),
+ IDIIS_Switch("afa", "A AF", 25, AFSwitchPositions),
+ IDIIS_Padding<1>(),
 
  // 16
- IDIIS_Switch("afz", "Z AF", 23, AFSwitchPositions, sizeof(AFSwitchPositions) / sizeof(AFSwitchPositions[0])),
- IDIIS_Switch("afy", "Y AF", 22, AFSwitchPositions, sizeof(AFSwitchPositions) / sizeof(AFSwitchPositions[0])),
- IDIIS_Switch("afx", "X AF", 21, AFSwitchPositions, sizeof(AFSwitchPositions) / sizeof(AFSwitchPositions[0])),
- IDIIS_Switch("afr", "R AF", 28, AFSwitchPositions, sizeof(AFSwitchPositions) / sizeof(AFSwitchPositions[0])),
+ IDIIS_Switch("afz", "Z AF", 23, AFSwitchPositions),
+ IDIIS_Switch("afy", "Y AF", 22, AFSwitchPositions),
+ IDIIS_Switch("afx", "X AF", 21, AFSwitchPositions),
+ IDIIS_Switch("afr", "R AF", 28, AFSwitchPositions),
 
  // 20
- IDIIS_Switch("afspeed", "Autofire Speed", 29, SpeedSwitchPositions, sizeof(SpeedSwitchPositions) / sizeof(SpeedSwitchPositions[0])),
- IDIIS_Switch("afl", "L AF", 24, AFSwitchPositions, sizeof(AFSwitchPositions) / sizeof(AFSwitchPositions[0])),
+ IDIIS_Switch("afspeed", "Autofire Speed", 29, SpeedSwitchPositions),
+ IDIIS_Switch("afl", "L AF", 24, AFSwitchPositions),
 
  // 24
- { "rstick_left", "R Stick LEFT ← (Analog)", 11, IDIT_BUTTON_ANALOG },
- { "rstick_right", "R Stick RIGHT → (Analog)", 12, IDIT_BUTTON_ANALOG },
- { "rstick_fore", "R Stick FORE ↑ (Analog)", 9, IDIT_BUTTON_ANALOG },
- { "rstick_back", "R Stick BACK ↓ (Analog)", 10, IDIT_BUTTON_ANALOG },
+ IDIIS_Axis(	"rstick", "R Stick",
+		"left", "LEFT ← (Analog)",
+		"right", "RIGHT → (Analog)", 11),
 
- { "rthrottle_down", "R Throttle Down (Analog)", 14, IDIT_BUTTON_ANALOG },
- { "rthrottle_up", "R Throttle Up (Analog)", 13, IDIT_BUTTON_ANALOG },
+ // 40
+ IDIIS_Axis(	"rstick", "R Stick",
+		"fore", "FORE ↑ (Analog)",
+		"back", "BACK ↓ (Analog)", 9),
 
- { "lstick_left", "L Stick LEFT ← (Analog)", 2, IDIT_BUTTON_ANALOG },
- { "lstick_right", "L Stick RIGHT → (Analog)", 3, IDIT_BUTTON_ANALOG },
- { "lstick_fore", "L Stick FORE ↑ (Analog)", 0, IDIT_BUTTON_ANALOG },
- { "lstick_back", "L Stick BACK ↓ (Analog)", 1, IDIT_BUTTON_ANALOG },
+ // 56
+ IDIIS_Axis(	"rthrottle", "R Throttle",
+		"down", "Down (Analog)",
+		"up", "Up (Analog)", 13, true),
 
- { "lthrottle_down", "L Throttle Down (Analog)", 5, IDIT_BUTTON_ANALOG },
- { "lthrottle_up", "L Throttle Up (Analog)", 4, IDIT_BUTTON_ANALOG },
+ // 72
+ IDIIS_Axis(	"lstick", "L Stick",
+		"left", "LEFT ← (Analog)",
+		"right", "RIGHT → (Analog)", 2),
 
+ // 88
+ IDIIS_Axis(	"lstick", "L Stick",
+		"fore", "FORE ↑ (Analog)",
+		"back", "BACK ↓ (Analog)", 0),
+
+ // 104
+ IDIIS_Axis(	"lthrottle", "L Throttle",
+		"down", "Down (Analog)",
+		"up", "Up (Analog)", 4, true),
 };
+
+
+

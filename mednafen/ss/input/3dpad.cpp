@@ -174,28 +174,35 @@ static const IDIIS_SwitchPos ModeSwitchPositions[] =
 
 IDIISG IODevice_3DPad_IDII =
 {
- { "up", "D-Pad UP ↑", 0, IDIT_BUTTON, "down" },
- { "down", "D-Pad DOWN ↓", 1, IDIT_BUTTON, "up" },
- { "left", "D-Pad LEFT ←", 2, IDIT_BUTTON, "right" },
- { "right", "D-Pad RIGHT →", 3, IDIT_BUTTON, "left" },
+ IDIIS_Button("up", "D-Pad UP ↑", 0, "down"),
+ IDIIS_Button("down", "D-Pad DOWN ↓", 1, "up"),
+ IDIIS_Button("left", "D-Pad LEFT ←", 2, "right"),
+ IDIIS_Button("right", "D-Pad RIGHT →", 3, "left"),
 
- { "b", "B", 6, IDIT_BUTTON },
- { "c", "C", 7, IDIT_BUTTON },
- { "a", "A", 5, IDIT_BUTTON },
- { "start", "START", 4, IDIT_BUTTON },
+ IDIIS_Button("b", "B", 6),
+ IDIIS_Button("c", "C", 7),
+ IDIIS_Button("a", "A", 5),
+ IDIIS_Button("start", "START", 4),
 
- { "z", "Z", 10, IDIT_BUTTON },
- { "y", "Y", 9, IDIT_BUTTON },
- { "x", "X", 8, IDIT_BUTTON },
- { NULL, "empty", 0, IDIT_BUTTON },
+ IDIIS_Button("z", "Z", 10),
+ IDIIS_Button("y", "Y", 9),
+ IDIIS_Button("x", "X", 8),
+ IDIIS_Padding<1>(),
 
- IDIIS_Switch("mode", "Mode", 17, ModeSwitchPositions, sizeof(ModeSwitchPositions) / sizeof(ModeSwitchPositions[0]), false),
+ IDIIS_Switch("mode", "Mode", 17, ModeSwitchPositions, false),
 
- { "analog_left", "Analog LEFT ←", 15, IDIT_BUTTON_ANALOG },
- { "analog_right", "Analog RIGHT →", 16, IDIT_BUTTON_ANALOG },
- { "analog_up", "Analog UP ↑", 13, IDIT_BUTTON_ANALOG },
- { "analog_down", "Analog DOWN ↓", 14, IDIT_BUTTON_ANALOG },
+ IDIIS_Axis(	"analog", "Analog",
+		"left", "LEFT ←",
+		"right", "RIGHT →", 14),
 
- { "rs", "Right Shoulder (Analog)", 12, IDIT_BUTTON_ANALOG },
- { "ls", "Left Shoulder (Analog)", 11, IDIT_BUTTON_ANALOG },
+ IDIIS_Axis(	"analog", "Analog",
+		"up", "UP ↑",
+		"down", "DOWN ↓", 13),
+
+ IDIIS_AnaButton("rs", "Right Shoulder (Analog)", 12),
+ IDIIS_AnaButton("ls", "Left Shoulder (Analog)", 11),
 };
+
+
+
+
