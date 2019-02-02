@@ -55,7 +55,7 @@ static MDFN_COLD void StateAction(StateMem* sm, const unsigned load, const bool 
 {
  SFORMAT StateRegs[] =
  {
-  SFARRAY16N(CS1RAM, 0x800000, "RAM"),
+  SFPTR16N(CS1RAM, 0x800000, "RAM"),
   SFEND
  };
 

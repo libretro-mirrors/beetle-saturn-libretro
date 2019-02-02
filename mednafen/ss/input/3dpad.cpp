@@ -76,10 +76,10 @@ void IODevice_3DPad::StateAction(StateMem* sm, const unsigned load, const bool d
   SFVAR(dbuttons),
   SFVAR(mode),
 
-  SFARRAY(thumb, 2),
-  SFARRAY(shoulder, 2),
+  SFVAR(thumb),
+  SFVAR(shoulder),
 
-  SFARRAY(buffer, 0x10),
+  SFVAR(buffer),
   SFVAR(data_out),
   SFVAR(tl),
 

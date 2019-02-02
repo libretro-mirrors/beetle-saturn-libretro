@@ -68,7 +68,7 @@ void IODevice_Wheel::StateAction(StateMem* sm, const unsigned load, const bool d
   SFVAR(dbuttons),
   SFVAR(wheel),
 
-  SFARRAY(buffer, 0x10),
+  SFVAR(buffer),
   SFVAR(data_out),
   SFVAR(tl),
 

@@ -56,7 +56,7 @@ void IODevice_Mouse::StateAction(StateMem* sm, const unsigned load, const bool d
   SFVAR(accum_xdelta),
   SFVAR(accum_ydelta),
 
-  SFARRAY(buffer, 0x10),
+  SFVAR(buffer),
   SFVAR(data_out),
   SFVAR(tl),
 

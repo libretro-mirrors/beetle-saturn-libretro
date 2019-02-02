@@ -2,7 +2,7 @@
 /* Mednafen Sega Saturn Emulation Module                                      */
 /******************************************************************************/
 /* vdp2.cpp - VDP2 Emulation
-**  Copyright (C) 2015-2016 Mednafen Team
+**  Copyright (C) 2015-2018 Mednafen Team
 **
 ** This program is free software; you can redistribute it and/or
 ** modify it under the terms of the GNU General Public License
@@ -985,7 +985,7 @@ void StateAction(StateMem* sm, const unsigned load, const bool data_only)
  {
   SFVAR(lastts),
 
-  SFARRAY16(RawRegs, 0x100),
+  SFVAR(RawRegs),
   SFVAR(DisplayOn),
   SFVAR(BorderMode),
   SFVAR(ExLatchEnable),
@@ -1003,40 +1003,40 @@ void StateAction(StateMem* sm, const unsigned load, const bool data_only)
   SFVAR(CRAM_Mode),
 
   SFVAR(BGON),
-  SFARRAY(&VCPRegs[0][0], 4 * 8),
-  SFARRAY32(VRAMPenalty, 4),
+  SFVARN(VCPRegs, "&VCPRegs[0][0]"),
+  SFVAR(VRAMPenalty),
 
   SFVAR(RPTA),
-  SFARRAY(RPRCTL, 2),
-  SFARRAY(KTAOF, 2),
+  SFVAR(RPRCTL),
+  SFVAR(KTAOF),
 
-  SFARRAY16(VRAM, 262144),
-  SFARRAY16(CRAM, 2048),
+  SFVAR(VRAM),
+  SFVAR(CRAM),
 
-  SFVAR(RotParams->Xst, 2, sizeof(*RotParams)),
-  SFVAR(RotParams->Yst, 2, sizeof(*RotParams)),
-  SFVAR(RotParams->Zst, 2, sizeof(*RotParams)),
-  SFVAR(RotParams->DXst, 2, sizeof(*RotParams)),
-  SFVAR(RotParams->DYst, 2, sizeof(*RotParams)),
-  SFVAR(RotParams->DX, 2, sizeof(*RotParams)),
-  SFVAR(RotParams->DY, 2, sizeof(*RotParams)),
-  SFARRAY32(RotParams->RotMatrix, 6, 2, sizeof(*RotParams)),
-  SFVAR(RotParams->Px, 2, sizeof(*RotParams)),
-  SFVAR(RotParams->Py, 2, sizeof(*RotParams)),
-  SFVAR(RotParams->Pz, 2, sizeof(*RotParams)),
-  SFVAR(RotParams->Cx, 2, sizeof(*RotParams)),
-  SFVAR(RotParams->Cy, 2, sizeof(*RotParams)),
-  SFVAR(RotParams->Cz, 2, sizeof(*RotParams)),
-  SFVAR(RotParams->Mx, 2, sizeof(*RotParams)),
-  SFVAR(RotParams->My, 2, sizeof(*RotParams)),
-  SFVAR(RotParams->kx, 2, sizeof(*RotParams)),
-  SFVAR(RotParams->ky, 2, sizeof(*RotParams)),
-  SFVAR(RotParams->KAst, 2, sizeof(*RotParams)),
-  SFVAR(RotParams->DKAst, 2, sizeof(*RotParams)),
-  SFVAR(RotParams->DKAx, 2, sizeof(*RotParams)),
-  SFVAR(RotParams->XstAccum, 2, sizeof(*RotParams)),
-  SFVAR(RotParams->YstAccum, 2, sizeof(*RotParams)),
-  SFVAR(RotParams->KAstAccum, 2, sizeof(*RotParams)),
+  SFVAR(RotParams->Xst, 2, sizeof(*RotParams), RotParams),
+  SFVAR(RotParams->Yst, 2, sizeof(*RotParams), RotParams),
+  SFVAR(RotParams->Zst, 2, sizeof(*RotParams), RotParams),
+  SFVAR(RotParams->DXst, 2, sizeof(*RotParams), RotParams),
+  SFVAR(RotParams->DYst, 2, sizeof(*RotParams), RotParams),
+  SFVAR(RotParams->DX, 2, sizeof(*RotParams), RotParams),
+  SFVAR(RotParams->DY, 2, sizeof(*RotParams), RotParams),
+  SFVAR(RotParams->RotMatrix, 2, sizeof(*RotParams), RotParams),
+  SFVAR(RotParams->Px, 2, sizeof(*RotParams), RotParams),
+  SFVAR(RotParams->Py, 2, sizeof(*RotParams), RotParams),
+  SFVAR(RotParams->Pz, 2, sizeof(*RotParams), RotParams),
+  SFVAR(RotParams->Cx, 2, sizeof(*RotParams), RotParams),
+  SFVAR(RotParams->Cy, 2, sizeof(*RotParams), RotParams),
+  SFVAR(RotParams->Cz, 2, sizeof(*RotParams), RotParams),
+  SFVAR(RotParams->Mx, 2, sizeof(*RotParams), RotParams),
+  SFVAR(RotParams->My, 2, sizeof(*RotParams), RotParams),
+  SFVAR(RotParams->kx, 2, sizeof(*RotParams), RotParams),
+  SFVAR(RotParams->ky, 2, sizeof(*RotParams), RotParams),
+  SFVAR(RotParams->KAst, 2, sizeof(*RotParams), RotParams),
+  SFVAR(RotParams->DKAst, 2, sizeof(*RotParams), RotParams),
+  SFVAR(RotParams->DKAx, 2, sizeof(*RotParams), RotParams),
+  SFVAR(RotParams->XstAccum, 2, sizeof(*RotParams), RotParams),
+  SFVAR(RotParams->YstAccum, 2, sizeof(*RotParams), RotParams),
+  SFVAR(RotParams->KAstAccum, 2, sizeof(*RotParams), RotParams),
 
   SFVAR(Out_VB),
 

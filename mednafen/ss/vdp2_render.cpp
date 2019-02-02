@@ -3449,18 +3449,18 @@ void VDP2REND_StateAction(StateMem* sm, const unsigned load, const bool data_onl
 
   SFVAR(MosaicVCount),
 
-  SFARRAY32(VCLast, 2),
+  SFVAR(VCLast),
 
-  SFARRAY32(YCoordAccum, 2),
-  SFARRAY32(MosEff_YCoordAccum, 2),
+  SFVAR(YCoordAccum),
+  SFVAR(MosEff_YCoordAccum),
 
-  SFARRAY32(CurXScrollIF, 2),
-  SFARRAY32(CurYScrollIF, 2),
-  SFARRAY16(CurXCoordInc, 2),
-  SFARRAY32(CurLSA, 2),
+  SFVAR(CurXScrollIF),
+  SFVAR(CurYScrollIF),
+  SFVAR(CurXCoordInc),
+  SFVAR(CurLSA),
 
-  SFARRAY16(NBG23_YCounter, 2),
-  SFARRAY16(MosEff_NBG23_YCounter, 2),
+  SFVAR(NBG23_YCounter),
+  SFVAR(MosEff_NBG23_YCounter),
 
   SFVAR(CurBackTabAddr),
   SFVAR(CurBackColor),
@@ -3469,12 +3469,11 @@ void VDP2REND_StateAction(StateMem* sm, const unsigned load, const bool data_onl
   SFVAR(CurLCColor),
 
   // XStart and XEnd can be modified by line window processing.
-  SFVAR(Window->XStart, 2, sizeof(*Window)),
-  SFVAR(Window->XEnd, 2, sizeof(*Window)),
-  SFVAR(Window->YMet, 2, sizeof(*Window)),
-  SFVAR(Window->CurXStart, 2, sizeof(*Window)),
-  SFVAR(Window->CurXEnd, 2, sizeof(*Window)),
-  SFVAR(Window->CurLineWinAddr, 2, sizeof(*Window)),
+  SFVAR(Window->XStart, 2, sizeof(*Window), Window),
+  SFVAR(Window->XEnd, 2, sizeof(*Window), Window),
+  SFVAR(Window->CurXStart, 2, sizeof(*Window), Window),
+  SFVAR(Window->CurXEnd, 2, sizeof(*Window), Window),
+  SFVAR(Window->CurLineWinAddr, 2, sizeof(*Window), Window),
 
   SFEND
  };

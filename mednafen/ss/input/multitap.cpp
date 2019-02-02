@@ -103,8 +103,8 @@ void IODevice_Multitap::StateAction(StateMem* sm, const unsigned load, const boo
 {
  SFORMAT StateRegs[] =
  {
-  SFARRAY(sub_state, 6),
-  SFARRAY(tmp, 4),
+  SFVAR(sub_state),
+  SFVAR(tmp),
   SFVAR(id1),
   SFVAR(id2),
 

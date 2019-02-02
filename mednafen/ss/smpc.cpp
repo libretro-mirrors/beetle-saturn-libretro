@@ -500,12 +500,12 @@ void SMPC_StateAction(StateMem* sm, const unsigned load, const bool data_only)
  {
   SFVAR(RTC.ClockAccum),
   SFVAR(RTC.Valid),
-  SFARRAY(RTC.raw, 7),
+  SFVAR(RTC.raw),
 
-  SFARRAY(SaveMem, 4),
+  SFVAR(SaveMem),
 
-  SFARRAY(IREG, 7),
-  SFARRAY(OREG, 0x20),
+  SFVAR(IREG),
+  SFVAR(OREG),
   SFVAR(SR),
   SFVAR(SF),
 
@@ -536,7 +536,7 @@ void SMPC_StateAction(StateMem* sm, const unsigned load, const bool data_only)
   SFVAR(JRS.OptEatTime),
   SFVAR(JRS.OptReadTime),
 
-  SFARRAY(JRS.Mode, 2),
+  SFVAR(JRS.Mode),
   SFVAR(JRS.TimeOptEn),
   SFVAR(JRS.NextContBit),
 
@@ -549,22 +549,22 @@ void SMPC_StateAction(StateMem* sm, const unsigned load, const bool data_only)
 
   SFVAR(JRS.OWP),
 
-  SFARRAY(JRS.work, 8),
+  SFVAR(JRS.work),
 
   SFVAR(JRS.TapCounter),
   SFVAR(JRS.TapCount),
   SFVAR(JRS.ReadCounter),
   SFVAR(JRS.ReadCount),
-  SFARRAY(JRS.ReadBuffer, 256),
+  SFVAR(JRS.ReadBuffer),
   SFVAR(JRS.WriteCounter),
   SFVAR(JRS.PDCounter),
 
-  SFARRAY(&DataOut[0][0], 4),
-  SFARRAY(&DataDir[0][0], 4),
-  SFARRAYB(DirectModeEn, 2),
-  SFARRAYB(ExLatchEn, 2),
+  SFVARN(DataOut, "&DataOut[0][0]"),
+  SFVARN(DataDir, "&DataDir[0][0]"),
+  SFVAR(DirectModeEn),
+  SFVAR(ExLatchEn),
 
-  SFARRAY(IOBusState, 2),
+  SFVAR(IOBusState),
 
   SFVAR(vb),
   SFVAR(vsync),

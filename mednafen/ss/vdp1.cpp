@@ -2,7 +2,7 @@
 /* Mednafen Sega Saturn Emulation Module                                      */
 /******************************************************************************/
 /* vdp1.cpp - VDP1 Emulation
-**  Copyright (C) 2015-2016 Mednafen Team
+**  Copyright (C) 2015-2017 Mednafen Team
 **
 ** This program is free software; you can redistribute it and/or
 ** modify it under the terms of the GNU General Public License
@@ -881,14 +881,12 @@ uint16 Read16_DB(uint32 A)
  return ReadReg((A - 0x100000) >> 1);
 }
 
-
-
 void StateAction(StateMem* sm, const unsigned load, const bool data_only)
 {
  SFORMAT StateRegs[] =
  {
-  SFARRAY16(VRAM, 0x40000),
-  SFARRAY16(&FB[0][0], 2 * 0x20000),
+  SFVAR(VRAM),
+  SFVARN(FB, "&FB[0][0]"),
   SFVAR(FBDrawWhich),
 
   SFVAR(FBManualPending),

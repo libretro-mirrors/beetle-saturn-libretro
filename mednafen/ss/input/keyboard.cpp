@@ -157,13 +157,13 @@ void IODevice_Keyboard::StateAction(StateMem* sm, const unsigned load, const boo
 {
  SFORMAT StateRegs[] =
  {
-  SFARRAY16(fifo, fifo_size),
+  SFVAR(fifo),
   SFVAR(fifo_rdp),
   SFVAR(fifo_wrp),
   SFVAR(fifo_cnt),
 
-  SFARRAY64(phys, 4),
-  SFARRAY64(processed, 4),
+  SFVAR(phys),
+  SFVAR(processed),
 
   SFVAR(simbutt),
   SFVAR(simbutt_pend),
@@ -174,7 +174,7 @@ void IODevice_Keyboard::StateAction(StateMem* sm, const unsigned load, const boo
   SFVAR(rep_dcnt),
 
   SFVAR(mkbrk_pend),
-  SFARRAY(buffer, 12),
+  SFVAR(buffer),
 
   SFVAR(data_out),
   SFVAR(tl),

@@ -81,9 +81,9 @@ void IODevice_Mission::StateAction(StateMem* sm, const unsigned load, const bool
   SFVAR(afcounter),
   SFVAR(afphase),
 
-  SFARRAY(&axes[0][0], 2 * 3),
+  SFVARN(axes, "&axes[0][0]"),
 
-  SFARRAY(buffer, 0x20),
+  SFVAR(buffer),
   SFVAR(data_out),
   SFVAR(tl),
 

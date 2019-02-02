@@ -2,7 +2,7 @@
 /* Mednafen Sega Saturn Emulation Module                                      */
 /******************************************************************************/
 /* scsp.inc - SCSP Emulation
-**  Copyright (C) 2015-2016 Mednafen Team
+**  Copyright (C) 2015-2017 Mednafen Team
 **
 ** This program is free software; you can redistribute it and/or
 ** modify it under the terms of the GNU General Public License
@@ -102,8 +102,8 @@ void SS_SCSP::Reset(bool powering_up)
 
  for(unsigned i = 0; i < 32; i++)
  {
- // Some SSFs require this; TODO: test to see if this is correct for a reset,
- // and if not, move it into special SSF loading code.
+  // Some SSFs require this; TODO: test to see if this is correct for a reset,
+  // and if not, move it into special SSF loading code.
   Slots[i].EnvLevel = 0x3FF;
   Slots[i].EnvPhase = ENV_PHASE_RELEASE;
 
@@ -1497,27 +1497,30 @@ INLINE void SS_SCSP::RunSample(int16* outlr)
  outlr[1] = out_accum[1];
 }
 
+//
+//
+//
 void SS_SCSP::StateAction(StateMem* sm, const unsigned load, const bool data_only, const char* sname)
 {
  SFORMAT StateRegs[] =
  {
-  SFARRAY16N(&SlotRegs[0][0], 0x20 * 0x10, "SlotRegs"),
+  SFVARN(SlotRegs, "SlotRegs"),
 
-  SFVAR(Slots->PhaseWhacker, 32, sizeof(Slot)),
-  SFVAR(Slots->CurrentAddr, 32, sizeof(Slot)),
-  SFVAR(Slots->InLoop, 32, sizeof(Slot)),
-  SFVAR(Slots->LoopSub, 32, sizeof(Slot)),
-  SFVAR(Slots->WFAllowAccess, 32, sizeof(Slot)),
-  SFVAR(Slots->EnvLevel, 32, sizeof(Slot)),
-  SFVAR(Slots->EnvPhase, 32, sizeof(Slot)),
-  SFVAR(Slots->EnvGCBTPrev, 32, sizeof(Slot)),
-  SFVAR(Slots->LFOCounter, 32, sizeof(Slot)),
-  SFVAR(Slots->LFOTimeCounter, 32, sizeof(Slot)),
+  SFVAR(Slots->PhaseWhacker, 32, sizeof(*Slots), Slots),
+  SFVAR(Slots->CurrentAddr, 32, sizeof(*Slots), Slots),
+  SFVAR(Slots->InLoop, 32, sizeof(*Slots), Slots),
+  SFVAR(Slots->LoopSub, 32, sizeof(*Slots), Slots),
+  SFVAR(Slots->WFAllowAccess, 32, sizeof(*Slots), Slots),
+  SFVAR(Slots->EnvLevel, 32, sizeof(*Slots), Slots),
+  SFVAR(Slots->EnvPhase, 32, sizeof(*Slots), Slots),
+  SFVAR(Slots->EnvGCBTPrev, 32, sizeof(*Slots), Slots),
+  SFVAR(Slots->LFOCounter, 32, sizeof(*Slots), Slots),
+  SFVAR(Slots->LFOTimeCounter, 32, sizeof(*Slots), Slots),
 
-  SFARRAY16(EXTS, 2),
+  SFVAR(EXTS),
 
-  SFARRAY16(SoundStack, 0x40),
-  SFARRAY16(SoundStackDelayer, 4),
+  SFVAR(SoundStack),
+  SFVAR(SoundStackDelayer),
 
   SFVAR(MasterVolume),
   SFVAR(MVOL),
@@ -1531,11 +1534,11 @@ void SS_SCSP::StateAction(StateMem* sm, const unsigned load, const bool data_onl
   SFVAR(LFSR),
   SFVAR(GlobalCounter),
 
-  SFARRAY(MIDI.InputFIFO, 4),
+  SFVAR(MIDI.InputFIFO),
   SFVAR(MIDI.InputRP),
   SFVAR(MIDI.InputWP),
   SFVAR(MIDI.InputCount),
-  SFARRAY(MIDI.OutputFIFO, 4),
+  SFVAR(MIDI.OutputFIFO),
   SFVAR(MIDI.OutputRP),
   SFVAR(MIDI.OutputWP),
   SFVAR(MIDI.OutputCount),
@@ -1547,12 +1550,12 @@ void SS_SCSP::StateAction(StateMem* sm, const unsigned load, const bool data_onl
   SFVAR(MCIEB),
   SFVAR(MCIPD),
 
-  SFARRAY(SCILV, 3),
+  SFVAR(SCILV),
 
-  SFVAR(Timers->Control, 3, sizeof(*Timers)),
-  SFVAR(Timers->Counter, 3, sizeof(*Timers)),
-  SFVAR(Timers->PrevClockIn, 3, sizeof(*Timers)),
-  SFVAR(Timers->Reload, 3, sizeof(*Timers)),
+  SFVAR(Timers->Control, 3, sizeof(*Timers), Timers),
+  SFVAR(Timers->Counter, 3, sizeof(*Timers), Timers),
+  SFVAR(Timers->PrevClockIn, 3, sizeof(*Timers), Timers),
+  SFVAR(Timers->Reload, 3, sizeof(*Timers), Timers),
 
   SFVAR(DMEA),
   SFVAR(DRGA),
@@ -1565,13 +1568,13 @@ void SS_SCSP::StateAction(StateMem* sm, const unsigned load, const bool data_onl
   SFVAR(RBP),
   SFVAR(RBL),
 
-  SFARRAY64(DSP.MPROG, 0x80),
-  SFARRAY32(DSP.TEMP, 0x80),
-  SFARRAY32(DSP.MEMS, 0x20),
-  SFARRAY16(DSP.COEF, 64),
-  SFARRAY16(DSP.MADRS, 32),
-  SFARRAY32(DSP.MIXS, 0x10),
-  SFARRAY16(DSP.EFREG, 0x10),
+  SFVAR(DSP.MPROG),
+  SFVAR(DSP.TEMP),
+  SFVAR(DSP.MEMS),
+  SFVAR(DSP.COEF),
+  SFVAR(DSP.MADRS),
+  SFVAR(DSP.MIXS),
+  SFVAR(DSP.EFREG),
 
   SFVAR(DSP.INPUTS),
 
@@ -1591,7 +1594,7 @@ void SS_SCSP::StateAction(StateMem* sm, const unsigned load, const bool data_onl
   SFVAR(DSP.ReadPending),
   SFVAR(DSP.ReadValue),
   //
-  SFARRAY16(RAM, 262144),
+  SFPTR16(RAM, 262144),
 
   SFEND
  };
@@ -1636,7 +1639,6 @@ void SS_SCSP::StateAction(StateMem* sm, const unsigned load, const bool data_onl
 //
 //
 //
-
 uint32 SS_SCSP::GetRegister(const unsigned id, char* const special, const uint32 special_len)
 {
  uint32 ret = 0xDEADBEEF;
@@ -1669,7 +1671,7 @@ uint32 SS_SCSP::GetRegister(const unsigned id, char* const special, const uint32
  }
 
  return ret;
- }
+}
 
 void SS_SCSP::SetRegister(const unsigned id, const uint32 value)
 {

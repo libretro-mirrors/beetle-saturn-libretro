@@ -1457,7 +1457,7 @@ MDFN_COLD int LibRetro_StateAction( StateMem* sm, const unsigned load, const boo
 
       SFORMAT SRDStateRegs[] =
       {
-         SFARRAY( sr_dig.data(), sr_dig.size() ),
+         SFPTR8( sr_dig.data(), sr_dig.size() ),
          SFEND
       };
 
@@ -1481,16 +1481,16 @@ MDFN_COLD int LibRetro_StateAction( StateMem* sm, const unsigned load, const boo
   SFVAR(UpdateInputLastBigTS),
 
   SFVAR(next_event_ts),
-  SFARRAY32N(ep.event_times, sizeof(ep.event_times) / sizeof(ep.event_times[0]), "event_times"),
-  SFARRAYN(ep.event_order, sizeof(ep.event_order) / sizeof(ep.event_order[0]), "event_order"),
+  SFPTR32N(ep.event_times, sizeof(ep.event_times) / sizeof(ep.event_times[0]), "event_times"),
+  SFPTR8N(ep.event_order, sizeof(ep.event_order) / sizeof(ep.event_order[0]), "event_order"),
 
   SFVAR(SH7095_mem_timestamp),
   SFVAR(SH7095_BusLock),
   SFVAR(SH7095_DB),
 
-  SFARRAY16(WorkRAML, WORKRAM_BANK_SIZE_BYTES / sizeof(uint16_t)),
-  SFARRAY16(WorkRAMH, WORKRAM_BANK_SIZE_BYTES / sizeof(uint16_t)),
-  SFARRAY(BackupRAM, sizeof(BackupRAM) / sizeof(BackupRAM[0])),
+  SFPTR16(WorkRAML, WORKRAM_BANK_SIZE_BYTES / sizeof(uint16_t)),
+  SFPTR16(WorkRAMH, WORKRAM_BANK_SIZE_BYTES / sizeof(uint16_t)),
+  SFPTR8(BackupRAM, sizeof(BackupRAM) / sizeof(BackupRAM[0])),
 
   SFEND
  };

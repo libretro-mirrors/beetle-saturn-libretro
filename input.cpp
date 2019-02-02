@@ -1012,8 +1012,8 @@ int input_StateAction( StateMem* sm, const unsigned load, const bool data_only )
 
 	SFORMAT StateRegs[] =
 	{
-		SFARRAY16N( input_mode, MAX_CONTROLLERS, "pad-mode" ),
-		SFARRAY16N( input_throttle_latch, MAX_CONTROLLERS, "throttle-latch" ),
+		SFPTR16N( input_mode, MAX_CONTROLLERS, "pad-mode" ),
+		SFPTR16N( input_throttle_latch, MAX_CONTROLLERS, "throttle-latch" ),
 		SFEND
 	};
 
