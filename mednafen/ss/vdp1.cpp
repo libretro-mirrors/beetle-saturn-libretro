@@ -39,8 +39,8 @@
 #include "vdp2.h"
 #include "vdp1_common.h"
 
-enum { VDP1_UpdateTimingGran = 263 };
-enum { VDP1_IdleTimingGran = 1019 };
+enum : int { VDP1_UpdateTimingGran = 263 };
+enum : int { VDP1_IdleTimingGran = 1019 };
 
 namespace VDP1
 {
