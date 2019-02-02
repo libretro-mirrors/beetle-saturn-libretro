@@ -30,8 +30,8 @@
 #include <zlib.h>
 
 #define MEDNAFEN_CORE_NAME                   "Beetle Saturn"
-#define MEDNAFEN_CORE_VERSION                "v0.9.48"
-#define MEDNAFEN_CORE_VERSION_NUMERIC        0x00094800 // 0x00102100
+#define MEDNAFEN_CORE_VERSION                "v1.21.0"
+#define MEDNAFEN_CORE_VERSION_NUMERIC        0x00102100
 #define MEDNAFEN_CORE_EXTENSIONS             "cue|ccd|chd|toc|m3u"
 #define MEDNAFEN_CORE_TIMING_FPS             59.82
 #define MEDNAFEN_CORE_GEOMETRY_BASE_W        320
