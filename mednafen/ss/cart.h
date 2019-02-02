@@ -92,7 +92,7 @@ void CART_Init(const int cart_type) MDFN_COLD;
 static INLINE ss_event_handler CART_GetEventHandler(void) { extern CartInfo Cart; return Cart.EventHandler; }
 static INLINE void CART_AdjustTS(const int32 delta) { extern CartInfo Cart; Cart.AdjustTS(delta); }
 static INLINE void CART_SetCPUClock(const int32 master_clock, const int32 cpu_divider) { extern CartInfo Cart; Cart.SetCPUClock(master_clock, cpu_divider); }
-static INLINE void CART_Kill(void) { extern CartInfo Cart; Cart.Kill(); }
+static INLINE void CART_Kill(void) { extern CartInfo Cart; if(Cart.Kill) { Cart.Kill(); Cart.Kill = nullptr; } }
 static INLINE void CART_StateAction(StateMem* sm, const unsigned load, const bool data_only) { extern CartInfo Cart; Cart.StateAction(sm, load, data_only); }
 static INLINE void CART_GetNVInfo(const char** ext, void** nv_ptr, bool* nv16, uint64* nv_size) { extern CartInfo Cart; Cart.GetNVInfo(ext, nv_ptr, nv16, nv_size); }
 static INLINE bool CART_GetClearNVDirty(void) { extern CartInfo Cart; return Cart.GetClearNVDirty(); }
