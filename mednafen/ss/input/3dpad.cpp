@@ -48,18 +48,18 @@ void IODevice_3DPad::UpdateInput(const uint8* data, const int32 time_elapsed)
 
  for(unsigned axis = 0; axis < 2; axis++)
  {
-  int32 tmp = 32767 + MDFN_de16lsb(&data[0x2 + (axis << 2) + 2]) - MDFN_de16lsb(&data[0x2 + (axis << 2) + 0]);
+  int32 tmp = MDFN_de16lsb(&data[0x2 + (axis << 1)]);
 
-  if(tmp >= (32767 - 128) && tmp < 32767)
-   tmp = 32767;
+  if(tmp >= (32768 - 128) && tmp < 32768)
+   tmp = 32768;
 
-  tmp = (tmp * 255 + 32767) / 65534;
+  tmp = (tmp * 255 + 32767) / 65535;
   thumb[axis] = tmp;
  }
 
  for(unsigned w = 0; w < 2; w++)
  {
-  shoulder[w] = (MDFN_de16lsb(&data[0xA + (w << 1)]) * 255 + 16383) / 32767;
+  shoulder[w] = (MDFN_de16lsb(&data[0x6 + (w << 1)]) * 255 + 32767) / 65535;
 
   // May not be right for digital mode, but shouldn't matter too much:
   if(shoulder[w] <= 0x55)
@@ -67,6 +67,8 @@ void IODevice_3DPad::UpdateInput(const uint8* data, const int32 time_elapsed)
   else if(shoulder[w] >= 0x8E)
    dbuttons |= 0x0800 << (w << 2);
  }
+
+ //printf("DButtons: %04x, Mode: %d, Thumb0: %02x, Thumb1: %02x, Shoulder0: %02x, Shoulder1: %02x\n", dbuttons, mode, thumb[0], thumb[1], shoulder[0], shoulder[1]);
 }
 
 void IODevice_3DPad::StateAction(StateMem* sm, const unsigned load, const bool data_only, const char* sname_prefix)
