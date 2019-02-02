@@ -99,6 +99,7 @@ typedef struct
  };
 } Uuint32;
 
+#define MDFN_HOT
 #define MDFN_COLD
 
 #undef require
