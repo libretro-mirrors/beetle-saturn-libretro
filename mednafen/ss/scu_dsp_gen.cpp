@@ -53,8 +53,9 @@ static INLINE void CalcZS48(uint64 val)
  DSP.FlagZ = !val;
 }
 
+
 template<const bool looped, const unsigned alu_op, const unsigned x_op, const unsigned y_op, const unsigned d1_op>
-static NO_INLINE void GeneralInstr(void)
+static NO_INLINE NO_CLONE void GeneralInstr(void)
 {
  const uint32 instr = DSP_InstrPre<looped>();
  //
@@ -323,7 +324,7 @@ static NO_INLINE void GeneralInstr(void)
  }
 
  //
- // FIXME: Will only work when running on little endian platforms!
+ //
  //
  #ifdef MSB_FIRST
  ct_inc = MDFN_bswap32(ct_inc);
@@ -337,3 +338,4 @@ extern void (*const DSP_GenFuncTable[2][16][8][8][4])(void) =
 {
  #include "scu_dsp_gentab.inc"
 };
+

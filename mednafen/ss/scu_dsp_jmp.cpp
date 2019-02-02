@@ -27,7 +27,7 @@
 #include "scu_dsp_common.inc"
 
 template<bool looped, unsigned cond>
-static NO_INLINE void JMPInstr(void)
+static NO_INLINE NO_CLONE void JMPInstr(void)
 {
  const uint32 instr = DSP_InstrPre<looped>();
 
@@ -39,3 +39,4 @@ extern void (*const DSP_JMPFuncTable[2][128])(void) =
 {
  #include "scu_dsp_jmptab.inc"
 };
+
