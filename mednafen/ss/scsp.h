@@ -2,7 +2,7 @@
 /* Mednafen Sega Saturn Emulation Module                                      */
 /******************************************************************************/
 /* scsp.h:
-**  Copyright (C) 2015-2016 Mednafen Team
+**  Copyright (C) 2015-2017 Mednafen Team
 **
 ** This program is free software; you can redistribute it and/or
 ** modify it under the terms of the GNU General Public License
@@ -101,17 +101,7 @@ class SS_SCSP
 
   uint8 SBControl;
 
-  union
-  {
-   struct
-   {
-    uint8 AttackRate;
-    uint8 Decay1Rate;
-    uint8 Decay2Rate;
-    uint8 ReleaseRate;
-   };
-   uint8 EnvRates[4];
-  };
+  uint8 EnvRates[4];
 
   bool AttackHold;
   bool AttackLoopLink;

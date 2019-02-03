@@ -4,6 +4,10 @@
 #include <assert.h>
 #include <stdint.h>
 
+#ifdef __cplusplus
+#include <type_traits>
+#endif
+
 typedef int8_t int8;
 typedef int16_t int16;
 typedef int32_t int32; 
@@ -99,12 +103,18 @@ typedef struct
  };
 } Uuint32;
 
+#define MDFN_HOT
 #define MDFN_COLD
+#define NO_CLONE
 
 #undef require
 #define require( expr ) assert( expr )
 
+#ifdef __cplusplus
+template<typename T> typename std::remove_all_extents<T>::type* MDAP(T* v) { return (typename std::remove_all_extents<T>::type*)v; }
 #include "error.h"
+#endif
 
+#define gettext_noop(String)	String
 
 #endif

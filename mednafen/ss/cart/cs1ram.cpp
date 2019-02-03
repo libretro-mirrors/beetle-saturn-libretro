@@ -25,7 +25,7 @@
 static uint16* CS1RAM = nullptr;
 
 template<typename T, bool IsWrite>
-static void CS1RAM_RW_DB(uint32 A, uint16* DB)
+static MDFN_HOT void CS1RAM_RW_DB(uint32 A, uint16* DB)
 {
  const uint32 mask = (sizeof(T) == 2) ? 0xFFFF : (0xFF << (((A & 1) ^ 1) << 3));
  uint16* const ptr = (uint16*)((uint8*)CS1RAM + (A & 0x00FFFFFE));
@@ -55,7 +55,7 @@ static MDFN_COLD void StateAction(StateMem* sm, const unsigned load, const bool 
 {
  SFORMAT StateRegs[] =
  {
-  SFARRAY16N(CS1RAM, 0x800000, "RAM"),
+  SFPTR16N(CS1RAM, 0x800000, "RAM"),
   SFEND
  };
 

@@ -25,10 +25,10 @@
 class IODevice_Wheel final : public IODevice
 {
  public:
- IODevice_Wheel();
- virtual ~IODevice_Wheel() override;
+ IODevice_Wheel() MDFN_COLD;
+ virtual ~IODevice_Wheel() override MDFN_COLD;
 
- virtual void Power(void) override;
+ virtual void Power(void) override MDFN_COLD;
  virtual void UpdateInput(const uint8* data, const int32 time_elapsed) override;
  virtual void StateAction(StateMem* sm, const unsigned load, const bool data_only, const char* sname_prefix) override;
 
@@ -46,5 +46,6 @@ class IODevice_Wheel final : public IODevice
 
 
 extern IDIISG IODevice_Wheel_IDII;
+
 
 #endif

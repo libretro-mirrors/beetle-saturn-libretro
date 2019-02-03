@@ -68,7 +68,7 @@ void IODevice_Wheel::StateAction(StateMem* sm, const unsigned load, const bool d
   SFVAR(dbuttons),
   SFVAR(wheel),
 
-  SFARRAY(buffer, 0x10),
+  SFVAR(buffer),
   SFVAR(data_out),
   SFVAR(tl),
 
@@ -76,7 +76,7 @@ void IODevice_Wheel::StateAction(StateMem* sm, const unsigned load, const bool d
   SFEND
  };
  char section_name[64];
- snprintf(section_name, sizeof(section_name), "%s_Wheel", sname_prefix);
+ trio_snprintf(section_name, sizeof(section_name), "%s_Wheel", sname_prefix);
 
  if(!MDFNSS_StateAction(sm, load, data_only, StateRegs, section_name, true) && load)
   Power();
@@ -136,26 +136,25 @@ uint8 IODevice_Wheel::UpdateBus(const sscpu_timestamp_t timestamp, const uint8 s
 
 IDIISG IODevice_Wheel_IDII =
 {
- { "up", "L Gear Shift(Equiv. UP ↑)", 2, IDIT_BUTTON, "down" },
- { "down", "R Gear Shift(Equiv. DOWN ↓)", 3, IDIT_BUTTON, "up" },
- { NULL, "empty", 0, IDIT_BUTTON }, // left
- { NULL, "empty", 0, IDIT_BUTTON }, // right
+ IDIIS_Button("up", "L Gear Shift(Equiv. UP ↑)", 1, "down"),
+ IDIIS_Button("down", "R Gear Shift(Equiv. DOWN ↓)", 2, "up"),
+ IDIIS_Padding<2>(),
 
- { "b", "B (R Group)", 9, IDIT_BUTTON },
- { "c", "C (R Group)", 10, IDIT_BUTTON },
- { "a", "A (R Group)", 8, IDIT_BUTTON },
- { "start", "START", 7, IDIT_BUTTON },
+ IDIIS_Button("b", "B (R Group)", 8),
+ IDIIS_Button("c", "C (R Group)", 9),
+ IDIIS_Button("a", "A (R Group)", 7),
+ IDIIS_Button("start", "START", 6),
 
- { "z", "Z (L Group)", 4, IDIT_BUTTON },
- { "y", "Y (L Group)", 5, IDIT_BUTTON },
- { "x", "X (L Group)", 6, IDIT_BUTTON },
- { NULL, "empty", 0, IDIT_BUTTON },
+ IDIIS_Button("z", "Z (L Group)", 3),
+ IDIIS_Button("y", "Y (L Group)", 4),
+ IDIIS_Button("x", "X (L Group)", 5),
+ IDIIS_Padding<1>(),
 
- { NULL, "empty", 0, IDIT_BUTTON },
- { NULL, "empty", 0, IDIT_BUTTON },
- { NULL, "empty", 0, IDIT_BUTTON },
- { NULL, "empty", 0, IDIT_BUTTON },
-
- { "analog_left", "Analog LEFT ←", 0, IDIT_BUTTON_ANALOG },
- { "analog_right", "Analog RIGHT →", 1, IDIT_BUTTON_ANALOG },
+ IDIIS_Axis(	"analog", "Analog",
+		"left", "LEFT ←",
+		"right", "RIGHT →", 0),
 };
+
+
+
+

@@ -1,5 +1,26 @@
-#ifndef _STATE_H
-#define _STATE_H
+/******************************************************************************/
+/* Mednafen - Multi-system Emulator                                           */
+/******************************************************************************/
+/* state.h:
+**  Copyright (C) 2005-2017 Mednafen Team
+**
+** This program is free software; you can redistribute it and/or
+** modify it under the terms of the GNU General Public License
+** as published by the Free Software Foundation; either version 2
+** of the License, or (at your option) any later version.
+**
+** This program is distributed in the hope that it will be useful,
+** but WITHOUT ANY WARRANTY; without even the implied warranty of
+** MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+** GNU General Public License for more details.
+**
+** You should have received a copy of the GNU General Public License
+** along with this program; if not, write to the Free Software Foundation, Inc.,
+** 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+*/
+
+#ifndef __MDFN_STATE_H
+#define __MDFN_STATE_H
 
 #include <retro_inline.h>
 #include <type_traits>
@@ -51,8 +72,6 @@ struct SFORMAT
 	uint32 repstride;
 };
 
-static INLINE bool* SF_FORCE_AB(bool* p) { return p; }
-
 static INLINE int8* SF_FORCE_A8(int8* p) { return p; }
 static INLINE uint8* SF_FORCE_A8(uint8* p) { return p; }
 
@@ -65,11 +84,8 @@ static INLINE uint32* SF_FORCE_A32(uint32* p) { return p; }
 static INLINE int64* SF_FORCE_A64(int64* p) { return p; }
 static INLINE uint64* SF_FORCE_A64(uint64* p) { return p; }
 
-static INLINE float* SF_FORCE_AF(float* p) { return p; }
-static INLINE double* SF_FORCE_AD(double* p) { return p; }
-
 template<typename T>
-static INLINE void SF_FORCE_ANY(T* p, typename std::enable_if<!std::is_enum<T>::value>::type* = nullptr)
+static INLINE void SF_FORCE_ANY(typename std::enable_if<!std::is_enum<T>::value>::type* = nullptr)
 {
  static_assert(	std::is_same<T, bool>::value ||
 		std::is_same<T, int8>::value || std::is_same<T, uint8>::value ||
@@ -79,20 +95,22 @@ static INLINE void SF_FORCE_ANY(T* p, typename std::enable_if<!std::is_enum<T>::
 }
 
 template<typename T>
-static INLINE void SF_FORCE_ANY(T* p, typename std::enable_if<std::is_enum<T>::value>::type* = nullptr)
+static INLINE void SF_FORCE_ANY(typename std::enable_if<std::is_enum<T>::value>::type* = nullptr)
 {
- SF_FORCE_ANY((typename std::underlying_type<T>::type*)p);
+ SF_FORCE_ANY<typename std::underlying_type<T>::type>();
 }
 
-template<typename T>
-static INLINE SFORMAT SFBASE_(T* const v, const uint32 count, const uint32 totalcount, const size_t repstride, const char* const name)
+template<typename IT>
+static INLINE SFORMAT SFBASE_(IT* const iv, uint32 icount, const uint32 totalcount, const size_t repstride, void* repbase, const char* const name)
 {
- SF_FORCE_ANY(v);
+ typedef typename std::remove_all_extents<IT>::type T;
+ uint32 count = icount * (sizeof(IT) / sizeof(T));
+ SF_FORCE_ANY<T>();
  //
  //
  SFORMAT ret;
 
- ret.data = v;
+ ret.data = iv ? (char*)repbase + ((char*)iv - (char*)repbase) : nullptr;
  ret.name = name;
  ret.repcount = totalcount - 1;
  ret.repstride = repstride;
@@ -110,45 +128,53 @@ static INLINE SFORMAT SFBASE_(T* const v, const uint32 count, const uint32 total
  return ret;
 }
 
+/*
+ Probably a bad idea unless we prevent derived classes.
+
+template<typename IT>
+static INLINE SFORMAT SFBASE_(std::array<IT, N>* iv, uint32 icount, const uint32 totalcount, const size_t repstride, void* repbase, const char* const name)
+{
+ return SFBASE_(iv->data(), icount * N, totalcount, repstride, repbase, name);
+}
+*/
+
 template<typename T>
 static INLINE SFORMAT SFBASE_(T* const v, const uint32 count, const char* const name)
 {
- return SFBASE_(v, count, 1, 0, name);
+ return SFBASE_(v, count, 1, 0, v, name);
 }
 
 #define SFVARN(x, ...)	SFBASE_(&(x), 1, __VA_ARGS__)
 
 #define SFVAR1_(x)	   SFVARN((x), #x)
-#define SFVAR3_(x, tc, rs) SFVARN((x), tc, rs, #x)
-#define SFVAR_(a, b, c, d, ...)	d
-
-#define EXPAND( x ) x
-#define SFVAR(...) 	EXPAND(SFVAR_(__VA_ARGS__, SFVAR3_, SFVAR2_, SFVAR1_, SFVAR0_)(__VA_ARGS__))
+#define SFVAR4_(x, tc, rs, rb) SFVARN((x), tc, rs, rb, #x)
+#define SFVAR_(a, b, c, d, e, ...)	e
+#define SFVAR(...) 	SFVAR_(__VA_ARGS__, SFVAR4_, SFVAR3_, SFVAR2_, SFVAR1_, SFVAR0_)(__VA_ARGS__)
 
 #if SIZEOF_DOUBLE != 8
  #error "sizeof(double) != 8"
 #endif
 
-#define SFARRAYN(x, ...)	SFBASE_(SF_FORCE_A8(x), __VA_ARGS__)
-#define SFARRAY(x, ...)		SFBASE_(SF_FORCE_A8(x), __VA_ARGS__, #x)
+#define SFPTR8N(x, ...)		SFBASE_(SF_FORCE_A8(x), __VA_ARGS__)
+#define SFPTR8(x, ...)		SFBASE_(SF_FORCE_A8(x), __VA_ARGS__, #x)
 
-#define SFARRAYBN(x, ...)	SFBASE_(SF_FORCE_AB(x), __VA_ARGS__)
-#define SFARRAYB(x, ...)	SFBASE_(SF_FORCE_AB(x), __VA_ARGS__, #x)
+#define SFPTRBN(x, ...)		SFBASE_<bool>((x), __VA_ARGS__)
+#define SFPTRB(x, ...)		SFBASE_<bool>((x), __VA_ARGS__, #x)
 
-#define SFARRAY16N(x, ...)	SFBASE_(SF_FORCE_A16(x), __VA_ARGS__)
-#define SFARRAY16(x, ...)	SFBASE_(SF_FORCE_A16(x), __VA_ARGS__, #x)
+#define SFPTR16N(x, ...)	SFBASE_(SF_FORCE_A16(x), __VA_ARGS__)
+#define SFPTR16(x, ...)		SFBASE_(SF_FORCE_A16(x), __VA_ARGS__, #x)
 
-#define SFARRAY32N(x, ...)	SFBASE_(SF_FORCE_A32(x), __VA_ARGS__)
-#define SFARRAY32(x, ...)	SFBASE_(SF_FORCE_A32(x), __VA_ARGS__, #x)
+#define SFPTR32N(x, ...)	SFBASE_(SF_FORCE_A32(x), __VA_ARGS__)
+#define SFPTR32(x, ...)		SFBASE_(SF_FORCE_A32(x), __VA_ARGS__, #x)
 
-#define SFARRAY64N(x, ...)	SFBASE_(SF_FORCE_A64(x), __VA_ARGS__)
-#define SFARRAY64(x, ...)	SFBASE_(SF_FORCE_A64(x), __VA_ARGS__, #x)
+#define SFPTR64N(x, ...)	SFBASE_(SF_FORCE_A64(x), __VA_ARGS__)
+#define SFPTR64(x, ...)		SFBASE_(SF_FORCE_A64(x), __VA_ARGS__, #x)
 
-#define SFARRAYFN(x, ...)	SFBASE_(SF_FORCE_AF(x), __VA_ARGS__)
-#define SFARRAYF(x, ...)	SFBASE_(SF_FORCE_AF(x), __VA_ARGS__, #x)
+#define SFPTRFN(x, ...)		SFBASE_<float>((x), __VA_ARGS__)
+#define SFPTRF(x, ...)		SFBASE_<float>((x), __VA_ARGS__, #x)
 
-#define SFARRAYDN(x, ...)	SFBASE_(SF_FORCE_AD(x), __VA_ARGS__)
-#define SFARRAYD(x, ...)	SFBASE_(SF_FORCE_AD(x), __VA_ARGS__, #x)
+#define SFPTRDN(x, ...)		SFBASE_<double>((x), __VA_ARGS__)
+#define SFPTRD(x, ...)		SFBASE_<double>((x), __VA_ARGS__, #x)
 
 #define SFLINK(x) { nullptr, (x), ~0U, 0, 0, 0 }
 

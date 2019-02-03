@@ -428,16 +428,16 @@ static uint8 TAS_Callback(uint8 data)
  // These externally-provided functions should add >= 4 to M68K::timestamp per call:
  enum { BUS_INT_ACK_AUTO = -1 };
 
- uint16 (*BusReadInstr)(uint32 A);
- uint8 (*BusRead8)(uint32 A);
- uint16 (*BusRead16)(uint32 A);
- void (*BusWrite8)(uint32 A, uint8 V);
- void (*BusWrite16)(uint32 A, uint16 V);
+ uint16 (MDFN_FASTCALL *BusReadInstr)(uint32 A);
+ uint8 (MDFN_FASTCALL *BusRead8)(uint32 A);
+ uint16 (MDFN_FASTCALL *BusRead16)(uint32 A);
+ void (MDFN_FASTCALL *BusWrite8)(uint32 A, uint8 V);
+ void (MDFN_FASTCALL *BusWrite16)(uint32 A, uint16 V);
  //
  //
- void (*BusRMW)(uint32 A, uint8 (*cb)(M68K*, uint8));
- unsigned (*BusIntAck)(uint8 level);
- void (*BusRESET)(bool state);	// Optional; Calling Reset(false) from this callback *is* permitted.
+ void (MDFN_FASTCALL *BusRMW)(uint32 A, uint8 (MDFN_FASTCALL *cb)(M68K*, uint8));
+ unsigned (MDFN_FASTCALL *BusIntAck)(uint8 level);
+ void (MDFN_FASTCALL *BusRESET)(bool state);	// Optional; Calling Reset(false) from this callback *is* permitted.
 
  //
  //
@@ -451,9 +451,23 @@ static uint8 TAS_Callback(uint8 data)
  enum
  {
   GSREG_D0 = 0,
-  GSREG_D7 = 7,
+  GSREG_D1,
+  GSREG_D2,
+  GSREG_D3,
+  GSREG_D4,
+  GSREG_D5,
+  GSREG_D6,
+  GSREG_D7,
+
   GSREG_A0 = 8,
-  GSREG_A7 = 15,
+  GSREG_A1,
+  GSREG_A2,
+  GSREG_A3,
+  GSREG_A4,
+  GSREG_A5,
+  GSREG_A6,
+  GSREG_A7,
+
   GSREG_PC = 16,
   GSREG_SR,
   GSREG_SSP,

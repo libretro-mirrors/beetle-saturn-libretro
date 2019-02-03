@@ -20,7 +20,7 @@
 #include <mednafen/hash/sha256.h>
 #include "mednafen/hash/md5.h"
 #include "mednafen/ss/ss.h"
-#include "mednafen/ss/debug.inc"
+static INLINE bool DBG_NeedCPUHooks(void) { return false; } // <-- replaces debug.inc
 
 #include <ctype.h>
 #include <time.h>
@@ -30,8 +30,8 @@
 #include <zlib.h>
 
 #define MEDNAFEN_CORE_NAME                   "Beetle Saturn"
-#define MEDNAFEN_CORE_VERSION                "v0.9.48"
-#define MEDNAFEN_CORE_VERSION_NUMERIC        0x00094800 // 0x00102100
+#define MEDNAFEN_CORE_VERSION                "v1.21.0"
+#define MEDNAFEN_CORE_VERSION_NUMERIC        0x00102100
 #define MEDNAFEN_CORE_EXTENSIONS             "cue|ccd|chd|toc|m3u"
 #define MEDNAFEN_CORE_TIMING_FPS             59.82
 #define MEDNAFEN_CORE_GEOMETRY_BASE_W        320
@@ -1131,8 +1131,8 @@ static bool InitCommon(const unsigned cpucache_emumode, const unsigned cart_type
    SCU_Init();
    SMPC_Init(smpc_area, MasterClock);
    VDP1::Init();
-   VDP2::Init(PAL, sls, sle);
-   VDP2::FillVideoParams(&EmulatedSS);
+   VDP2::Init(PAL);
+   VDP2::SetGetVideoParams(&EmulatedSS, true, sls, sle, true, DoHBlend);
    CDB_Init();
    SOUND_Init();
 
@@ -1141,24 +1141,6 @@ static bool InitCommon(const unsigned cpucache_emumode, const unsigned cart_type
 
 #ifdef HAVE_DEBUG
    DBG_Init();
-#endif
-
-#if 0
-   MDFN_printf("\n");
-   {
-      const bool correct_aspect = MDFN_GetSettingB("ss.correct_aspect");
-      const bool h_overscan = MDFN_GetSettingB("ss.h_overscan");
-      const bool h_blend = MDFN_GetSettingB("ss.h_blend");
-
-      MDFN_printf(_("Displayed scanlines: [%u,%u]\n"), sls, sle);
-      MDFN_printf(_("Correct Aspect Ratio: %s\n"), correct_aspect ? _("Enabled") : _("Disabled"));
-      MDFN_printf(_("Show H Overscan: %s\n"), h_overscan ? _("Enabled") : _("Disabled"));
-      MDFN_printf(_("H Blend: %s\n"), h_blend ? _("Enabled") : _("Disabled"));
-
-      VDP2::SetGetVideoParams(&EmulatedSS, correct_aspect, sls, sle, h_overscan, h_blend);
-   }
-
-   MDFN_printf("\n");
 #endif
 
    // Apply multi-tap state to SMPC
@@ -1457,7 +1439,7 @@ MDFN_COLD int LibRetro_StateAction( StateMem* sm, const unsigned load, const boo
 
       SFORMAT SRDStateRegs[] =
       {
-         SFARRAY( sr_dig.data(), sr_dig.size() ),
+         SFPTR8( sr_dig.data(), sr_dig.size() ),
          SFEND
       };
 
@@ -1481,16 +1463,16 @@ MDFN_COLD int LibRetro_StateAction( StateMem* sm, const unsigned load, const boo
   SFVAR(UpdateInputLastBigTS),
 
   SFVAR(next_event_ts),
-  SFARRAY32N(ep.event_times, sizeof(ep.event_times) / sizeof(ep.event_times[0]), "event_times"),
-  SFARRAYN(ep.event_order, sizeof(ep.event_order) / sizeof(ep.event_order[0]), "event_order"),
+  SFPTR32N(ep.event_times, sizeof(ep.event_times) / sizeof(ep.event_times[0]), "event_times"),
+  SFPTR8N(ep.event_order, sizeof(ep.event_order) / sizeof(ep.event_order[0]), "event_order"),
 
   SFVAR(SH7095_mem_timestamp),
   SFVAR(SH7095_BusLock),
   SFVAR(SH7095_DB),
 
-  SFARRAY16(WorkRAML, WORKRAM_BANK_SIZE_BYTES / sizeof(uint16_t)),
-  SFARRAY16(WorkRAMH, WORKRAM_BANK_SIZE_BYTES / sizeof(uint16_t)),
-  SFARRAY(BackupRAM, sizeof(BackupRAM) / sizeof(BackupRAM[0])),
+  SFPTR16(WorkRAML, WORKRAM_BANK_SIZE_BYTES / sizeof(uint16_t)),
+  SFPTR16(WorkRAMH, WORKRAM_BANK_SIZE_BYTES / sizeof(uint16_t)),
+  SFPTR8(BackupRAM, sizeof(BackupRAM) / sizeof(BackupRAM[0])),
 
   SFEND
  };

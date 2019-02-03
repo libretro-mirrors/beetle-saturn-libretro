@@ -739,24 +739,24 @@ void input_update( retro_input_state_t input_state_cb )
 
 			{
 				// mouse buttons
-				p_input->u8[0x8] = 0;
+				p_input->u8[0x4] = 0;
 
 				if ( input_state_cb( iplayer, RETRO_DEVICE_MOUSE, 0, RETRO_DEVICE_ID_MOUSE_LEFT ) ) {
-					p_input->u8[0x8] |= ( 1 << 0 ); // A
+					p_input->u8[0x4] |= ( 1 << 0 ); // A
 				}
 
 				if ( input_state_cb( iplayer, RETRO_DEVICE_MOUSE, 0, RETRO_DEVICE_ID_MOUSE_RIGHT ) ) {
-					p_input->u8[0x8] |= ( 1 << 1 ); // B
+					p_input->u8[0x4] |= ( 1 << 1 ); // B
 				}
 
 				if ( input_state_cb( iplayer, RETRO_DEVICE_MOUSE, 0, RETRO_DEVICE_ID_MOUSE_MIDDLE ) ) {
-					p_input->u8[0x8] |= ( 1 << 2 ); // C
+					p_input->u8[0x4] |= ( 1 << 2 ); // C
 				}
 
 				if ( input_state_cb( iplayer, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_START ) ||
 					 input_state_cb( iplayer, RETRO_DEVICE_MOUSE, 0, RETRO_DEVICE_ID_MOUSE_BUTTON_4 ) ||
 					 input_state_cb( iplayer, RETRO_DEVICE_MOUSE, 0, RETRO_DEVICE_ID_MOUSE_BUTTON_5 ) ) {
-					p_input->u8[0x8] |= ( 1 << 3 ); // Start
+					p_input->u8[0x4] |= ( 1 << 3 ); // Start
 				}
 
 				// mouse input
@@ -764,10 +764,10 @@ void input_update( retro_input_state_t input_state_cb )
 				dx_raw = input_state_cb( iplayer, RETRO_DEVICE_MOUSE, 0, RETRO_DEVICE_ID_MOUSE_X );
 				dy_raw = input_state_cb( iplayer, RETRO_DEVICE_MOUSE, 0, RETRO_DEVICE_ID_MOUSE_Y );
 
-				int *delta;
-				delta = (int*)p_input;
-				delta[ 0 ] = (int)roundf( dx_raw * mouse_sensitivity );
-				delta[ 1 ] = (int)roundf( dy_raw * mouse_sensitivity );
+				int16_t *delta;
+				delta = (int16_t*)p_input;
+				delta[ 0 ] = (int16_t)roundf( dx_raw * mouse_sensitivity );
+				delta[ 1 ] = (int16_t)roundf( dy_raw * mouse_sensitivity );
 			}
 
 			break;
@@ -1012,8 +1012,8 @@ int input_StateAction( StateMem* sm, const unsigned load, const bool data_only )
 
 	SFORMAT StateRegs[] =
 	{
-		SFARRAY16N( input_mode, MAX_CONTROLLERS, "pad-mode" ),
-		SFARRAY16N( input_throttle_latch, MAX_CONTROLLERS, "throttle-latch" ),
+		SFPTR16N( input_mode, MAX_CONTROLLERS, "pad-mode" ),
+		SFPTR16N( input_throttle_latch, MAX_CONTROLLERS, "throttle-latch" ),
 		SFEND
 	};
 

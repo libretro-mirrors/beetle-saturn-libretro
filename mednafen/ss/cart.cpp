@@ -34,17 +34,18 @@
 #include "cart/rom.h"
 #include "cart/ar4mp.h"
 
+
 CartInfo Cart;
 
 template<typename T>
-static void DummyRead(uint32 A, uint16* DB)
+static MDFN_HOT void DummyRead(uint32 A, uint16* DB)
 {
  // Don't set *DB here.
  SS_DBG(SS_DBG_WARNING, "[CART] Unknown %zu-byte read from 0x%08x\n", sizeof(T), A);
 }
 
 template<typename T>
-static void DummyWrite(uint32 A, uint16* DB)
+static MDFN_HOT void DummyWrite(uint32 A, uint16* DB)
 {
  SS_DBG(SS_DBG_WARNING, "[CART] Unknown %zu-byte write to 0x%08x(DB=0x%04x)\n", sizeof(T), A, *DB);
 }
@@ -208,3 +209,4 @@ void CART_Init(const int cart_type)
  for(auto& m : Cart.CS2M_RW)
   assert(m.Read16 != nullptr && m.Write8 != nullptr && m.Write16 != nullptr);
 }
+

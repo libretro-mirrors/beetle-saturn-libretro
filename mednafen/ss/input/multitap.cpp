@@ -103,8 +103,8 @@ void IODevice_Multitap::StateAction(StateMem* sm, const unsigned load, const boo
 {
  SFORMAT StateRegs[] =
  {
-  SFARRAY(sub_state, 6),
-  SFARRAY(tmp, 4),
+  SFVAR(sub_state),
+  SFVAR(tmp),
   SFVAR(id1),
   SFVAR(id2),
 
@@ -117,7 +117,7 @@ void IODevice_Multitap::StateAction(StateMem* sm, const unsigned load, const boo
   SFEND
  };
  char section_name[32];
- snprintf(section_name, sizeof(section_name), "%s_Multitap", sname_prefix);
+ trio_snprintf(section_name, sizeof(section_name), "%s_Multitap", sname_prefix);
 
  if(!MDFNSS_StateAction(sm, load, data_only, StateRegs, section_name, true) && load)
   Power();
@@ -130,12 +130,12 @@ void IODevice_Multitap::StateAction(StateMem* sm, const unsigned load, const boo
  {
   char snsp[32];
 
-  snprintf(snsp, sizeof(snsp), "%sP%u", section_name, i);
+  trio_snprintf(snsp, sizeof(snsp), "%sP%u", section_name, i);
   devices[i]->StateAction(sm, load, data_only, snsp);
  }
 }
 
-enum { PhaseBias = __COUNTER__ + 1 };
+enum : int { PhaseBias = __COUNTER__ + 1 };
 
 #define WAIT_UNTIL(cond)  {					\
 			    case __COUNTER__:				\
@@ -266,5 +266,9 @@ uint8 IODevice_Multitap::UpdateBus(const sscpu_timestamp_t timestamp, const uint
 
  BreakOut:;
 
+ LastTS = timestamp;
+
  return (smpc_out & (smpc_out_asserted | 0xE0)) | (((tl << 4) | data_out) &~ smpc_out_asserted);
 }
+
+

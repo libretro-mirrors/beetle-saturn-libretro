@@ -27,7 +27,7 @@
 #include "scu_dsp_common.inc"
 
 template<bool looped, unsigned op>
-static NO_INLINE void MiscInstr(void)
+static NO_INLINE NO_CLONE void MiscInstr(void)
 {
  DSP_InstrPre<looped>();
 
@@ -63,3 +63,4 @@ extern void (*const DSP_MiscFuncTable[2][4])(void) =
 {
  #include "scu_dsp_misctab.inc"
 };
+

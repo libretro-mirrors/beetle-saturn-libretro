@@ -33,7 +33,7 @@ static uint16* FLASH = nullptr; //[0x20000];
 static uint16* ExtRAM = nullptr; //[0x200000];
 
 template<typename T, bool IsWrite>
-static void ExtRAM_RW_DB(uint32 A, uint16* DB)
+static MDFN_HOT void ExtRAM_RW_DB(uint32 A, uint16* DB)
 {
  const uint32 mask = (sizeof(T) == 2) ? 0xFFFF : (0xFF << (((A & 1) ^ 1) << 3));
  uint16* const ptr = (uint16*)((uint8*)ExtRAM + (A & 0x3FFFFE));
@@ -46,7 +46,7 @@ static void ExtRAM_RW_DB(uint32 A, uint16* DB)
   *DB = *ptr;
 }
 
-static void FLASH_Read(uint32 A, uint16* DB)
+static MDFN_HOT void FLASH_Read(uint32 A, uint16* DB)
 {
  if(MDFN_UNLIKELY(A & 0x080000))
   *DB = 0xFFFF;
@@ -54,12 +54,12 @@ static void FLASH_Read(uint32 A, uint16* DB)
   *DB = *(uint16*)((uint8*)FLASH + (A & 0x3FFFE));
 }
 
-static void CV_Read(uint32 A, uint16* DB)
+static MDFN_HOT void CV_Read(uint32 A, uint16* DB)
 {
  *DB = 0xFFFF ^ ((A >> 20) & ((A >> 18) | (A >> 19) | ((A >> 21) ^ (A >> 22))) & 0x2);
 }
 
-static void RAMID_Read(uint32 A, uint16* DB)
+static MDFN_HOT void RAMID_Read(uint32 A, uint16* DB)
 {
  *DB = 0xFF5C;
 }
@@ -91,8 +91,8 @@ static MDFN_COLD void StateAction(StateMem* sm, const unsigned load, const bool 
 {
  SFORMAT StateRegs[] =
  {
-  SFARRAY16(FLASH, 0x20000),
-  SFARRAY16(ExtRAM, 0x200000),
+  SFPTR16(FLASH, 0x20000),
+  SFPTR16(ExtRAM, 0x200000),
 
   SFEND
  };

@@ -1,8 +1,8 @@
 /******************************************************************************/
 /* Mednafen Sega Saturn Emulation Module                                      */
 /******************************************************************************/
-/* keyboard.cpp:
-**  Copyright (C) 2017 Mednafen Team
+/* jpkeyboard.cpp:
+**  Copyright (C) 2017-2018 Mednafen Team
 **
 ** This program is free software; you can redistribute it and/or
 ** modify it under the terms of the GNU General Public License
@@ -19,44 +19,35 @@
 ** 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 */
 
-// TODO: Debouncing?
-
 //
-// PS/2 keyboard adapter seems to do PS/2 processing near/at the end of a Saturn-side read sequence, which creates about 1 frame of extra latency
-// in practice.  We handle things a bit differently here, to avoid the latency.
+// Compared to the PS/2 keyboard adapter+PS/2 keyboard, the Japanese Saturn keyboard has the following differences:
+//   A few extra Japanese language keys, and related keymap/layout differences.
+//   No numpad and associated keys.
+//   Pause key behaves like a normal key.
+//   Caps Lock/Scroll Lock key repeat doesn't cause the lock state to oscillate.
+//   Lock status is hidden to the user(no LEDs), but still visible to software(though software may not respect it).
+//   Key repeat delay counters are apparently clocked by polling/doing read sequences(instead of having an independent internal clock), but only when a key make/break
+//	isn't pending(so releasing keys kind of messes up the repeat rate of a held key a little).
 //
-// Also, the PS/2 adapter seems to set the typematic delay to around 250ms, but we emulate it here as 400ms, as 250ms is
-// a tad bit too short.  It can be changed to 250ms by adjusting a single #if statement, though.
-//
-// During testing, a couple of early-1990s PS/2 keyboards malfunctioned and failed to work with the PS/2 adapter.
-// Not sure why, maybe a power draw issue?
-//
-// The keyboard emulated doesn't have special Windows-keyboard keys, as they don't appear to work correctly with the PS/2 adapter
-// (scancode field is updated, but no make nor break bits are set to 1), and it's good to have some non-shared keys for input grabbing toggling purposes...
-//
-//
-
-// make and break bits should not both be set to 1 at the same time.
-// pause is special
-// new key press halts repeat of held key, and it doesn't restart even if new key is released.
+// TODO:
+//	Emulate limitations on multiple keys being pressed simultaneously.
 //
 
 #include "common.h"
-#include "keyboard.h"
+#include "jpkeyboard.h"
 
-#include "../math_ops.h"
 
-IODevice_Keyboard::IODevice_Keyboard() : phys{0,0,0,0}
+IODevice_JPKeyboard::IODevice_JPKeyboard() : phys{0,0,0,0}
 {
 
 }
 
-IODevice_Keyboard::~IODevice_Keyboard()
+IODevice_JPKeyboard::~IODevice_JPKeyboard()
 {
 
 }
 
-void IODevice_Keyboard::Power(void)
+void IODevice_JPKeyboard::Power(void)
 {
  phase = -1;
  tl = true;
@@ -68,26 +59,23 @@ void IODevice_Keyboard::Power(void)
  mkbrk_pend = 0;
  memset(buffer, 0, sizeof(buffer));
 
- //memcpy(processed, phys, sizeof(processed));
  memset(processed, 0, sizeof(processed));
  memset(fifo, 0, sizeof(fifo));
  fifo_rdp = 0;
  fifo_wrp = 0;
  fifo_cnt = 0;
 
- rep_sc = -1;
- rep_dcnt = 0;
+ rep_sc = rep_sc_pend = 0;
+ rep_dcnt = rep_dcnt_pend = 0;
 }
 
-void IODevice_Keyboard::UpdateInput(const uint8* data, const int32 time_elapsed)
+void IODevice_JPKeyboard::UpdateInput(const uint8* data, const int32 time_elapsed)
 {
  phys[0] = MDFN_de64lsb(&data[0x00]);
  phys[1] = MDFN_de64lsb(&data[0x08]);
  phys[2] = MDFN_de16lsb(&data[0x10]);
  phys[3] = 0;
  //
- if(rep_dcnt > 0)
-  rep_dcnt -= time_elapsed;
 
  for(unsigned i = 0; i < 4; i++)
  {
@@ -99,27 +87,18 @@ void IODevice_Keyboard::UpdateInput(const uint8* data, const int32 time_elapsed)
    const uint64 mask = ((uint64)1 << bp);
    const int sc = ((i << 6) + bp);
 
-   if(fifo_cnt >= (fifo_size - (sc == 0x82)))
+   if(fifo_cnt >= fifo_size)
     goto fifo_oflow_abort;
 
    if(phys[i] & mask)
    {
-    rep_sc = sc;
-#if 1
-    rep_dcnt = 400000;
-#else
-    rep_dcnt = 250000;
-#endif
     fifo[fifo_wrp] = 0x800 | sc;
     fifo_wrp = (fifo_wrp + 1) % fifo_size;
     fifo_cnt++;
    }
 
-   if(!(phys[i] & mask) == (sc != 0x82))
+   if(!(phys[i] & mask))
    {
-    if(rep_sc == sc)
-     rep_sc = -1;
-
     fifo[fifo_wrp] = 0x100 | sc;
     fifo_wrp = (fifo_wrp + 1) % fifo_size;
     fifo_cnt++;
@@ -129,31 +108,10 @@ void IODevice_Keyboard::UpdateInput(const uint8* data, const int32 time_elapsed)
    tmp &= ~mask;
   }
  }
-
- if(rep_sc >= 0)
- {
-  while(rep_dcnt <= 0)
-  {
-   if(fifo_cnt >= fifo_size)
-    goto fifo_oflow_abort;
-
-   fifo[fifo_wrp] = 0x800 | rep_sc;
-   fifo_wrp = (fifo_wrp + 1) % fifo_size;
-   fifo_cnt++;
-
-   rep_dcnt += 33333;
-  }
- }
-
  fifo_oflow_abort:;
 }
 
-void IODevice_Keyboard::UpdateOutput(uint8* data)
-{
- data[0x12] = lock;
-}
-
-void IODevice_Keyboard::StateAction(StateMem* sm, const unsigned load, const bool data_only, const char* sname_prefix)
+void IODevice_JPKeyboard::StateAction(StateMem* sm, const unsigned load, const bool data_only, const char* sname_prefix)
 {
  SFORMAT StateRegs[] =
  {
@@ -171,7 +129,9 @@ void IODevice_Keyboard::StateAction(StateMem* sm, const unsigned load, const boo
   SFVAR(lock_pend),
 
   SFVAR(rep_sc),
+  SFVAR(rep_sc_pend),
   SFVAR(rep_dcnt),
+  SFVAR(rep_dcnt_pend),
 
   SFVAR(mkbrk_pend),
   SFVAR(buffer),
@@ -189,9 +149,6 @@ void IODevice_Keyboard::StateAction(StateMem* sm, const unsigned load, const boo
   Power();
  else if(load)
  {
-  if(rep_sc >= 0 && rep_dcnt < 0)
-   rep_dcnt = 0;
-
   fifo_rdp %= fifo_size;
   fifo_wrp %= fifo_size;
   fifo_cnt %= fifo_size + 1;
@@ -202,7 +159,7 @@ void IODevice_Keyboard::StateAction(StateMem* sm, const unsigned load, const boo
  }
 }
 
-uint8 IODevice_Keyboard::UpdateBus(const sscpu_timestamp_t timestamp, const uint8 smpc_out, const uint8 smpc_out_asserted)
+uint8 IODevice_JPKeyboard::UpdateBus(const sscpu_timestamp_t timestamp, const uint8 smpc_out, const uint8 smpc_out_asserted)
 {
  if(smpc_out & 0x40)
  {
@@ -214,38 +171,65 @@ uint8 IODevice_Keyboard::UpdateBus(const sscpu_timestamp_t timestamp, const uint
  {
   if((bool)(smpc_out & 0x20) != tl)
   {
-   tl = !tl;
-   phase += (phase < 11);
+   if(phase < 11)
+   {
+    tl = !tl;
+    phase++;
+   }
 
    if(!phase)
    {
-    if(mkbrk_pend == (uint8)mkbrk_pend && fifo_cnt)
+    if(mkbrk_pend == (uint8)mkbrk_pend)
     {
-     mkbrk_pend = fifo[fifo_rdp];
-     fifo_rdp = (fifo_rdp + 1) % fifo_size;
-     fifo_cnt--;
-
-     bool p = mkbrk_pend & 0x800;
-
-     switch(mkbrk_pend & 0xFF)
+     if(fifo_cnt)
      {
-      case 0x89: /*  Up */ simbutt_pend = simbutt & ~(1 <<  0); simbutt_pend &= ~(p <<  1); simbutt_pend |= (p <<  0); break;
-      case 0x8A: /*Down */ simbutt_pend = simbutt & ~(1 <<  1); simbutt_pend &= ~(p <<  0); simbutt_pend |= (p <<  1); break;
-      case 0x86: /*Left */ simbutt_pend = simbutt & ~(1 <<  2); simbutt_pend &= ~(p <<  3); simbutt_pend |= (p <<  2); break;
-      case 0x8D: /*Right*/ simbutt_pend = simbutt & ~(1 <<  3); simbutt_pend &= ~(p <<  2); simbutt_pend |= (p <<  3); break;
-      case 0x22: /*   X */ simbutt_pend = simbutt & ~(1 <<  4); simbutt_pend |= (p <<  4); break;
-      case 0x21: /*   C */ simbutt_pend = simbutt & ~(1 <<  5); simbutt_pend |= (p <<  5); break;
-      case 0x1A: /*   Z */ simbutt_pend = simbutt & ~(1 <<  6); simbutt_pend |= (p <<  6); break;
-      case 0x76: /* Esc */ simbutt_pend = simbutt & ~(1 <<  7); simbutt_pend |= (p <<  7); break;
-      case 0x23: /*   D */ simbutt_pend = simbutt & ~(1 <<  8); simbutt_pend |= (p <<  8); break;
-      case 0x1B: /*   S */ simbutt_pend = simbutt & ~(1 <<  9); simbutt_pend |= (p <<  9); break;
-      case 0x1C: /*   A */ simbutt_pend = simbutt & ~(1 << 10); simbutt_pend |= (p << 10); break;
-      case 0x24: /*   E */ simbutt_pend = simbutt & ~(1 << 11); simbutt_pend |= (p << 11); break;
-      case 0x15: /*   Q */ simbutt_pend = simbutt & ~(1 << 15); simbutt_pend |= (p << 15); break;
+      mkbrk_pend = fifo[fifo_rdp];
+      fifo_rdp = (fifo_rdp + 1) % fifo_size;
+      fifo_cnt--;
 
-      case 0x7E: /* Scrl */ lock_pend = lock ^ (p ? LOCK_SCROLL : 0); break;
-      case 0x77: /* Num  */ lock_pend = lock ^ (p ? LOCK_NUM : 0);    break;
-      case 0x58: /* Caps */ lock_pend = lock ^ (p ? LOCK_CAPS : 0);   break;
+      //
+      bool p = mkbrk_pend & 0x800;
+
+      if(p)
+      {
+       rep_sc_pend = mkbrk_pend & 0xFF;
+       rep_dcnt_pend = 30;
+      }
+      else
+      {
+       if(rep_sc == (mkbrk_pend & 0xFF))
+        rep_dcnt_pend = 0;
+      }
+
+      switch(mkbrk_pend & 0xFF)
+      {
+       case 0x89: /*  Up */ simbutt_pend = simbutt & ~(1 <<  0); simbutt_pend &= ~(p <<  1); simbutt_pend |= (p <<  0); break;
+       case 0x8A: /*Down */ simbutt_pend = simbutt & ~(1 <<  1); simbutt_pend &= ~(p <<  0); simbutt_pend |= (p <<  1); break;
+       case 0x86: /*Left */ simbutt_pend = simbutt & ~(1 <<  2); simbutt_pend &= ~(p <<  3); simbutt_pend |= (p <<  2); break;
+       case 0x8D: /*Right*/ simbutt_pend = simbutt & ~(1 <<  3); simbutt_pend &= ~(p <<  2); simbutt_pend |= (p <<  3); break;
+       case 0x22: /*   X */ simbutt_pend = simbutt & ~(1 <<  4); simbutt_pend |= (p <<  4); break;
+       case 0x21: /*   C */ simbutt_pend = simbutt & ~(1 <<  5); simbutt_pend |= (p <<  5); break;
+       case 0x1A: /*   Z */ simbutt_pend = simbutt & ~(1 <<  6); simbutt_pend |= (p <<  6); break;
+       case 0x76: /* Esc */ simbutt_pend = simbutt & ~(1 <<  7); simbutt_pend |= (p <<  7); break;
+       case 0x23: /*   D */ simbutt_pend = simbutt & ~(1 <<  8); simbutt_pend |= (p <<  8); break;
+       case 0x1B: /*   S */ simbutt_pend = simbutt & ~(1 <<  9); simbutt_pend |= (p <<  9); break;
+       case 0x1C: /*   A */ simbutt_pend = simbutt & ~(1 << 10); simbutt_pend |= (p << 10); break;
+       case 0x24: /*   E */ simbutt_pend = simbutt & ~(1 << 11); simbutt_pend |= (p << 11); break;
+       case 0x15: /*   Q */ simbutt_pend = simbutt & ~(1 << 15); simbutt_pend |= (p << 15); break;
+
+       case 0x7E: /* Scrl */ lock_pend = lock ^ (p ? LOCK_SCROLL : 0); break;
+       case 0x58: /* Caps */ lock_pend = lock ^ (p ? LOCK_CAPS : 0);   break;
+      }
+     }
+     else if(rep_dcnt > 0)
+     {
+      rep_dcnt_pend = rep_dcnt - 1;
+
+      if(!rep_dcnt_pend)
+      {
+       mkbrk_pend = 0x800 | rep_sc;
+       rep_dcnt_pend = 6;
+      }
      }
     }
     buffer[ 0] = 0x3;
@@ -267,6 +251,8 @@ uint8 IODevice_Keyboard::UpdateBus(const sscpu_timestamp_t timestamp, const uint
     mkbrk_pend = (uint8)mkbrk_pend;
     lock = lock_pend;
     simbutt = simbutt_pend;
+    rep_dcnt = rep_dcnt_pend;
+    rep_sc = rep_sc_pend;
    }
 
    data_out = buffer[phase];
@@ -276,13 +262,8 @@ uint8 IODevice_Keyboard::UpdateBus(const sscpu_timestamp_t timestamp, const uint
  return (smpc_out & (smpc_out_asserted | 0xE0)) | (((tl << 4) | data_out) &~ smpc_out_asserted);
 }
 
-static const IDIIS_StatusState Lock_SS[] =
-{
- { "off", gettext_noop("Off") },
- { "on", gettext_noop("On") },
-};
 
-const IDIISG IODevice_Keyboard_US101_IDII =
+const IDIISG IODevice_JPKeyboard_IDII =
 {
  /* 0x00 */ IDIIS_Padding<1>(),
  /* 0x01 */ IDIIS_Button("f9", "F9", -1),
@@ -298,19 +279,19 @@ const IDIISG IODevice_Keyboard_US101_IDII =
  /* 0x0B */ IDIIS_Button("f6", "F6", -1),
  /* 0x0C */ IDIIS_Button("f4", "F4", -1),
  /* 0x0D */ IDIIS_Button("tab", "Tab", -1),
- /* 0x0E */ IDIIS_Button("grave", "Grave `", -1),
+ /* 0x0E */ IDIIS_Button("hwfw", "半角/全角/漢字", -1),
  /* 0x0F */ IDIIS_Padding<1>(),
 
  /* 0x10 */ IDIIS_Padding<1>(),
  /* 0x11 */ IDIIS_Button("lalt", "Left Alt", -1),
  /* 0x12 */ IDIIS_Button("lshift", "Left Shift", -1),
- /* 0x13 */ IDIIS_Padding<1>(),
+ /* 0x13 */ IDIIS_Button("hkr", "ひらがな/カタカナ/ローマ字", -1),
  /* 0x14 */ IDIIS_Button("lctrl", "Left Ctrl", -1),
  /* 0x15 */ IDIIS_Button("q", "Q", -1),
  /* 0x16 */ IDIIS_Button("1", "1(One)", -1),
  /* 0x17 */ IDIIS_Button("ralt", "Right Alt", -1),
  /* 0x18 */ IDIIS_Button("rctrl", "Right Ctrl", -1),
- /* 0x19 */ IDIIS_Button("kp_enter", "Keypad Enter", -1),
+ /* 0x19 */ IDIIS_Padding<1>(),
  /* 0x1A */ IDIIS_Button("z", "Z", -1),
  /* 0x1B */ IDIIS_Button("s", "S", -1),
  /* 0x1C */ IDIIS_Button("a", "A", -1),
@@ -370,19 +351,19 @@ const IDIISG IODevice_Keyboard_US101_IDII =
  /* 0x4F */ IDIIS_Padding<1>(),
 
  /* 0x50 */ IDIIS_Padding<1>(),
- /* 0x51 */ IDIIS_Padding<1>(),
- /* 0x52 */ IDIIS_Button("quote", "Quote '", -1),
+ /* 0x51 */ IDIIS_Button("backslash", "Backslash \\", -1),
+ /* 0x52 */ IDIIS_Button("colon", "Colon :", -1),
  /* 0x53 */ IDIIS_Padding<1>(),
- /* 0x54 */ IDIIS_Button("leftbracket", "Left Bracket [", -1),
- /* 0x55 */ IDIIS_Button("equals", "Equals =", -1),
+ /* 0x54 */ IDIIS_Button("at", "At @", -1),
+ /* 0x55 */ IDIIS_Button("circumflex", "Circumflex ^", -1),
  /* 0x56 */ IDIIS_Padding<1>(),
  /* 0x57 */ IDIIS_Padding<1>(),
- /* 0x58 */ IDIIS_Button("capslock", "Caps Lock", -1),
+ /* 0x58 */ IDIIS_Button("capslock", "Caps Lock/英数", -1),
  /* 0x59 */ IDIIS_Button("rshift", "Right Shift", -1),
  /* 0x5A */ IDIIS_Button("enter", "Enter", -1),
- /* 0x5B */ IDIIS_Button("rightbracket", "Right Bracket ]", -1),
+ /* 0x5B */ IDIIS_Button("leftbracket", "Left Bracket [", -1),
  /* 0x5C */ IDIIS_Padding<1>(),
- /* 0x5D */ IDIIS_Button("backslash", "Backslash \\", -1),
+ /* 0x5D */ IDIIS_Button("rightbracket", "Right Bracket ]", -1),
  /* 0x5E */ IDIIS_Padding<1>(),
  /* 0x5F */ IDIIS_Padding<1>(),
 
@@ -390,37 +371,37 @@ const IDIISG IODevice_Keyboard_US101_IDII =
  /* 0x61 */ IDIIS_Padding<1>(),
  /* 0x62 */ IDIIS_Padding<1>(),
  /* 0x63 */ IDIIS_Padding<1>(),
- /* 0x64 */ IDIIS_Padding<1>(),
+ /* 0x64 */ IDIIS_Button("conv", "変換", -1),
  /* 0x65 */ IDIIS_Padding<1>(),
  /* 0x66 */ IDIIS_Button("backspace", "Backspace", -1),
- /* 0x67 */ IDIIS_Padding<1>(),
+ /* 0x67 */ IDIIS_Button("nonconv", "無変換", -1),
  /* 0x68 */ IDIIS_Padding<1>(),
- /* 0x69 */ IDIIS_Button("kp_end", "Keypad End/1", -1),
- /* 0x6A */ IDIIS_Padding<1>(),
- /* 0x6B */ IDIIS_Button("kp_left", "Keypad Left/4", -1),
- /* 0x6C */ IDIIS_Button("kp_home", "Keypad Home/7", -1),
+ /* 0x69 */ IDIIS_Padding<1>(),
+ /* 0x6A */ IDIIS_Button("yen", "Yen ¥", -1),
+ /* 0x6B */ IDIIS_Padding<1>(),
+ /* 0x6C */ IDIIS_Padding<1>(),
  /* 0x6D */ IDIIS_Padding<1>(),
  /* 0x6E */ IDIIS_Padding<1>(),
  /* 0x6F */ IDIIS_Padding<1>(),
 
- /* 0x70 */ IDIIS_Button("kp_insert", "Keypad Insert/0", -1),
- /* 0x71 */ IDIIS_Button("kp_delete", "Keypad Delete", -1),
- /* 0x72 */ IDIIS_Button("kp_down", "Keypad Down/2", -1),
- /* 0x73 */ IDIIS_Button("kp_center", "Keypad Center/5", -1),
- /* 0x74 */ IDIIS_Button("kp_right", "Keypad Right/6", -1),
- /* 0x75 */ IDIIS_Button("kp_up", "Keypad Up/8", -1),
+ /* 0x70 */ IDIIS_Padding<1>(),
+ /* 0x71 */ IDIIS_Padding<1>(),
+ /* 0x72 */ IDIIS_Padding<1>(),
+ /* 0x73 */ IDIIS_Padding<1>(),
+ /* 0x74 */ IDIIS_Padding<1>(),
+ /* 0x75 */ IDIIS_Padding<1>(),
  /* 0x76 */ IDIIS_Button("esc", "Escape", -1),
- /* 0x77 */ IDIIS_Button("numlock", "Num Lock", -1),
+ /* 0x77 */ IDIIS_Padding<1>(),
  /* 0x78 */ IDIIS_Button("f11", "F11", -1),
- /* 0x79 */ IDIIS_Button("kp_plus", "Keypad Plus", -1),
- /* 0x7A */ IDIIS_Button("kp_pagedown", "Keypad Pagedown/3", -1),
- /* 0x7B */ IDIIS_Button("kp_minus", "Keypad Minus", -1),
- /* 0x7C */ IDIIS_Button("kp_asterisk", "Keypad Asterisk(Multiply)", -1),
- /* 0x7D */ IDIIS_Button("kp_pageup", "Keypad Pageup/9", -1),
+ /* 0x79 */ IDIIS_Padding<1>(),
+ /* 0x7A */ IDIIS_Padding<1>(),
+ /* 0x7B */ IDIIS_Padding<1>(),
+ /* 0x7C */ IDIIS_Padding<1>(),
+ /* 0x7D */ IDIIS_Padding<1>(),
  /* 0x7E */ IDIIS_Button("scrolllock", "Scroll Lock", -1),
  /* 0x7F */ IDIIS_Padding<1>(),
 
- /* 0x80 */ IDIIS_Button("kp_slash", "Keypad Slash(Divide)", -1),
+ /* 0x80 */ IDIIS_Padding<1>(),
  /* 0x81 */ IDIIS_Button("insert", "Insert", -1),
  /* 0x82 */ IDIIS_Button("pause", "Pause", -1),
  /* 0x83 */ IDIIS_Button("f7", "F7", -1),
@@ -436,9 +417,5 @@ const IDIISG IODevice_Keyboard_US101_IDII =
  /* 0x8D */ IDIIS_Button("right", "Right", -1),
  /* 0x8E */ IDIIS_Padding<1>(),
  /* 0x8F */ IDIIS_Padding<1>(),
-
- IDIIS_Status("scrolllock_status", "Scroll Lock", Lock_SS),
- IDIIS_Status("numlock_status", "Num Lock", Lock_SS),
- IDIIS_Status("capslock_status", "Caps Lock", Lock_SS)
 };
 

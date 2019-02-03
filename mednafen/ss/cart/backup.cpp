@@ -27,7 +27,7 @@ static bool ExtBackupRAM_Dirty;
 
 // TODO: Check mirroring.
 template<typename T, bool IsWrite>
-static void ExtBackupRAM_RW_DB(uint32 A, uint16* DB)
+static MDFN_HOT void ExtBackupRAM_RW_DB(uint32 A, uint16* DB)
 {
  uint8* const ptr = ExtBackupRAM + ((A >> 1) & 0x7FFFF);
 
@@ -69,7 +69,7 @@ static MDFN_COLD void StateAction(StateMem* sm, const unsigned load, const bool 
 {
  SFORMAT StateRegs[] =
  {
-  SFARRAYN(ExtBackupRAM, 0x80000, "ExtBackupRAM"),
+  SFPTR8N(ExtBackupRAM, 0x80000, "ExtBackupRAM"),
   SFEND
  };
 

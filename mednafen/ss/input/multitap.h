@@ -22,20 +22,21 @@
 #ifndef __MDFN_SS_INPUT_MULTITAP_H
 #define __MDFN_SS_INPUT_MULTITAP_H
 
+
 class IODevice_Multitap final : public IODevice
 {
  public:
- IODevice_Multitap();
- virtual ~IODevice_Multitap() override;
+ IODevice_Multitap() MDFN_COLD;
+ virtual ~IODevice_Multitap() override MDFN_COLD;
 
- virtual void Power(void) override;
+ virtual void Power(void) override MDFN_COLD;
  virtual void StateAction(StateMem* sm, const unsigned load, const bool data_only, const char* sname_prefix) override;
  virtual void Draw(MDFN_Surface* surface, const MDFN_Rect& drect, const int32* lw, int ifield, float gun_x_scale, float gun_x_offs) const override;
  virtual uint8 UpdateBus(const sscpu_timestamp_t timestamp, const uint8 smpc_out, const uint8 smpc_out_asserted) override;
  virtual void LineHook(const sscpu_timestamp_t timestamp, int32 out_line, int32 div, int32 coord_adj) override;
  virtual void ResetTS(void) override;
 
-  void ForceSubUpdate(const sscpu_timestamp_t timestamp);
+ void ForceSubUpdate(const sscpu_timestamp_t timestamp);
  void SetSubDevice(unsigned sub_index, IODevice* device);
  IODevice* GetSubDevice(unsigned sub_index);
 
@@ -54,5 +55,6 @@ class IODevice_Multitap final : public IODevice
  uint8 port_counter;
  uint8 read_counter;
 };
+
 
 #endif

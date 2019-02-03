@@ -43,7 +43,7 @@ extern int32 SysClipX, SysClipY;
 extern int32 UserClipX0, UserClipY0, UserClipX1, UserClipY1;
 extern int32 LocalX, LocalY;
 
-extern uint32 (*const TexFetchTab[0x20])(uint32 x);
+extern uint32 (MDFN_FASTCALL *const TexFetchTab[0x20])(uint32 x);
 
 enum { TVMR_8BPP   = 0x1 };
 enum { TVMR_ROTATE = 0x2 };
@@ -277,6 +277,8 @@ static INLINE int32 PlotPixel(int32 x, int32 y, uint16 pix, bool transparent, Go
      {
       if(g)
        pix = g->Apply(pix);
+      else
+       pix = pix;
      }
      else
      {
@@ -309,12 +311,10 @@ static INLINE int32 PlotPixel(int32 x, int32 y, uint16 pix, bool transparent, Go
 
 static INLINE void CheckUndefClipping(void)
 {
-#ifdef HAVE_DEBUG
  if(SysClipX < UserClipX1 || SysClipY < UserClipY1 || UserClipX0 > UserClipX1 || UserClipY0 > UserClipY1)
  {
   //SS_DBG(SS_DBG_WARNING, "[VDP1] Illegal clipping windows; Sys=%u:%u -- User=%u:%u - %u:%u\n", SysClipX, SysClipY, UserClipX0, UserClipY0, UserClipX1, UserClipY1);
  }
-#endif
 }
 
 
@@ -334,7 +334,7 @@ struct line_data
  bool HSS;
  uint16 color;
  int32 ec_count;
- uint32 (*tffn)(uint32);
+ uint32 (MDFN_FASTCALL *tffn)(uint32);
  uint16 CLUT[0x10];
  uint32 cb_or;
  uint32 tex_base;
@@ -660,5 +660,7 @@ struct EdgeStepper
 //
 //
 }
+
+
 
 #endif

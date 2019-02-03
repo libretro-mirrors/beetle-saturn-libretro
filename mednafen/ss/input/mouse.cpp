@@ -43,9 +43,9 @@ void IODevice_Mouse::Power(void)
 
 void IODevice_Mouse::UpdateInput(const uint8* data, const int32 time_elapsed)
 {
- accum_xdelta += MDFN_de32lsb(&data[0]);
- accum_ydelta -= MDFN_de32lsb(&data[4]);
- buttons = data[8] & 0xF;
+ accum_xdelta += (int16)MDFN_de16lsb(&data[0]);
+ accum_ydelta -= (int16)MDFN_de16lsb(&data[2]);
+ buttons = data[4] & 0xF;
 }
 
 void IODevice_Mouse::StateAction(StateMem* sm, const unsigned load, const bool data_only, const char* sname_prefix)
@@ -56,7 +56,7 @@ void IODevice_Mouse::StateAction(StateMem* sm, const unsigned load, const bool d
   SFVAR(accum_xdelta),
   SFVAR(accum_ydelta),
 
-  SFARRAY(buffer, 0x10),
+  SFVAR(buffer),
   SFVAR(data_out),
   SFVAR(tl),
 
@@ -64,7 +64,7 @@ void IODevice_Mouse::StateAction(StateMem* sm, const unsigned load, const bool d
   SFEND
  };
  char section_name[64];
- snprintf(section_name, sizeof(section_name), "%s_Mouse", sname_prefix);
+ trio_snprintf(section_name, sizeof(section_name), "%s_Mouse", sname_prefix);
 
  if(!MDFNSS_StateAction(sm, load, data_only, StateRegs, section_name, true) && load)
   Power();
@@ -156,11 +156,13 @@ uint8 IODevice_Mouse::UpdateBus(const sscpu_timestamp_t timestamp, const uint8 s
 
 IDIISG IODevice_Mouse_IDII =
 {
- { "x_axis", "X Axis", -1, IDIT_X_AXIS_REL },
- { "y_axis", "Y Axis", -1, IDIT_Y_AXIS_REL },
+ IDIIS_AxisRel("motion", "Motion",/**/ "left", "Left",/**/ "right", "Right", 0),
+ IDIIS_AxisRel("motion", "Motion",/**/ "up", "Up",/**/ "down", "Down", 1),
 
- { "left", "Left Button", 0, IDIT_BUTTON },
- { "right", "Right Button", 2, IDIT_BUTTON },
- { "middle", "Middle Button", 1, IDIT_BUTTON },
- { "start", "Start", 3, IDIT_BUTTON },
+ IDIIS_Button("left", "Left Button", 2),
+ IDIIS_Button("right", "Right Button", 4),
+ IDIIS_Button("middle", "Middle Button", 3),
+ IDIIS_Button("start", "Start", 5),
 };
+
+

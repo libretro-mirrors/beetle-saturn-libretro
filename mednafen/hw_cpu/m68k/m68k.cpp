@@ -51,7 +51,7 @@
 
 #pragma GCC optimize ("no-crossjumping,no-gcse")
 
-static void Dummy_BusRESET(bool state)
+static MDFN_FASTCALL void Dummy_BusRESET(bool state)
 {
 
 }
@@ -85,7 +85,7 @@ void M68K::StateAction(StateMem* sm, const unsigned load, const bool data_only, 
 {
  SFORMAT StateRegs[] =
  {
-  SFARRAY32(DA, 16),
+  SFVAR(DA),
   SFVAR(PC),
   SFVAR(SRHB),
   SFVAR(IPL),
@@ -437,7 +437,7 @@ struct M68K::HAM
   }
  }
 
- INLINE void rmw(T (*cb)(M68K*, T))
+ INLINE void rmw(T (MDFN_FASTCALL *cb)(M68K*, T))
  {
   static_assert(am != PC_DISP && am != PC_INDEX && am != IMMEDIATE, "What");
 
@@ -1675,7 +1675,7 @@ INLINE void M68K::ROXR(HAM<T, TAM> &targ, unsigned count)
 //
 // TAS
 //
-static uint8 TAS_Callback(M68K* zptr, uint8 data)
+static MDFN_FASTCALL uint8 TAS_Callback(M68K* zptr, uint8 data)
 {
  zptr->CalcZN<uint8>(data);
  zptr->SetC(false);
@@ -2282,73 +2282,74 @@ void M68K::Reset(bool powering_up)
 //
 uint32 M68K::GetRegister(unsigned which, char* special, const uint32 special_len)
 {
-  if (which >= GSREG_D0 && which <= GSREG_D7)
-  {
-    return D[which - GSREG_D0];
-  }
-  else if (which >= GSREG_A0 && which <= GSREG_A7)
-  {
-    return A[which - GSREG_A0];
-  }
-  else if (which == GSREG_PC)
-  {
-    return PC;
-  }
-  else if (which == GSREG_SR)
-  {
-    return GetSR();
-  }
-  else if (which == GSREG_SSP)
-  {
-    if (GetSVisor())
-      return A[7];
-    else
-      return SP_Inactive;
-  }
-  else if (which == GSREG_USP)
-  {
-    if (!GetSVisor())
-      return A[7];
-    else
-      return SP_Inactive;
-  }
-  else
-  {
-    return 0xDEADBEEF;
-  }
+ switch(which)
+ {
+  default:
+	return 0xDEADBEEF;
+
+  case GSREG_D0: case GSREG_D1: case GSREG_D2: case GSREG_D3:
+  case GSREG_D4: case GSREG_D5: case GSREG_D6: case GSREG_D7:
+	return D[which - GSREG_D0];
+
+  case GSREG_A0: case GSREG_A1: case GSREG_A2: case GSREG_A3:
+  case GSREG_A4: case GSREG_A5: case GSREG_A6: case GSREG_A7:
+	return A[which - GSREG_A0];
+
+  case GSREG_PC:
+	return PC;
+
+  case GSREG_SR:
+	return GetSR();
+
+  case GSREG_SSP:
+	if(GetSVisor())
+	 return A[7];
+	else
+	 return SP_Inactive;
+
+  case GSREG_USP:
+	if(!GetSVisor())
+	 return A[7];
+	else
+	 return SP_Inactive;
+ }
 }
 
 void M68K::SetRegister(unsigned which, uint32 value)
 {
-  if (which >= GSREG_D0 && which <= GSREG_D7)
-  {
-    D[which - GSREG_D0] = value;
-  }
-  else if (which >= GSREG_A0 && which <= GSREG_A7)
-  {
-    A[which - GSREG_A0] = value;
-  }
-  else if (which == GSREG_PC)
-  {
-    PC = value;
-  }
-  else if (which == GSREG_SR)
-  {
-    SetSR(value);
-  }
-  else if (which == GSREG_SSP)
-  {
-    if (GetSVisor())
-      A[7] = value;
-    else
-      SP_Inactive = value;
-  }
-  else if (which == GSREG_USP)
-  {
-    if (!GetSVisor())
-      A[7] = value;
-    else
-      SP_Inactive = value;
-  }
+ switch(which)
+ {
+  case GSREG_D0: case GSREG_D1: case GSREG_D2: case GSREG_D3:
+  case GSREG_D4: case GSREG_D5: case GSREG_D6: case GSREG_D7:
+	D[which - GSREG_D0] = value;
+	break;
+
+  case GSREG_A0: case GSREG_A1: case GSREG_A2: case GSREG_A3:
+  case GSREG_A4: case GSREG_A5: case GSREG_A6: case GSREG_A7:
+	A[which - GSREG_A0] = value;
+	break;
+
+  case GSREG_PC:
+	PC = value;
+	break;
+
+  case GSREG_SR:
+	SetSR(value);
+	break;
+
+  case GSREG_SSP:
+	if(GetSVisor())
+	 A[7] = value;
+	else
+	 SP_Inactive = value;
+	break;
+
+  case GSREG_USP:
+	if(!GetSVisor())
+	 A[7] = value;
+	else
+	 SP_Inactive = value;
+	break;
+ }
 }
 

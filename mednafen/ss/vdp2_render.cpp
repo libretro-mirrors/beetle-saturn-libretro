@@ -2,7 +2,7 @@
 /* Mednafen Sega Saturn Emulation Module                                      */
 /******************************************************************************/
 /* vdp2_render.cpp - VDP2 Rendering
-**  Copyright (C) 2016 Mednafen Team
+**  Copyright (C) 2016-2017 Mednafen Team
 **
 ** This program is free software; you can redistribute it and/or
 ** modify it under the terms of the GNU General Public License
@@ -41,10 +41,10 @@
 static EmulateSpecStruct* espec = NULL;
 static bool PAL;
 static bool CorrectAspect;
-static bool ShowHOverscan = true;
+static bool ShowHOverscan;
 bool DoHBlend;
 static int LineVisFirst, LineVisLast;
-static uint32_t NextOutLine;
+static uint32 NextOutLine;
 static bool Clock28M;
 static unsigned VisibleLines;
 static VDP2Rend_LIB LIB[256];
@@ -149,7 +149,6 @@ static uint8 BackCCRatio;
 static struct
 {
  uint16 XStart, XEnd;
- uint16 YStart, YEnd;
  uint32 LineWinAddr;
  bool LineWinEn;
  //
@@ -457,23 +456,21 @@ struct RotVars
  TileFetcher<true> tf;
 };
 
-typedef uint64 nbgarr[4][8 + 704 + 8];
-
 static struct
 {
  uint64 spr[704];
  uint64 rbg0[704];
  union
  {
-  nbgarr nbg;
+  uint64 nbg[4][8 + 704 + 8];
   struct
   {
-   uint8 dummy[sizeof(nbgarr) / 2];
+   uint8 dummy[sizeof(nbg) / 2];
    uint16 vcscr[2][88 + 1 + 1];	// + 1 for fine x scroll != 0, + 1 for pointer shenanigans in FetchVCScroll
   };
   struct
   {
-   uint8 rotdummy[sizeof(nbgarr) / 4];
+   uint8 rotdummy[sizeof(nbg) / 4];
    uint8 rotabsel[352];	// Also used as a scratch buffer in T_DrawRBG() to handle mosaic-related junk.
    RotVars rotv[2];
    uint32 rotcoeff[352];
@@ -791,14 +788,10 @@ static INLINE void RegsWrite(uint32 A, uint16 V)
 
   //
   case 0xC0: Window[0].XStart = V & 0x3FF; break;
-  case 0xC2: Window[0].YStart = V & 0x1FF; break;
   case 0xC4: Window[0].XEnd = V & 0x3FF; break;
-  case 0xC6: Window[0].YEnd = V & 0x1FF; break;
 
   case 0xC8: Window[1].XStart = V & 0x3FF; break;
-  case 0xCA: Window[1].YStart = V & 0x1FF; break;
   case 0xCC: Window[1].XEnd = V & 0x3FF; break;
-  case 0xCE: Window[1].YEnd = V & 0x1FF; break;
 
   case 0xD0:
   case 0xD2:
@@ -1108,8 +1101,6 @@ static void Reset(bool powering_up)
  {
   Window[w].XStart = 0;
   Window[w].XEnd = 0;
-  Window[w].YStart = 0;
-  Window[w].YEnd = 0;
   Window[w].LineWinAddr = 0;
   Window[w].LineWinEn = false;
 
@@ -1383,7 +1374,7 @@ static NO_INLINE void ApplyHMosaic(const unsigned layer, uint64* buf, const unsi
 
 static void FetchVCScroll(const unsigned w)
 {
-   const bool vcon[2] = { (bool)(SCRCTL & BGON & !(MZCTL & 0x1)), (bool)((SCRCTL >> 8) & (BGON >> 1) & !(MZCTL & 0x2) & 0x1) };
+ const bool vcon[2] = { (bool)(SCRCTL & BGON & !(MZCTL & 0x1)), (bool)((SCRCTL >> 8) & (BGON >> 1) & !(MZCTL & 0x2) & 0x1) };
  const unsigned max_cyc = (HRes & 0x6) ? 4 : 8;
  const unsigned tc = (w >> 3) + 1;
  uint32 tmp[2] = { VCLast[0], VCLast[1] };
@@ -1867,7 +1858,7 @@ static void SetupRotVars(const T* rs, const unsigned rbg_w)
 
  for(unsigned i = 0; i < 2; i++)
  {
-  RotVars & r = LB.rotv[i];
+  auto& r = LB.rotv[i];
 
   r.Xsp = rs[i].Xsp;
   r.Ysp = rs[i].Ysp;
@@ -1990,8 +1981,8 @@ static void T_DrawRBG(const bool rn, uint64* bgbuf, const unsigned w, const uint
  for(unsigned i = 0; MDFN_LIKELY(i < w); i++)
  {
   const unsigned ab = LB.rotabsel[i];
-  RotVars &r = LB.rotv[ab];
-  TileFetcher<true> & tf = r.tf;
+  auto& r = LB.rotv[ab];
+  auto& tf = r.tf;
   uint32 Xp = r.Xp;
   int32 kx = r.kx;
   int32 ky = r.ky;
@@ -2657,21 +2648,20 @@ static NO_INLINE void DrawLine(const uint16 out_line, const uint16 vdp2_line, co
  uint32 border_ncf;
 
  target = espec->surface->pixels + out_line * espec->surface->pitchinpix;
-
  espec->LineWidths[out_line] = tvdw;
 
  if(!ShowHOverscan)
  {
-    const int32 ntdw = tvdw * 1024 / 1056;
-    const int32 tadj = std::max<int32>(0, espec->DisplayRect.x - ((tvdw - ntdw) >> 1));
+  const int32 ntdw = tvdw * 1024 / 1056;
+  const int32 tadj = std::max<int32>(0, espec->DisplayRect.x - ((tvdw - ntdw) >> 1));
 
-    //if(out_line == 100)
-    // printf("tvdw=%d, ntdw=%d, tadj=%d --- tvdw+tadj=%d\n", tvdw, ntdw, tadj, tvdw + tadj);
+  //if(out_line == 100)
+  // printf("tvdw=%d, ntdw=%d, tadj=%d --- tvdw+tadj=%d\n", tvdw, ntdw, tadj, tvdw + tadj);
 
-    assert((tvdw + tadj) <= 704);
+  assert((tvdw + tadj) <= 704);
 
-    target += tadj;
-    espec->LineWidths[out_line] = ntdw;
+  target += tadj;
+  espec->LineWidths[out_line] = ntdw;
  }
 
  //
@@ -2797,17 +2787,8 @@ static NO_INLINE void DrawLine(const uint16 out_line, const uint16 vdp2_line, co
   // Line Window
   //
   {
-   int32 w_ycomp_line;
-
-   if(InterlaceMode == IM_DOUBLE)
-    w_ycomp_line = (vdp2_line << 1) + field;
-   else
-    w_ycomp_line = vdp2_line;
-
    for(unsigned d = 0; d < 2; d++)
    {
-    int32 ys = Window[d].YStart, ye = Window[d].YEnd;
-
     if(Window[d].LineWinEn)
     {
      const uint16* vrt = &VRAM[Window[d].CurLineWinAddr & 0x3FFFE];
@@ -2824,7 +2805,7 @@ static NO_INLINE void DrawLine(const uint16 out_line, const uint16 vdp2_line, co
 
     // FIXME: Kludge, until we can figure out what's going on.
     if(xs >= 0x380)
-       xs = 0;
+     xs = 0;
 
     // FIXME: Kludge, until we can figure out what's going on.
     if(xe >= 0x380)
@@ -2843,13 +2824,7 @@ static NO_INLINE void DrawLine(const uint16 out_line, const uint16 vdp2_line, co
 
     Window[d].CurLineWinAddr += 2 << (InterlaceMode == IM_DOUBLE);
 
-    if(InterlaceMode != IM_DOUBLE)
-    {
-     ys >>= 1;
-     ye >>= 1;
-    }
-
-    Window[d].YMet = (w_ycomp_line >= Window[d].YStart) & (w_ycomp_line <= Window[d].YEnd);
+    Window[d].YMet = LIB[vdp2_line].win_ymet[d];
     //
     //
     //
@@ -2873,14 +2848,12 @@ static NO_INLINE void DrawLine(const uint16 out_line, const uint16 vdp2_line, co
   //
   //
   //
-#ifdef HAVE_DEBUG
   if(vdp2_line == 64)
   {
    //printf("%d:%d, %d:%d (%d) --- %d:%d, %d:%d (%d)\n", Window[0].XStart, Window[0].YStart, Window[0].XEnd, Window[0].YEnd, Window[0].LineWinEn, Window[1].XStart, Window[1].YStart, Window[1].XEnd, Window[1].YEnd, Window[1].LineWinEn);
    //printf("SPCTL_Low: %02x, SDCTL: %03x, SpriteCCCond: %01x, CCNum: %01x -- %01x %01x %01x %01x %01x %01x %01x %01x \n", SPCTL_Low, SDCTL, SpriteCCCond, SpriteCCNum, SpriteCCRatio[0], SpriteCCRatio[1], SpriteCCRatio[2], SpriteCCRatio[3], SpriteCCRatio[4], SpriteCCRatio[5], SpriteCCRatio[6], SpriteCCRatio[7]);
    //printf("WinControl[WINLAYER_CC]=%02x\n", WinControl[WINLAYER_CC]);
   }
-#endif
 
   //
   // Process sprite data before NBG0-3 and RBG0-1, but defer applying the window until after NBG and RBG are handled(so the sprite window
@@ -3200,11 +3173,11 @@ static void RThreadEntry(void* data)
    {
     for(int i = 1000; i; i--)
     {
-#ifdef _MSC_VER
-       __nop();
-#else
-       asm volatile("nop\n\t");
-#endif
+     #ifdef _MSC_VER
+     __nop();
+     #else
+     asm volatile("nop\n\t");
+     #endif
     }
    }
   }
@@ -3257,11 +3230,9 @@ static void RThreadEntry(void* data)
 //
 //
 //
-void VDP2REND_Init(const bool IsPAL, const int sls, const int sle)
+void VDP2REND_Init(const bool IsPAL)
 {
  PAL = IsPAL;
- LineVisFirst = sls;
- LineVisLast = sle;
  VisibleLines = PAL ? 288 : 240;
  //
  UserLayerEnableMask = ~0U;
@@ -3287,29 +3258,36 @@ void VDP2REND_GetGunXTranslation(const bool clock28m, float* scale, float* offs)
  }
 }
 
-void VDP2REND_FillVideoParams(MDFNGI* gi)
+void VDP2REND_SetGetVideoParams(MDFNGI* gi, const bool caspect, const int sls, const int sle, const bool show_h_overscan, const bool dohblend)
 {
+ CorrectAspect = caspect;
+ ShowHOverscan = show_h_overscan;
+ DoHBlend = dohblend;
+ LineVisFirst = sls;
+ LineVisLast = sle;
+ //
+ //
+ //
  gi->fb_width = 704;
 
  if(PAL)
  {
-   gi->nominal_width = (ShowHOverscan ? 365 : 354);
-   gi->fb_height = 576;
+  gi->nominal_width = (ShowHOverscan ? 365 : 354);
+  gi->fb_height = 576;
  }
  else
  {
   gi->nominal_width = (ShowHOverscan ? 302 : 292);
   gi->fb_height = 480;
  }
-
  gi->nominal_height = LineVisLast + 1 - LineVisFirst;
 
  gi->lcm_width = (ShowHOverscan? 10560 : 10240);
  gi->lcm_height = (LineVisLast + 1 - LineVisFirst) * 2;
 
- gi->mouse_scale_x = (float)(ShowHOverscan? 21472 : 20821) / gi->nominal_width;
+ gi->mouse_scale_x = (float)(ShowHOverscan? 21472 : 20821);
  gi->mouse_offs_x = (float)(ShowHOverscan? 0 : 651) / 2;
- gi->mouse_scale_y = 1.0;
+ gi->mouse_scale_y = gi->nominal_height;
  gi->mouse_offs_y = LineVisFirst;
  //
  //
@@ -3319,7 +3297,7 @@ void VDP2REND_FillVideoParams(MDFNGI* gi)
   gi->nominal_width = (ShowHOverscan ? 352 : 341);
   gi->lcm_width = gi->nominal_width * 2;
 
-  gi->mouse_scale_x = (float)(ShowHOverscan? 21472 : 20821) / gi->nominal_width;
+  gi->mouse_scale_x = (float)(ShowHOverscan? 21472 : 20821);
   gi->mouse_offs_x = (float)(ShowHOverscan? 0 : 651) / 2;
  }
 }
@@ -3394,20 +3372,22 @@ VDP2Rend_LIB* VDP2REND_GetLIB(unsigned line)
  return &LIB[line];
 }
 
-void VDP2REND_DrawLine(int vdp2_line, const uint32 crt_line, const bool field)
+void VDP2REND_DrawLine(const int vdp2_line, const uint32 crt_line, const bool field)
 {
-   if(MDFN_LIKELY(crt_line < VisibleLines))
-   {
-      uint16 out_line = crt_line;
+ const unsigned bwthresh = VisibleLines - 48;
 
-      if(espec->InterlaceOn)
-         out_line = (out_line << 1) | espec->InterlaceField;
+ if(MDFN_LIKELY(crt_line < VisibleLines))
+ {
+  uint16 out_line = crt_line;
+
+  if(espec->InterlaceOn)
+   out_line = (out_line << 1) | espec->InterlaceField;
 
       DrawCounter.fetch_add(1, std::memory_order_release);
       WWQ(COMMAND_DRAW_LINE, ((uint16)vdp2_line << 16) | out_line, field);
 
-      NextOutLine = crt_line + 1;
-   }
+  NextOutLine = crt_line + 1;
+ }
 }
 
 void VDP2REND_Reset(bool powering_up)
@@ -3449,18 +3429,18 @@ void VDP2REND_StateAction(StateMem* sm, const unsigned load, const bool data_onl
 
   SFVAR(MosaicVCount),
 
-  SFARRAY32(VCLast, 2),
+  SFVAR(VCLast),
 
-  SFARRAY32(YCoordAccum, 2),
-  SFARRAY32(MosEff_YCoordAccum, 2),
+  SFVAR(YCoordAccum),
+  SFVAR(MosEff_YCoordAccum),
 
-  SFARRAY32(CurXScrollIF, 2),
-  SFARRAY32(CurYScrollIF, 2),
-  SFARRAY16(CurXCoordInc, 2),
-  SFARRAY32(CurLSA, 2),
+  SFVAR(CurXScrollIF),
+  SFVAR(CurYScrollIF),
+  SFVAR(CurXCoordInc),
+  SFVAR(CurLSA),
 
-  SFARRAY16(NBG23_YCounter, 2),
-  SFARRAY16(MosEff_NBG23_YCounter, 2),
+  SFVAR(NBG23_YCounter),
+  SFVAR(MosEff_NBG23_YCounter),
 
   SFVAR(CurBackTabAddr),
   SFVAR(CurBackColor),
@@ -3469,12 +3449,11 @@ void VDP2REND_StateAction(StateMem* sm, const unsigned load, const bool data_onl
   SFVAR(CurLCColor),
 
   // XStart and XEnd can be modified by line window processing.
-  SFVAR(Window->XStart, 2, sizeof(*Window)),
-  SFVAR(Window->XEnd, 2, sizeof(*Window)),
-  SFVAR(Window->YMet, 2, sizeof(*Window)),
-  SFVAR(Window->CurXStart, 2, sizeof(*Window)),
-  SFVAR(Window->CurXEnd, 2, sizeof(*Window)),
-  SFVAR(Window->CurLineWinAddr, 2, sizeof(*Window)),
+  SFVAR(Window->XStart, 2, sizeof(*Window), Window),
+  SFVAR(Window->XEnd, 2, sizeof(*Window), Window),
+  SFVAR(Window->CurXStart, 2, sizeof(*Window), Window),
+  SFVAR(Window->CurXEnd, 2, sizeof(*Window), Window),
+  SFVAR(Window->CurLineWinAddr, 2, sizeof(*Window), Window),
 
   SFEND
  };

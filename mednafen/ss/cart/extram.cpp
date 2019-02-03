@@ -27,7 +27,7 @@ static size_t ExtRAM_Mask;
 static uint8 Cart_ID;
 
 template<typename T, bool IsWrite>
-static void ExtRAM_RW_DB(uint32 A, uint16* DB)
+static MDFN_HOT void ExtRAM_RW_DB(uint32 A, uint16* DB)
 {
  const uint32 mask = (sizeof(T) == 2) ? 0xFFFF : (0xFF << (((A & 1) ^ 1) << 3));
  uint16* const ptr = (uint16*)((uint8*)ExtRAM + (A & ExtRAM_Mask));
@@ -40,7 +40,7 @@ static void ExtRAM_RW_DB(uint32 A, uint16* DB)
   *DB = *ptr;
 }
 
-static void CartID_Read_DB(uint32 A, uint16* DB)
+static MDFN_HOT void CartID_Read_DB(uint32 A, uint16* DB)
 {
  if((A & ~1) == 0x04FFFFFE)
   *DB = Cart_ID;
@@ -58,8 +58,8 @@ static MDFN_COLD void StateAction(StateMem* sm, const unsigned load, const bool 
 
  SFORMAT StateRegs[] =
  {
-  SFARRAY16N(&ExtRAM[0x000000], pcount, "LO"),
-  SFARRAY16N(&ExtRAM[0x100000], pcount, "HI"),
+  SFPTR16N(&ExtRAM[0x000000], pcount, "LO"),
+  SFPTR16N(&ExtRAM[0x100000], pcount, "HI"),
   SFEND
  };
 

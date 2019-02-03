@@ -48,18 +48,18 @@ void IODevice_3DPad::UpdateInput(const uint8* data, const int32 time_elapsed)
 
  for(unsigned axis = 0; axis < 2; axis++)
  {
-  int32 tmp = 32767 + MDFN_de16lsb(&data[0x2 + (axis << 2) + 2]) - MDFN_de16lsb(&data[0x2 + (axis << 2) + 0]);
+  int32 tmp = MDFN_de16lsb(&data[0x2 + (axis << 1)]);
 
-  if(tmp >= (32767 - 128) && tmp < 32767)
-   tmp = 32767;
+  if(tmp >= (32768 - 128) && tmp < 32768)
+   tmp = 32768;
 
-  tmp = (tmp * 255 + 32767) / 65534;
+  tmp = (tmp * 255 + 32767) / 65535;
   thumb[axis] = tmp;
  }
 
  for(unsigned w = 0; w < 2; w++)
  {
-  shoulder[w] = (MDFN_de16lsb(&data[0xA + (w << 1)]) * 255 + 16383) / 32767;
+  shoulder[w] = (MDFN_de16lsb(&data[0x6 + (w << 1)]) * 255 + 32767) / 65535;
 
   // May not be right for digital mode, but shouldn't matter too much:
   if(shoulder[w] <= 0x55)
@@ -67,6 +67,8 @@ void IODevice_3DPad::UpdateInput(const uint8* data, const int32 time_elapsed)
   else if(shoulder[w] >= 0x8E)
    dbuttons |= 0x0800 << (w << 2);
  }
+
+ //printf("DButtons: %04x, Mode: %d, Thumb0: %02x, Thumb1: %02x, Shoulder0: %02x, Shoulder1: %02x\n", dbuttons, mode, thumb[0], thumb[1], shoulder[0], shoulder[1]);
 }
 
 void IODevice_3DPad::StateAction(StateMem* sm, const unsigned load, const bool data_only, const char* sname_prefix)
@@ -76,10 +78,10 @@ void IODevice_3DPad::StateAction(StateMem* sm, const unsigned load, const bool d
   SFVAR(dbuttons),
   SFVAR(mode),
 
-  SFARRAY(thumb, 2),
-  SFARRAY(shoulder, 2),
+  SFVAR(thumb),
+  SFVAR(shoulder),
 
-  SFARRAY(buffer, 0x10),
+  SFVAR(buffer),
   SFVAR(data_out),
   SFVAR(tl),
 
@@ -87,7 +89,7 @@ void IODevice_3DPad::StateAction(StateMem* sm, const unsigned load, const bool d
   SFEND
  };
  char section_name[64];
- snprintf(section_name, sizeof(section_name), "%s_3DPad", sname_prefix);
+ trio_snprintf(section_name, sizeof(section_name), "%s_3DPad", sname_prefix);
 
  if(!MDFNSS_StateAction(sm, load, data_only, StateRegs, section_name, true) && load)
   Power();
@@ -166,34 +168,41 @@ uint8 IODevice_3DPad::UpdateBus(const sscpu_timestamp_t timestamp, const uint8 s
 
 static const IDIIS_SwitchPos ModeSwitchPositions[] =
 {
- { "digital", "Digital(+)" },
- { "analog", "Analog(○)", "Analog mode is not compatible with all games.  For some compatible games, analog mode reportedly must be enabled before the game boots up for the game to recognize it properly." },
+ { "digital", gettext_noop("Digital(+)") },
+ { "analog", gettext_noop("Analog(○)"), gettext_noop("Analog mode is not compatible with all games.  For some compatible games, analog mode reportedly must be enabled before the game boots up for the game to recognize it properly.") },
 };
 
 IDIISG IODevice_3DPad_IDII =
 {
- { "up", "D-Pad UP ↑", 0, IDIT_BUTTON, "down" },
- { "down", "D-Pad DOWN ↓", 1, IDIT_BUTTON, "up" },
- { "left", "D-Pad LEFT ←", 2, IDIT_BUTTON, "right" },
- { "right", "D-Pad RIGHT →", 3, IDIT_BUTTON, "left" },
+ IDIIS_Button("up", "D-Pad UP ↑", 0, "down"),
+ IDIIS_Button("down", "D-Pad DOWN ↓", 1, "up"),
+ IDIIS_Button("left", "D-Pad LEFT ←", 2, "right"),
+ IDIIS_Button("right", "D-Pad RIGHT →", 3, "left"),
 
- { "b", "B", 6, IDIT_BUTTON },
- { "c", "C", 7, IDIT_BUTTON },
- { "a", "A", 5, IDIT_BUTTON },
- { "start", "START", 4, IDIT_BUTTON },
+ IDIIS_Button("b", "B", 6),
+ IDIIS_Button("c", "C", 7),
+ IDIIS_Button("a", "A", 5),
+ IDIIS_Button("start", "START", 4),
 
- { "z", "Z", 10, IDIT_BUTTON },
- { "y", "Y", 9, IDIT_BUTTON },
- { "x", "X", 8, IDIT_BUTTON },
- { NULL, "empty", 0, IDIT_BUTTON },
+ IDIIS_Button("z", "Z", 10),
+ IDIIS_Button("y", "Y", 9),
+ IDIIS_Button("x", "X", 8),
+ IDIIS_Padding<1>(),
 
- IDIIS_Switch("mode", "Mode", 17, ModeSwitchPositions, sizeof(ModeSwitchPositions) / sizeof(ModeSwitchPositions[0]), false),
+ IDIIS_Switch("mode", "Mode", 17, ModeSwitchPositions, false),
 
- { "analog_left", "Analog LEFT ←", 15, IDIT_BUTTON_ANALOG },
- { "analog_right", "Analog RIGHT →", 16, IDIT_BUTTON_ANALOG },
- { "analog_up", "Analog UP ↑", 13, IDIT_BUTTON_ANALOG },
- { "analog_down", "Analog DOWN ↓", 14, IDIT_BUTTON_ANALOG },
+ IDIIS_Axis(	"analog", "Analog",
+		"left", "LEFT ←",
+		"right", "RIGHT →", 14),
 
- { "rs", "Right Shoulder (Analog)", 12, IDIT_BUTTON_ANALOG },
- { "ls", "Left Shoulder (Analog)", 11, IDIT_BUTTON_ANALOG },
+ IDIIS_Axis(	"analog", "Analog",
+		"up", "UP ↑",
+		"down", "DOWN ↓", 13),
+
+ IDIIS_AnaButton("rs", "Right Shoulder (Analog)", 12),
+ IDIIS_AnaButton("ls", "Left Shoulder (Analog)", 11),
 };
+
+
+
+
