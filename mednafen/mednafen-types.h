@@ -115,4 +115,6 @@ template<typename T> typename std::remove_all_extents<T>::type* MDAP(T* v) { ret
 #include "error.h"
 #endif
 
+#define gettext_noop(String)	String
+
 #endif

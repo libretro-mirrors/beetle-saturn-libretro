@@ -168,8 +168,8 @@ uint8 IODevice_3DPad::UpdateBus(const sscpu_timestamp_t timestamp, const uint8 s
 
 static const IDIIS_SwitchPos ModeSwitchPositions[] =
 {
- { "digital", "Digital(+)" },
- { "analog", "Analog(○)", "Analog mode is not compatible with all games.  For some compatible games, analog mode reportedly must be enabled before the game boots up for the game to recognize it properly." },
+ { "digital", gettext_noop("Digital(+)") },
+ { "analog", gettext_noop("Analog(○)"), gettext_noop("Analog mode is not compatible with all games.  For some compatible games, analog mode reportedly must be enabled before the game boots up for the game to recognize it properly.") },
 };
 
 IDIISG IODevice_3DPad_IDII =
