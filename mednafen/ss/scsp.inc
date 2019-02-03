@@ -1616,7 +1616,7 @@ void SS_SCSP::StateAction(StateMem* sm, const unsigned load, const bool data_onl
 
   for(uint32 A = 0x100000; A < 0x100400; A += 2)
   {
-   RW<uint16, true>(A, *(&SlotRegs[0][0] + ((A & 0x3FE) >> 1)));
+   RW<uint16, true>(A, *(MDAP(SlotRegs) + ((A & 0x3FE) >> 1)));
   }
   RecalcSoundInt();
   RecalcMainInt();
