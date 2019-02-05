@@ -19,14 +19,6 @@
 ** 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 */
 
-/*===LIBRETRO ADDITION===*/
-#if defined(__x86_64__) && !defined(_WIN32)
-#define SIZEOF_VOID_P 8
-#else
-#define SIZEOF_VOID_P 4
-#endif
-/*===LIBRETRO ADDITION===*/
-
 #if (defined(__x86_64__) && defined(__code_model_small__) && !defined(__PIC__) && !defined(__pic__)) || SIZEOF_VOID_P <= 4
  #define DSP_INSTR_BASE_UIPT 0
  #define DSP_INSTR_RECOVER_TCAST uint32
