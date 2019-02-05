@@ -44,6 +44,12 @@ ifeq ($(NEED_DEINTERLACER), 1)
    FLAGS += -DNEED_DEINTERLACER
 endif
 
+ifeq ($(IS_64BIT), 1)
+FLAGS += -DSIZEOF_VOID_P=8
+else
+FLAGS += -DSIZEOF_VOID_P=4
+endif
+
 ifeq ($(IS_X86), 1)
 FLAGS += -DARCH_X86
 endif
