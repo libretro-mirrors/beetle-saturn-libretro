@@ -29,6 +29,12 @@
 	Proper reset/power-on state.
 
 	Mem4Mb
+
+	DSP: Handle instruction with MRT=1 and MWT=1 correctly.
+
+	DSP: Handle IWT=1 when MRT=0 and MWT=0 for the instruction a couple instructions back(NOFL influences the value...)
+
+	DSP: Test IWT=1 when MRT=0 and MWT=1 for the intruction a couple back.
 */
 
 #include "ss_endian.h"
@@ -662,6 +668,9 @@ INLINE void SS_SCSP::RW(uint32 A, T& DBV)
   //
   ne64_rwbo_be<T, IsWrite>(DSP.MPROG, A & 0x3FF, &DBV);
 
+  if(IsWrite)
+   DSP.MPROG_Dirty = true;
+
   return;
  }
 
@@ -968,6 +977,10 @@ INLINE void SS_SCSP::RunLFO(Slot* s)
 //
 //
 //
+#ifdef MDFN_SS_SCSP_DSP_DYNAREC
+ #include "scsp_dsp_dynarec.inc"
+#else
+
 static INLINE uint32 dspfloat_to_int(const uint16 inv)
 {
  const uint32 sign_xor = (int32)((inv & 0x8000) << 16) >> 1;
@@ -1098,10 +1111,7 @@ INLINE void SS_SCSP::RunDSP(void)
   }
 
   const int32 INPUTS = sign_x_to_s32(24, DSP.INPUTS);
-  const int32 TEMP = sign_x_to_s32(24, DSP.TEMP[TEMPReadAddr]);
-  const int32 X_SEL_Inputs[2] = { TEMP, INPUTS };
   const uint16 Y_SEL_Inputs[4] = { DSP.FRC_REG, DSP.COEF[CRA], (uint16)((DSP.Y_REG >> 11) & 0x1FFF), (uint16)((DSP.Y_REG >> 4) & 0x0FFF) };
-  const uint32 SGA_Inputs[2] = { (uint32)TEMP, DSP.SFT_REG };
   //
   //
   //
@@ -1112,9 +1122,7 @@ INLINE void SS_SCSP::RunDSP(void)
   //
   //
   //
-  int32 ShifterOutput;
-
-  ShifterOutput = (uint32)sign_x_to_s32(26, DSP.SFT_REG) << (SHFT0 ^ SHFT1);
+  int32 ShifterOutput = (uint32)sign_x_to_s32(26, DSP.SFT_REG) << (SHFT0 ^ SHFT1);
 
   if(!SHFT1)
   {
@@ -1124,13 +1132,6 @@ INLINE void SS_SCSP::RunDSP(void)
     ShifterOutput = 0x800000;
   }
   ShifterOutput &= 0xFFFFFF;
-
-  if(EWT)
-   DSP.EFREG[EWA] = (ShifterOutput >> 8);
-
-  if(TWT)
-   DSP.TEMP[TEMPWriteAddr] = ShifterOutput;
-
   //
   //
   if(FRCL)
@@ -1142,27 +1143,31 @@ INLINE void SS_SCSP::RunDSP(void)
   }
   //
   //
-  DSP.Product = ((int64)sign_x_to_s32(13, Y_SEL_Inputs[YSEL]) * X_SEL_Inputs[XSEL]) >> 12;
-  // if(step < 4)
-  //  printf("%u %08x %08x product=0x%08x\n", step, Y_SEL_Inputs[YSEL], X_SEL_Inputs[XSEL], DSP.Product);
+  {
+   const int32 TEMP = sign_x_to_s32(24, DSP.TEMP[TEMPReadAddr]);
+   const uint32 SGA_Inputs[2] = { (uint32)TEMP, DSP.SFT_REG };
+   const int32 X_SEL_Inputs[2] = { TEMP, INPUTS };
+   const uint32 Product = ((int64)sign_x_to_s32(13, Y_SEL_Inputs[YSEL]) * X_SEL_Inputs[XSEL]) >> 12;
+   uint32 SGAOutput;
+
+   SGAOutput = SGA_Inputs[BSEL];
+
+   if(NEGB)
+    SGAOutput = -SGAOutput;
+
+   if(ZERO)
+    SGAOutput = 0;
+
+   DSP.SFT_REG = (Product + SGAOutput) & 0x3FFFFFF;
+  }
   //
   //
-  //if((step == 3 || step == 7) && CRA)
-  // printf("Step %u: %08x %08x %08x  --- ysel=%u cra=0x%02x[0x%04x] temp=0x%08x\n", step, SGA_Inputs[BSEL], Y_SEL_Inputs[YSEL], X_SEL_Inputs[XSEL], YSEL, CRA, DSP.COEF[CRA], TEMP);
+  if(EWT)
+   DSP.EFREG[EWA] = (ShifterOutput >> 8);
 
-  uint32 SGAOutput;
+  if(TWT)
+   DSP.TEMP[TEMPWriteAddr] = ShifterOutput;
 
-  SGAOutput = SGA_Inputs[BSEL];
-
-  if(NEGB)
-   SGAOutput = -SGAOutput;
-
-  if(ZERO)
-   SGAOutput = 0;
-
-  DSP.SFT_REG = (DSP.Product + SGAOutput) & 0x3FFFFFF;
-  //
-  //
   if(IWT)
   {
    DSP.MEMS[IWA] = DSP.ReadValue;
@@ -1226,6 +1231,7 @@ INLINE void SS_SCSP::RunDSP(void)
   DSP.MDEC_CT = (0x2000 << RBL);
  DSP.MDEC_CT--;
 }
+#endif
 //
 //
 //
@@ -1566,7 +1572,6 @@ void SS_SCSP::StateAction(StateMem* sm, const unsigned load, const bool data_onl
 
   SFVAR(DSP.INPUTS),
 
-  SFVAR(DSP.Product),
   SFVAR(DSP.SFT_REG),
   SFVAR(DSP.FRC_REG),
   SFVAR(DSP.Y_REG),
@@ -1613,6 +1618,8 @@ void SS_SCSP::StateAction(StateMem* sm, const unsigned load, const bool data_onl
   RBL &= 0x3;
 
   DSP.RWAddr &= 0x7FFFF;
+  
+  DSP.MPROG_Dirty = true;
 
   for(uint32 A = 0x100000; A < 0x100400; A += 2)
   {

@@ -288,7 +288,6 @@ class SS_SCSP
 
   uint32 INPUTS;	// 24 bit
 
-  uint32 Product;	// 26 bit
   uint32 SFT_REG;	// 26 bit
   uint16 FRC_REG;	// 13 bit
   uint32 Y_REG;		// 24 bit, latches INPUTS
@@ -303,11 +302,16 @@ class SS_SCSP
 
   uint8 ReadPending;	// = 1 (NOFL=0), =2 (NOFL=1) at time or MRT
   uint32 ReadValue;
- } DSP;
 
+  bool MPROG_Dirty;
+ } DSP;
  //
  //
 
  uint16 RAM[262144 * 2];	// *2 for dummy so we don't have to have so many conditionals in the playback code.
+
+#ifdef MDFN_SS_SCSP_DSP_DYNAREC
+ alignas(8) uint8 DynaRecPool[65536];
+#endif
 };
 
