@@ -2,7 +2,7 @@
 /* Mednafen Sega Saturn Emulation Module                                      */
 /******************************************************************************/
 /* vdp2.h:
-**  Copyright (C) 2015-2017 Mednafen Team
+**  Copyright (C) 2015-2019 Mednafen Team
 **
 ** This program is free software; you can redistribute it and/or
 ** modify it under the terms of the GNU General Public License
@@ -92,6 +92,39 @@ enum
 
  GSREG_RAMCTL,
 
+ GSREG_BGON,
+ GSREG_MZCTL,
+ GSREG_SFSEL,
+ GSREG_SFCODE,
+ GSREG_CHCTLA,
+ GSREG_CHCTLB,
+
+ GSREG_SCXIN0,
+ GSREG_SCXDN0,
+ GSREG_SCYIN0,
+ GSREG_SCYDN0,
+ GSREG_ZMXIN0,
+ GSREG_ZMXDN0,
+ GSREG_ZMYIN0,
+ GSREG_ZMYDN0,
+
+ GSREG_SCXIN1,
+ GSREG_SCXDN1,
+ GSREG_SCYIN1,
+ GSREG_SCYDN1,
+ GSREG_ZMXIN1,
+ GSREG_ZMXDN1,
+ GSREG_ZMYIN1,
+ GSREG_ZMYDN1,
+
+ GSREG_SCXN2,
+ GSREG_SCYN2,
+ GSREG_SCXN3,
+ GSREG_SCYN3,
+
+ GSREG_ZMCTL,
+ GSREG_SCRCTL,
+
  GSREG_CYCA0,
  GSREG_CYCA1 = GSREG_CYCA0 + 1,
  GSREG_CYCB0 = GSREG_CYCA0 + 2,
@@ -101,8 +134,8 @@ enum
 
 uint32 GetRegister(const unsigned id, char* const special, const uint32 special_len);
 void SetRegister(const unsigned id, const uint32 value);
-uint8 PeekVRAM(const uint32 addr);
-void PokeVRAM(const uint32 addr, const uint8 val);
+uint8 PeekVRAM(uint32 addr);
+void PokeVRAM(uint32 addr, const uint8 val);
 #ifdef HAVE_DEBUG
 void MakeDump(const std::string& path) MDFN_COLD;
 #endif

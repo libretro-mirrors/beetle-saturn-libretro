@@ -81,6 +81,20 @@ INLINE void PokeFB(const bool which, const uint32 addr, const uint8 val)
 void MakeDump(const std::string& path) MDFN_COLD;
 #endif
 
+enum
+{
+ GSREG_SYSCLIPX = 0,
+ GSREG_SYSCLIPY,
+ GSREG_USERCLIPX0,
+ GSREG_USERCLIPY0,
+ GSREG_USERCLIPX1,
+ GSREG_USERCLIPY1,
+ GSREG_LOCALX,
+ GSREG_LOCALY
+};
+uint32 GetRegister(const unsigned id, char* const special, const uint32 special_len) MDFN_COLD;
+void SetRegister(const unsigned id, const uint32 value) MDFN_COLD;
+
 }
 
 

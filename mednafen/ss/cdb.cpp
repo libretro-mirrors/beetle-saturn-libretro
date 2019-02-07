@@ -54,6 +54,7 @@
 #include <mednafen/mednafen.h>
 #include "scu.h"
 #include "sound.h"
+#include "cdb.h"
 
 #include <mednafen/cdrom/CDUtility.h>
 #include <mednafen/cdrom/cdromif.h>
@@ -230,7 +231,7 @@ static MDFN_COLD void GetCommandDetails(const uint16* CD, char* s, size_t sl)
 	break;
 
   case COMMAND_RESET_SEL:
-	trio_snprintf(s, sl, "Reset Selector; Flags=0x%02x, pn=0x%04x", CD[0] & 0xFF, CD[2] >> 8);
+	trio_snprintf(s, sl, "Reset Selector; Flags=0x%02x, pn=0x%02x", CD[0] & 0xFF, CD[2] >> 8);
 	break;
 
   case COMMAND_GET_BUFSIZE:
@@ -1747,6 +1748,11 @@ static void Drive_Run(int64 clocks)
 	  {
 	   DrivePhase = DRIVEPHASE_PLAY;
 	   DriveCounter += (int64)((44100 * 256) / ((SubQBuf_Safe[0] & 0x40) ? 150 : 75)) << 32;
+
+#if 0
+	   if(!Cur_CDIF->NonDeterministic_CheckSectorReady(CurSector - 150))
+	    DrivePhase = DRIVEPHASE_SEEK;
+#endif
 	  }
 	  //else
 	  // printf("%d\n", CurSector);
@@ -3935,6 +3941,46 @@ void CDB_StateAction(StateMem* sm, const unsigned load, const bool data_only)
   FLS.pbuf_offs %= 2048;
   //FLS.pbuf_read_i
   FLS.finfo_offs %= 256 + 1;
+ }
+}
+
+uint32 CDB_GetRegister(const unsigned id, char* const special, const uint32 special_len)
+{
+ uint32 ret = 0xDEADBEEF;
+
+ switch(id)
+ {
+  case CDB_GSREG_HIRQ:
+	ret = HIRQ;
+	break;
+
+  case CDB_GSREG_HIRQ_MASK:
+	ret = HIRQ_Mask;
+	break;
+
+  case CDB_GSREG_CDATA0:
+  case CDB_GSREG_CDATA1:
+  case CDB_GSREG_CDATA2:
+  case CDB_GSREG_CDATA3:
+	ret = CData[id - CDB_GSREG_CDATA0];
+	break;
+
+  case CDB_GSREG_RESULT0:
+  case CDB_GSREG_RESULT1:
+  case CDB_GSREG_RESULT2:
+  case CDB_GSREG_RESULT3:
+	ret = Results[id - CDB_GSREG_RESULT0];
+	break;
+ }
+
+ return ret;
+}
+
+void CDB_SetRegister(const unsigned id, const uint32 value)
+{
+ switch(id)
+ {
+
  }
 }
 
