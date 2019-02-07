@@ -20,6 +20,7 @@ static unsigned players = 2;
 
 static int astick_deadzone = 0;
 static int trigger_deadzone = 0;
+static const int TRIGGER_MAX = 0xFFFF;
 static float mouse_sensitivity = 1.0f;
 
 static unsigned geometry_width = 0;
@@ -358,11 +359,14 @@ static void get_analog_stick( retro_input_state_t input_state_cb,
 	*p_analog_y = analog_y;
 }
 
-static uint16_t apply_trigger_deadzone( uint16_t input )
+static uint32_t apply_trigger_deadzone( uint32_t input )
 {
+	// Scale by two and apply outer deadzone (about 1%)
+	input = ( input * 66191 ) / 32768;
+	
+	// Inner deadzone
 	if ( trigger_deadzone > 0 )
 	{
-		static const int TRIGGER_MAX = 0x8000;
 		const float scale = ((float)TRIGGER_MAX/(float)(TRIGGER_MAX - trigger_deadzone));
 
 		if ( input > trigger_deadzone )
@@ -371,15 +375,16 @@ static uint16_t apply_trigger_deadzone( uint16_t input )
 			float scaled = (input - trigger_deadzone)*scale;
 
 			input = (int)round(scaled);
-			if (input > +32767) {
-				input = +32767;
-			}
 		}
 		else
 		{
 			input = 0;
 		}
 	}
+	
+	// Clamp
+	if (input > TRIGGER_MAX)
+		input = TRIGGER_MAX;
 
 	return input;
 }
@@ -410,14 +415,15 @@ static uint16_t get_analog_trigger( retro_input_state_t input_state_cb,
 		trigger = input_state_cb( player_index,
 								  RETRO_DEVICE_JOYPAD,
 								  0,
-								  id ) ? 0x7FFF : 0;
+								  id ) ? 0xFFFF : 0;
 	}
 	else
 	{
 		// We got something, which means the front-end can handle analog buttons.
 		// So we apply a deadzone to the input and use it.
+		// Mednafen wants 0 - 65535 so we scale up from 0 - 32767
 
-		trigger = apply_trigger_deadzone( trigger );
+		trigger = apply_trigger_deadzone( (unsigned)trigger );
 	}
 
 	return trigger;
@@ -519,7 +525,7 @@ void input_set_deadzone_stick( int percent )
 void input_set_deadzone_trigger( int percent )
 {
 	if ( percent >= 0 && percent <= 100 )
-		trigger_deadzone = (int)( percent * 0.01f * 0x8000);
+		trigger_deadzone = (int)( percent * 0.01f * TRIGGER_MAX);
 }
 
 void input_set_mouse_sensitivity( int percent )
@@ -629,12 +635,19 @@ void input_update( retro_input_state_t input_state_cb )
 				int analog_x, analog_y;
 				get_analog_stick( input_state_cb, iplayer, RETRO_DEVICE_INDEX_ANALOG_LEFT, &analog_x, &analog_y );
 
+				// mednafen wants 0 - 32767 - 65535
+				uint16_t thumb_x, thumb_y;
+				thumb_x = static_cast< uint16_t >( analog_x + 32767 );
+				thumb_y = static_cast< uint16_t >( analog_y + 32767 );
+
 				//
 				// -- triggers
 
+				// mednafen wants 0 - 65535
 				uint16_t l_trigger, r_trigger;
 				l_trigger = get_analog_trigger( input_state_cb, iplayer, RETRO_DEVICE_ID_JOYPAD_L2 );
 				r_trigger = get_analog_trigger( input_state_cb, iplayer, RETRO_DEVICE_ID_JOYPAD_R2 );
+
 
 				//
 				// -- mode switch
@@ -669,29 +682,19 @@ void input_update( retro_input_state_t input_state_cb )
 				//
 				// -- format input data
 
-				// Convert analog values into direction values.
-				uint16_t right = analog_x > 0 ?  analog_x : 0;
-				uint16_t left  = analog_x < 0 ? -analog_x : 0;
-				uint16_t down  = analog_y > 0 ?  analog_y : 0;
-				uint16_t up    = analog_y < 0 ? -analog_y : 0;
-
 				// Apply analog/digital mode switch bit.
 				if ( input_mode[iplayer] & INPUT_MODE_3D_PAD_ANALOG ) {
 					p_input->buttons |= 0x1000; // set bit 12
 				}
 
-				p_input->u8[0x2] = ((left  >> 0) & 0xff);
-				p_input->u8[0x3] = ((left  >> 8) & 0xff);
-				p_input->u8[0x4] = ((right >> 0) & 0xff);
-				p_input->u8[0x5] = ((right >> 8) & 0xff);
-				p_input->u8[0x6] = ((up    >> 0) & 0xff);
-				p_input->u8[0x7] = ((up    >> 8) & 0xff);
-				p_input->u8[0x8] = ((down  >> 0) & 0xff);
-				p_input->u8[0x9] = ((down  >> 8) & 0xff);
-				p_input->u8[0xa] = ((r_trigger >> 0) & 0xff);
-				p_input->u8[0xb] = ((r_trigger >> 8) & 0xff);
-				p_input->u8[0xc] = ((l_trigger >> 0) & 0xff);
-				p_input->u8[0xd] = ((l_trigger >> 8) & 0xff);
+				p_input->u8[0x2] = ((thumb_x >> 0) & 0xff);
+				p_input->u8[0x3] = ((thumb_x >> 8) & 0xff);
+				p_input->u8[0x4] = ((thumb_y >> 0) & 0xff);
+				p_input->u8[0x5] = ((thumb_y >> 8) & 0xff);
+				p_input->u8[0x6] = ((r_trigger >> 0) & 0xff);
+				p_input->u8[0x7] = ((r_trigger >> 8) & 0xff);
+				p_input->u8[0x8] = ((l_trigger >> 0) & 0xff);
+				p_input->u8[0x9] = ((l_trigger >> 8) & 0xff);
 			}
 
 			break;
