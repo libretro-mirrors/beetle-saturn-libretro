@@ -1036,6 +1036,119 @@ uint32 GetRegister(const unsigned id, char* const special, const uint32 special_
 		tab[(ret >> 12) & 0xF], tab[(ret >>  8) & 0xF], tab[(ret >>  4) & 0xF], tab[(ret >>  0) & 0xF]);
 	}
 	break;
+
+  case GSREG_BGON:
+	ret = BGON;
+	break;
+
+  case GSREG_MZCTL:
+	ret = RawRegs[0x22 >> 1] & 0xFF1F;
+	break;
+
+  case GSREG_SFSEL:
+	ret = RawRegs[0x24 >> 1] & 0x001F;
+	break;
+
+  case GSREG_SFCODE:
+	ret = RawRegs[0x26 >> 1];
+	break;
+
+  case GSREG_CHCTLA:
+	ret = RawRegs[0x28 >> 1] & 0x3F7F;
+	break;
+
+  case GSREG_CHCTLB:
+	ret = RawRegs[0x2A >> 1] & 0x7733;
+	break;
+  //
+  //
+  case GSREG_SCXIN0:
+	ret = RawRegs[0x70 >> 1] & 0x07FF;
+	break;
+
+  case GSREG_SCXDN0:
+	ret = RawRegs[0x72 >> 1] & 0xFF00;
+	break;
+
+  case GSREG_SCYIN0:
+	ret = RawRegs[0x74 >> 1] & 0x07FF;
+	break;
+
+  case GSREG_SCYDN0:
+	ret = RawRegs[0x76 >> 1] & 0xFF00;
+	break;
+
+  case GSREG_ZMXIN0:
+	ret = RawRegs[0x78 >> 1] & 0x0007;
+	break;
+
+  case GSREG_ZMXDN0:
+	ret = RawRegs[0x7A >> 1] & 0xFF00;
+	break;
+
+  case GSREG_ZMYIN0:
+	ret = RawRegs[0x7C >> 1] & 0x0007;
+	break;
+
+  case GSREG_ZMYDN0:
+	ret = RawRegs[0x7E >> 1] & 0xFF00;
+	break;
+
+  case GSREG_SCXIN1:
+	ret = RawRegs[0x80 >> 1] & 0x07FF;
+	break;
+
+  case GSREG_SCXDN1:
+	ret = RawRegs[0x82 >> 1] & 0xFF00;
+	break;
+
+  case GSREG_SCYIN1:
+	ret = RawRegs[0x84 >> 1] & 0x07FF;
+	break;
+
+  case GSREG_SCYDN1:
+	ret = RawRegs[0x86 >> 1] & 0xFF00;
+	break;
+
+  case GSREG_ZMXIN1:
+	ret = RawRegs[0x88 >> 1] & 0x0007;
+	break;
+
+  case GSREG_ZMXDN1:
+	ret = RawRegs[0x8A >> 1] & 0xFF00;
+	break;
+
+  case GSREG_ZMYIN1:
+	ret = RawRegs[0x8C >> 1] & 0x0007;
+	break;
+
+  case GSREG_ZMYDN1:
+	ret = RawRegs[0x8E >> 1] & 0xFF00;
+	break;
+
+  case GSREG_SCXN2:
+	ret = RawRegs[0x90 >> 1] & 0x07FF;
+	break;
+
+  case GSREG_SCYN2:
+	ret = RawRegs[0x92 >> 1] & 0x07FF;
+	break;
+
+  case GSREG_SCXN3:
+	ret = RawRegs[0x94 >> 1] & 0x07FF;
+	break;
+
+  case GSREG_SCYN3:
+	ret = RawRegs[0x96 >> 1] & 0x07FF;
+	break;
+
+  case GSREG_ZMCTL:
+	ret = RawRegs[0x98 >> 1] & 0x0303;
+	break;
+
+  case GSREG_SCRCTL:
+	ret = RawRegs[0x9A >> 1] & 0x3F3F;
+	break;
  }
 
  return ret;
@@ -1043,18 +1156,143 @@ uint32 GetRegister(const unsigned id, char* const special, const uint32 special_
 
 void SetRegister(const unsigned id, const uint32 value)
 {
+ int rr = -1;
 
+ switch(id)
+ {
+  case GSREG_BGON:
+	BGON = value & 0x1F3F;
+	rr = 0x20 >> 1;
+	break;
+
+  case GSREG_MZCTL:
+	rr = 0x22 >> 1;
+	break;
+
+  case GSREG_SFSEL:
+	rr = 0x24 >> 1;
+	break;
+
+  case GSREG_SFCODE:
+	rr = 0x26 >> 1;
+	break;
+
+  case GSREG_CHCTLA:
+	rr = 0x28 >> 1;
+	break;
+
+  case GSREG_CHCTLB:
+	rr = 0x2A >> 1;
+	break;
+  //
+  //
+  case GSREG_SCXIN0:
+	rr = 0x70 >> 1;
+	break;
+
+  case GSREG_SCXDN0:
+	rr = 0x72 >> 1;
+	break;
+
+  case GSREG_SCYIN0:
+	rr = 0x74 >> 1;
+	break;
+
+  case GSREG_SCYDN0:
+	rr = 0x76 >> 1;
+	break;
+
+  case GSREG_ZMXIN0:
+	rr = 0x78 >> 1;
+	break;
+
+  case GSREG_ZMXDN0:
+	rr = 0x7A >> 1;
+	break;
+
+  case GSREG_ZMYIN0:
+	rr = 0x7C >> 1;
+	break;
+
+  case GSREG_ZMYDN0:
+	rr = 0x7E >> 1;
+	break;
+
+  case GSREG_SCXIN1:
+	rr = 0x80 >> 1;
+	break;
+
+  case GSREG_SCXDN1:
+	rr = 0x82 >> 1;
+	break;
+
+  case GSREG_SCYIN1:
+	rr = 0x84 >> 1;
+	break;
+
+  case GSREG_SCYDN1:
+	rr = 0x86 >> 1;
+	break;
+
+  case GSREG_ZMXIN1:
+	rr = 0x88 >> 1;
+	break;
+
+  case GSREG_ZMXDN1:
+	rr = 0x8A >> 1;
+	break;
+
+  case GSREG_ZMYIN1:
+	rr = 0x8C >> 1;
+	break;
+
+  case GSREG_ZMYDN1:
+	rr = 0x8E >> 1;
+	break;
+
+  case GSREG_SCXN2:
+	rr = 0x90 >> 1;
+	break;
+
+  case GSREG_SCYN2:
+	rr = 0x92 >> 1;
+	break;
+
+  case GSREG_SCXN3:
+	rr = 0x94 >> 1;
+	break;
+
+  case GSREG_SCYN3:
+	rr = 0x96 >> 1;
+	break;
+
+  case GSREG_ZMCTL:
+	rr = 0x98 >> 1;
+	break;
+
+  case GSREG_SCRCTL:
+	rr = 0x9A >> 1;
+	break;
+ }
+
+ if(rr >= 0)
+ {
+  RawRegs[rr] = (uint16)value;
+  VDP2REND_Write16_DB(0x180000 + (rr << 1), RawRegs[rr]);
+ }
 }
 
-uint8 PeekVRAM(const uint32 addr)
+uint8 PeekVRAM(uint32 addr)
 {
  return ne16_rbo_be<uint8>(VRAM, addr & 0x7FFFF);
 }
 
-void PokeVRAM(const uint32 addr, const uint8 val)
+void PokeVRAM(uint32 addr, const uint8 val)
 {
- ne16_wbo_be<uint8>(VRAM, addr & 0x7FFFF, val);
- //VDP2REND_Write8_DB(addr, val << (((A & 1) ^ 1) << 3));
+ addr &= 0x7FFFF;
+
+ ne16_wbo_be<uint8>(VRAM, addr, val);
+ VDP2REND_Write16_DB(addr & ~1, ne16_rbo_be<uint16>(VRAM, addr & ~1));
 }
 
 void SetLayerEnableMask(uint64 mask)

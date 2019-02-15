@@ -2,7 +2,7 @@
 /* Mednafen Sega Saturn Emulation Module                                      */
 /******************************************************************************/
 /* sh7095.inc - Hitachi SH7095 Emulation
-**  Copyright (C) 2015-2017 Mednafen Team
+**  Copyright (C) 2015-2019 Mednafen Team
 **
 ** This program is free software; you can redistribute it and/or
 ** modify it under the terms of the GNU General Public License
@@ -1961,6 +1961,28 @@ INLINE T SH7095::MemReadRT(uint32 A)
  else
   timestamp = std::max<sscpu_timestamp_t>(MA_until, timestamp);
 
+#ifdef MDFN_SS_DEV_BUILD
+  if((A & 0xC7FFFFFF) >= 0x06000200 && (A & 0xC7FFFFFF) <= 0x060003FF)
+  {
+   const uint32 pcm = PC & 0x07FFFFFF;
+   bool match = (pcm >= 0x100000) && (pcm < 0x06000600 || pcm >= 0x06000A00);
+
+   if(match && !BWMIgnoreAddr[0][A & 0x1FF])
+   {
+    SS_DBG(SS_DBG_BIOS, "[%s] Read from BIOS area of RAM 0x%08x; PC=0x%08x\n", cpu_name, A, PC);
+   }
+  }
+
+  if((A & 0xC7FFFFFF) >= 0x00000200/*0x00000004*//*0x00000000*/ && (A & 0xC7FFFFFF) <= 0x000FFFFF)
+  {
+   const uint32 pcm = PC & 0x07FFFFFF;
+   bool match = (pcm >= 0x100000) && (pcm < 0x06000600 || pcm >= 0x06000A00);
+
+   if(match)
+    SS_DBG(SS_DBG_BIOS, "[%s] Read from BIOS ROM 0x%06x; PC=0x%08x\n", cpu_name, A, PC);
+  }
+#endif
+
  //
  // WARNING: Template arguments CacheEnabled and TwoWayMode are only valid for region==0.  In addition, TwoWayMode is only valid for CacheEnabled==true.
  //
@@ -2130,6 +2152,19 @@ INLINE void SH7095::MemWriteRT(uint32 A, T V)
  }
 
  MA_until = std::max<sscpu_timestamp_t>(MA_until, timestamp + 1);
+
+#ifdef MDFN_SS_DEV_BUILD
+  if((A & 0xC7FFFFFF) >= 0x06000200 && (A & 0xC7FFFFFF) <= 0x060003FF)
+  {
+   const uint32 pcm = PC & 0x07FFFFFF;
+   bool match = (pcm >= 0x100000) && (pcm < 0x06000600 || pcm >= 0x06000800);
+
+   if(match && !BWMIgnoreAddr[1][A & 0x1FF])
+   {
+    SS_DBG(SS_DBG_BIOS, "[%s] Write to BIOS area of RAM 0x%08x; PC=0x%08x\n", cpu_name, A, PC);
+   }
+  }
+#endif
 
  //
  // WARNING: Template argument CacheEnabled is only valid for region==0.

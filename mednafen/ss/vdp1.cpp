@@ -972,4 +972,51 @@ void MakeDump(const std::string& path)
 #endif
 }
 
+uint32 GetRegister(const unsigned id, char* const special, const uint32 special_len)
+{
+ uint32 ret = 0xDEADBEEF;
+
+ switch(id)
+ {
+  case GSREG_SYSCLIPX:
+	ret = SysClipX;
+	break;
+
+  case GSREG_SYSCLIPY:
+	ret = SysClipY;
+	break;
+
+  case GSREG_USERCLIPX0:
+	ret = UserClipX0;
+	break;
+
+  case GSREG_USERCLIPY0:
+	ret = UserClipY0;
+	break;
+
+  case GSREG_USERCLIPX1:
+	ret = UserClipX1;
+	break;
+
+  case GSREG_USERCLIPY1:
+	ret = UserClipY1;
+	break;
+
+  case GSREG_LOCALX:
+	ret = LocalX;
+	break;
+
+  case GSREG_LOCALY:
+	ret = LocalY;
+ 	break;
+ }
+
+ return ret;
+}
+
+void SetRegister(const unsigned id, const uint32 value)
+{
+ // TODO
+}
+
 }

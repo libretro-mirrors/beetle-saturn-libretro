@@ -46,12 +46,15 @@
   SS_DBG_SMPC 	   = (1U << 12),
   SS_DBG_SMPC_REGW = (1U << 13),
 
+  SS_DBG_BIOS	   = (1U << 15),
+
   SS_DBG_CDB  	   = (1U << 16),
   SS_DBG_CDB_REGW  = (1U << 17),
 
   SS_DBG_VDP1 	   = (1U << 20),
   SS_DBG_VDP1_REGW = (1U << 21),
   SS_DBG_VDP1_VRAMW= (1U << 22),
+  SS_DBG_VDP1_FBW  = (1U << 23),
 
   SS_DBG_VDP2 	   = (1U << 24),
   SS_DBG_VDP2_REGW = (1U << 25),

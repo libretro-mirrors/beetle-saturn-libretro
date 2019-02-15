@@ -84,6 +84,10 @@ static const struct
  //
  //
  //
+ { "T-16804G", CART_BACKUP_MEM },// Dezaemon 2
+ //
+ //
+ //
  { "MK-81088", CART_KOF95 },	// The King of Fighters '95 (Europe)
  { "T-3101G", CART_KOF95 },	// The King of Fighters '95
  { "T-13308G", CART_ULTRAMAN },// Ultraman: Hikari no Kyojin Densetsu
@@ -126,6 +130,7 @@ static const struct
  //
  //
  { nullptr, CART_CS1RAM_16M, { 0x4a, 0xf9, 0xff, 0x30, 0xea, 0x54, 0xfe, 0x3a, 0x79, 0xa7, 0x68, 0x69, 0xae, 0xde, 0x55, 0xbb } },	// Heart of Darkness (Prototype)
+ { nullptr, CART_CS1RAM_16M, { 0xf1, 0x71, 0xc3, 0xe4, 0x69, 0xd5, 0x99, 0x93, 0x94, 0x09, 0x05, 0xfc, 0x29, 0xd3, 0x8a, 0x59 } },	// Heart of Darkness (Prototype)
 };
 
 static const struct
@@ -145,6 +150,7 @@ static const struct
  { "MK-81045", CPUCACHE_EMUMODE_DATA_CB },	// Golden Axe - The Duel (Europe) (and USA too?)
  { "GS-9041",	CPUCACHE_EMUMODE_DATA_CB },	// Golden Axe - The Duel (Japan)
  { "GS-9173", CPUCACHE_EMUMODE_DATA_CB },	// House of the Dead (Japan)
+ { "GS-9055", CPUCACHE_EMUMODE_DATA_CB },	// Linkle Liver Story
  { "81600",	CPUCACHE_EMUMODE_DATA_CB },	// Sega Saturn Choice Cuts (USA)
  { "610680501",CPUCACHE_EMUMODE_DATA_CB },	// Segakore Sega Bible Mogitate SegaSaturn
  { "T-7001H",	CPUCACHE_EMUMODE_DATA_CB },	// Spot Goes to Hollywood (USA)
@@ -219,3 +225,4 @@ void DB_Lookup(const char* path, const char* sgid, const uint8* fd_id, unsigned*
  }
 #endif
 }
+
