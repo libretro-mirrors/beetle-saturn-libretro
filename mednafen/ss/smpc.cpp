@@ -409,8 +409,14 @@ void SMPC_Init(const uint8 area_code_arg, const int32 master_clock_arg)
  vsync = false;
  lastts = 0;
 
+ for(unsigned sp = 0; sp < 2; sp++)
+  SPorts[sp] = nullptr;
+
  for(unsigned i = 0; i < 12; i++)
+ {
+  VirtualPorts[i] = nullptr;
   SMPC_SetInput(i, "none", NULL);
+ }
 
  SMPC_SetRTC(NULL, 0);
 }
@@ -479,8 +485,16 @@ void SMPC_Reset(bool powering_up)
   DirectModeEn[port] = false;
   ExLatchEn[port] = false;
   UpdateIOBus(port, SH7095_mem_timestamp);
+  //
+  if(powering_up)
+  {
+   IOPorts[port]->Power();
+   UpdateIOBus(port, SH7095_mem_timestamp);
+  }
  }
-
+ //
+ //
+ //
  ResetPending = false;
 
  PendingClockDivisor = 0;
@@ -643,10 +657,10 @@ void SMPC_EndFrame(EmulateSpecStruct* espec, const sscpu_timestamp_t timestamp)
 
 void SMPC_UpdateOutput(void)
 {
-   for(unsigned vp = 0; vp < 12; vp++)
-   {
-      VirtualPorts[vp]->UpdateOutput(VirtualPortsDPtr[vp]);
-   }
+ for(unsigned vp = 0; vp < 12; vp++)
+ {
+  VirtualPorts[vp]->UpdateOutput(VirtualPortsDPtr[vp]);
+ }
 }
 
 void SMPC_UpdateInput(const int32 time_elapsed)

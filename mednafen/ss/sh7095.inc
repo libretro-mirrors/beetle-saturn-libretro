@@ -3659,7 +3659,7 @@ INLINE void SH7095::Step(void)
 
 	if(GetS() && sum > 0x00007FFFFFFFFFFFULL && sum < 0xFFFF800000000000ULL)
 	{
-	 if((int64)b < 0)
+	 if((int32)(m0 ^ m1) < 0)
 	  sum = 0xFFFF800000000000ULL;
 	 else
 	  sum = 0x00007FFFFFFFFFFFULL;

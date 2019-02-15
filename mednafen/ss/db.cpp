@@ -140,6 +140,8 @@ static const struct
  { "MK-81036",	CPUCACHE_EMUMODE_DATA_CB },	// Clockwork Knight 2 (USA)
  { "T-30304G", CPUCACHE_EMUMODE_DATA_CB },	// DeJig - Lassen Art Collection (Japan)
  { "T-18504G", CPUCACHE_EMUMODE_DATA_CB },	// Father Christmas (Japan)
+ { "GS-9101",  CPUCACHE_EMUMODE_DATA_CB },	// Fighting Vipers (Japan)
+ { "MK-81041",  CPUCACHE_EMUMODE_DATA_CB },	// Fighting Vipers (Europe/USA)
  { "MK-81045", CPUCACHE_EMUMODE_DATA_CB },	// Golden Axe - The Duel (Europe) (and USA too?)
  { "GS-9041",	CPUCACHE_EMUMODE_DATA_CB },	// Golden Axe - The Duel (Japan)
  { "GS-9173", CPUCACHE_EMUMODE_DATA_CB },	// House of the Dead (Japan)
