@@ -159,6 +159,7 @@ static const struct
  { "T-1206G",	CPUCACHE_EMUMODE_DATA_CB },	// Street Fighter Zero (Japan)
  { "T-1246G",	CPUCACHE_EMUMODE_DATA_CB },	// Street Fighter Zero 3 (Japan)
  { "T-1215H",	CPUCACHE_EMUMODE_DATA_CB },	// Super Puzzle Fighter II Turbo (USA)
+ { "T-5001H",	CPUCACHE_EMUMODE_DATA_CB },	// Theme Park (Europe)
  { "GS-9113", CPUCACHE_EMUMODE_DATA_CB },	// Virtua Fighter Kids (Java Tea Original)
  { "T-15005G", CPUCACHE_EMUMODE_DATA_CB },	// Virtual Volleyball (Japan)
  { "T-18601H", CPUCACHE_EMUMODE_DATA_CB },	// WipEout (USA)
