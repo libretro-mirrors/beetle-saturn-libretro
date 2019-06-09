@@ -410,7 +410,10 @@ void SMPC_Init(const uint8 area_code_arg, const int32 master_clock_arg)
  lastts = 0;
 
  for(unsigned sp = 0; sp < 2; sp++)
+ {
   SPorts[sp] = nullptr;
+  IOPorts[sp] = nullptr; /* beetle/libretro: added to fix crash when two multi-taps are used */
+ }
 
  for(unsigned i = 0; i < 12; i++)
  {
