@@ -951,37 +951,65 @@ void input_update( retro_input_state_t input_state_cb )
 				int gun_x, gun_y;
 				int forced_reload;
 
-				forced_reload = input_state_cb( iplayer, RETRO_DEVICE_LIGHTGUN, 0, RETRO_DEVICE_ID_LIGHTGUN_RELOAD );
+				int gun_x_raw, gun_y_raw;
+				gun_x_raw = input_state_cb( iplayer, RETRO_DEVICE_POINTER, 0, RETRO_DEVICE_ID_POINTER_X);
+				gun_y_raw = input_state_cb( iplayer, RETRO_DEVICE_POINTER, 0, RETRO_DEVICE_ID_POINTER_Y);
 
-				// off-screen?
-				if ( input_state_cb( iplayer, RETRO_DEVICE_LIGHTGUN, 0, RETRO_DEVICE_ID_LIGHTGUN_IS_OFFSCREEN ) ||
-					 forced_reload ||
-					 geometry_height == 0 )
-				{
-					shot_type = 0x4; // off-screen shot
+				printf("yoshi debug pointer raw: x = %i , y = %i \n", gun_x_raw, gun_y_raw);
 
+				shot_type = 0x1; // on-screen shot
+
+				// .. scale into screen space:
+				// NOTE: the scaling here is empirical-guesswork.
+				// Tested at 352x240 (ntsc) and 352x256 (pal)
+
+				const int scale_x = 21472;
+				const int scale_y = geometry_height;
+				const int offset_y = geometry_height - 240;
+
+				int is_offscreen = 0;
+
+				gun_x = ( ( gun_x_raw + 0x7fff ) * scale_x ) / (0x7fff << 1);
+				gun_y = ( ( gun_y_raw + 0x7fff ) * scale_y ) / (0x7fff << 1) + offset_y;
+				// Handle offscreen by checking raw x and y values
+				if ( gun_x == 0 || gun_y == 0 ) {
+					printf("yoshi debug lightgun is offscreen! \n");
+					is_offscreen = 1;
 					gun_x = -16384; // magic position to disable cross-hair drawing.
 					gun_y = -16384;
 				}
-				else
-				{
-					shot_type = 0x1; // on-screen shot
 
-					int gun_x_raw, gun_y_raw;
-					gun_x_raw = input_state_cb( iplayer, RETRO_DEVICE_LIGHTGUN, 0, RETRO_DEVICE_ID_LIGHTGUN_SCREEN_X );
-					gun_y_raw = input_state_cb( iplayer, RETRO_DEVICE_LIGHTGUN, 0, RETRO_DEVICE_ID_LIGHTGUN_SCREEN_Y );
+				// forced_reload = input_state_cb( iplayer, RETRO_DEVICE_LIGHTGUN, 0, RETRO_DEVICE_ID_LIGHTGUN_RELOAD );
 
-					// .. scale into screen space:
-					// NOTE: the scaling here is empirical-guesswork.
-					// Tested at 352x240 (ntsc) and 352x256 (pal)
+				// // off-screen?
+				// if ( input_state_cb( iplayer, RETRO_DEVICE_LIGHTGUN, 0, RETRO_DEVICE_ID_LIGHTGUN_IS_OFFSCREEN ) ||
+				// 	 forced_reload ||
+				// 	 geometry_height == 0 )
+				// {
+				// 	shot_type = 0x4; // off-screen shot
 
-					const int scale_x = 21472;
-					const int scale_y = geometry_height;
-					const int offset_y = geometry_height - 240;
+				// 	gun_x = -16384; // magic position to disable cross-hair drawing.
+				// 	gun_y = -16384;
+				// }
+				// else
+				// {
+				// 	shot_type = 0x1; // on-screen shot
 
-					gun_x = ( ( gun_x_raw + 0x7fff ) * scale_x ) / (0x7fff << 1);
-					gun_y = ( ( gun_y_raw + 0x7fff ) * scale_y ) / (0x7fff << 1) + offset_y;
-				}
+				// 	int gun_x_raw, gun_y_raw;
+				// 	gun_x_raw = input_state_cb( iplayer, RETRO_DEVICE_LIGHTGUN, 0, RETRO_DEVICE_ID_LIGHTGUN_SCREEN_X );
+				// 	gun_y_raw = input_state_cb( iplayer, RETRO_DEVICE_LIGHTGUN, 0, RETRO_DEVICE_ID_LIGHTGUN_SCREEN_Y );
+
+				// 	// .. scale into screen space:
+				// 	// NOTE: the scaling here is empirical-guesswork.
+				// 	// Tested at 352x240 (ntsc) and 352x256 (pal)
+
+				// 	const int scale_x = 21472;
+				// 	const int scale_y = geometry_height;
+				// 	const int offset_y = geometry_height - 240;
+
+				// 	gun_x = ( ( gun_x_raw + 0x7fff ) * scale_x ) / (0x7fff << 1);
+				// 	gun_y = ( ( gun_y_raw + 0x7fff ) * scale_y ) / (0x7fff << 1) + offset_y;
+				// }
 
 				// position
 				p_input->gun_pos[ 0 ] = gun_x;
@@ -991,14 +1019,30 @@ void input_update( retro_input_state_t input_state_cb )
 				p_input->u8[ 4 ] = 0;
 
 				// trigger
-				if ( input_state_cb( iplayer, RETRO_DEVICE_LIGHTGUN, 0, RETRO_DEVICE_ID_LIGHTGUN_TRIGGER ) || forced_reload ) {
-					p_input->u8[ 4 ] |= shot_type;
+				if ( input_state_cb( iplayer, RETRO_DEVICE_POINTER, 0, RETRO_DEVICE_ID_POINTER_PRESSED ) ) {
+					printf("yoshi debug: pointer pressed!! shot type = %i \n",shot_type);
+					p_input->u8[ 4 ] |= 0x1;
+				}
+				int touch_count = input_state_cb( iplayer, RETRO_DEVICE_POINTER, 0, RETRO_DEVICE_ID_POINTER_COUNT );
+				printf("yoshi debug touch count = %i \n",touch_count);
+				if ( touch_count == 3 ) {
+					p_input->u8[ 4 ] |= 0x2;
+				} else if ( touch_count == 2 ) {
+					p_input->u8[ 4 ] |= 0x4;
+				} else if ( touch_count == 1 && is_offscreen ) {
+					p_input->u8[ 4 ] |= 0x4;
 				}
 
-				// start
-				if ( input_state_cb( iplayer, RETRO_DEVICE_LIGHTGUN, 0, RETRO_DEVICE_ID_LIGHTGUN_START ) ) {
-					p_input->u8[ 4 ] |= 0x2;
-				}
+				// if ( input_state_cb( iplayer, RETRO_DEVICE_LIGHTGUN, 0, RETRO_DEVICE_ID_LIGHTGUN_TRIGGER ) || forced_reload ) {
+				// 	p_input->u8[ 4 ] |= shot_type;
+				// }
+
+				// // start
+				// if ( input_state_cb( iplayer, RETRO_DEVICE_LIGHTGUN, 0, RETRO_DEVICE_ID_LIGHTGUN_START ) ) {
+				// 	p_input->u8[ 4 ] |= 0x2;
+				// }
+
+				printf("yoshi debug corrected gun: x = %i , y = %i input = %i \n", gun_x, gun_y, p_input->u8[4]);
 			}
 
 			break;
