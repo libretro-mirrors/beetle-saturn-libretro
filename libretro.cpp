@@ -1972,6 +1972,19 @@ static void check_variables(bool startup)
          setting_gun_crosshair = SETTING_GUN_CROSSHAIR_DOT;
       }
    }
+
+   var.key = "beetle_saturn_virtuagun_input";
+   var.value = NULL;
+
+   if ( environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value )
+   {
+      if ( !strcmp(var.value, "Touchscreen") ) {
+         setting_gun_input = SETTING_GUN_INPUT_POINTER;
+      } else {
+         setting_gun_input = SETTING_GUN_INPUT_LIGHTGUN;
+      }
+   }
+
 }
 
 static bool MDFNI_LoadGame( const char *name )
@@ -2345,6 +2358,7 @@ void retro_set_environment( retro_environment_t cb )
       { "beetle_saturn_trigger_deadzone", "Trigger Deadzone; 15%|20%|25%|30%|0%|5%|10%"},
       { "beetle_saturn_mouse_sensitivity", "Mouse Sensitivity; 100%|105%|110%|115%|120%|125%|130%|135%|140%|145%|150%|155%|160%|165%|170%|175%|180%|185%|190%|195%|200%|5%|10%|15%|20%|25%|30%|35%|40%|45%|50%|55%|60%|65%|70%|75%|80%|85%|90%|95%" },
       { "beetle_saturn_virtuagun_crosshair", "Gun Crosshair; Cross|Dot|Off" },
+      { "beetle_saturn_virtuagun_input", "Gun Input Mode; Lightgun|Touchscreen" },
       { "beetle_saturn_cdimagecache", "CD Image Cache (restart); disabled|enabled" },
       { "beetle_saturn_midsync", "Mid-frame Input Synchronization; disabled|enabled" },
       { "beetle_saturn_autortc", "Automatically set RTC on game load; enabled|disabled" },
