@@ -953,7 +953,6 @@ void input_update( retro_input_state_t input_state_cb )
 					gun_x_raw = input_state_cb( iplayer, RETRO_DEVICE_POINTER, 0, RETRO_DEVICE_ID_POINTER_X);
 					gun_y_raw = input_state_cb( iplayer, RETRO_DEVICE_POINTER, 0, RETRO_DEVICE_ID_POINTER_Y);
 
-					printf("yoshi debug pointer raw: x = %i , y = %i \n", gun_x_raw, gun_y_raw);
 					// .. scale into screen space:
 					// NOTE: the scaling here is empirical-guesswork.
 					// Tested at 352x240 (ntsc) and 352x256 (pal)
@@ -970,7 +969,6 @@ void input_update( retro_input_state_t input_state_cb )
 					// Handle offscreen by checking corrected x and y values
 					if ( gun_x == 0 || gun_y == 0 )
 					{
-						printf("yoshi debug lightgun is offscreen! \n");
 						is_offscreen = 1;
 						gun_x = -16384; // magic position to disable cross-hair drawing.
 						gun_y = -16384;
@@ -994,7 +992,6 @@ void input_update( retro_input_state_t input_state_cb )
 					// 2-finger touch: Reload
 					// offscreen touch: Reload
 					int touch_count = input_state_cb( iplayer, RETRO_DEVICE_POINTER, 0, RETRO_DEVICE_ID_POINTER_COUNT );
-					printf("yoshi debug touch count = %i \n",touch_count);
 					if ( touch_count == 3 )
 					{
 						p_input->u8[ 4 ] |= 0x2;
