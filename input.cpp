@@ -1042,6 +1042,14 @@ void input_update( retro_input_state_t input_state_cb )
 						gun_y = ( ( gun_y_raw + 0x7fff ) * scale_y ) / (0x7fff << 1) + offset_y;
 					}
 
+					// position
+					p_input->gun_pos[ 0 ] = gun_x;
+					p_input->gun_pos[ 1 ] = gun_y;
+
+					// buttons
+					p_input->u8[ 4 ] = 0;
+
+					// trigger
 					if ( input_state_cb( iplayer, RETRO_DEVICE_LIGHTGUN, 0, RETRO_DEVICE_ID_LIGHTGUN_TRIGGER ) || forced_reload ) {
 						p_input->u8[ 4 ] |= shot_type;
 					}
