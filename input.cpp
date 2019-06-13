@@ -26,6 +26,12 @@ static float mouse_sensitivity = 1.0f;
 static unsigned geometry_width = 0;
 static unsigned geometry_height = 0;
 
+static int pointer_pressed = 0;
+static const int POINTER_PRESSED_CYCLES = 4;
+static int pointer_cycles_after_released = 0;
+static int pointer_pressed_last_x = 0;
+static int pointer_pressed_last_y = 0;
+
 typedef union
 {
 	uint8_t u8[ 32 ];
@@ -974,18 +980,37 @@ void input_update( retro_input_state_t input_state_cb )
 						gun_y = -16384;
 					}
 
+					// Touch sensitivity: Keep the gun position held for a fixed number of cycles after touch is released
+					// because a very light touch can result in a misfire
+					if ( pointer_cycles_after_released > 0 && pointer_cycles_after_released < POINTER_PRESSED_CYCLES ) {
+						pointer_cycles_after_released++;
+						p_input->gun_pos[ 0 ] = pointer_pressed_last_x;
+						p_input->gun_pos[ 1 ] = pointer_pressed_last_y;
+						return;
+					}
+
+					// trigger
+					if ( input_state_cb( iplayer, RETRO_DEVICE_POINTER, 0, RETRO_DEVICE_ID_POINTER_PRESSED ) )
+					{
+						pointer_pressed = 1;
+						pointer_cycles_after_released = 0;
+						pointer_pressed_last_x = gun_x;
+						pointer_pressed_last_y = gun_y;
+					} else if ( pointer_pressed ) {
+						pointer_cycles_after_released++;
+						pointer_pressed = 0;
+						p_input->gun_pos[ 0 ] = pointer_pressed_last_x;
+						p_input->gun_pos[ 1 ] = pointer_pressed_last_y;
+						p_input->u8[4] &= ~0x1;
+						return;
+					}
+
 					// position
 					p_input->gun_pos[ 0 ] = gun_x;
 					p_input->gun_pos[ 1 ] = gun_y;
 
 					// buttons
 					p_input->u8[ 4 ] = 0;
-
-					// trigger
-					if ( input_state_cb( iplayer, RETRO_DEVICE_POINTER, 0, RETRO_DEVICE_ID_POINTER_PRESSED ) )
-					{
-						p_input->u8[ 4 ] |= 0x1;
-					}
 
 					// use multi-touch to support different button inputs:
 					// 3-finger touch: START button
@@ -1003,6 +1028,9 @@ void input_update( retro_input_state_t input_state_cb )
 					else if ( touch_count == 1 && is_offscreen )
 					{
 						p_input->u8[ 4 ] |= 0x4;
+					} else if ( touch_count == 1 )
+					{
+						p_input->u8[ 4 ] |= 0x1;
 					}
 
 				} else {   // Lightgun input is default
