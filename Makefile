@@ -119,8 +119,13 @@ else ifneq (,$(findstring ios,$(platform)))
    ifeq ($(HAVE_OPENGL),1)
       GL_LIB := -framework OpenGLES
    endif
-   CC = cc -arch armv7 -isysroot $(IOSSDK)
-   CXX = c++ -arch armv7 -isysroot $(IOSSDK)
+   ifeq ($(platform), ios-arm64)
+     CC = cc -arch armv7 -isysroot $(IOSSDK)
+     CXX = c++ -arch armv7 -isysroot $(IOSSDK)
+   else
+     CC = cc -arch armv7 -isysroot $(IOSSDK)
+     CXX = c++ -arch armv7 -isysroot $(IOSSDK)
+   endif
    IPHONEMINVER :=
    ifeq ($(platform),$(filter $(platform),ios9 ios-arm64))
       IPHONEMINVER = -miphoneos-version-min=8.0
