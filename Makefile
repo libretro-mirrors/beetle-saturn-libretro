@@ -120,8 +120,8 @@ else ifneq (,$(findstring ios,$(platform)))
       GL_LIB := -framework OpenGLES
    endif
    ifeq ($(platform), ios-arm64)
-     CC = cc -arch armv7 -isysroot $(IOSSDK)
-     CXX = c++ -arch armv7 -isysroot $(IOSSDK)
+     CC = cc -arch arm64 -isysroot $(IOSSDK)
+     CXX = c++ -arch arm64 -isysroot $(IOSSDK)
    else
      CC = cc -arch armv7 -isysroot $(IOSSDK)
      CXX = c++ -arch armv7 -isysroot $(IOSSDK)
