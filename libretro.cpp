@@ -2452,10 +2452,6 @@ bool retro_serialize(void *data, size_t size)
 
    ret               = MDFNSS_SaveSM(&st, MEDNAFEN_CORE_VERSION_NUMERIC, NULL, NULL, NULL);
 
-   /* there are still some errors with the save states, the size seems to change on some games for now just log when this happens */
-   if (st.len != size)
-      log_cb(RETRO_LOG_WARN, "warning, save state size has changed\n");
-
    memcpy(data,st.data,size);
    free(st.data);
    return ret;
