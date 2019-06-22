@@ -541,15 +541,20 @@ void input_set_mouse_sensitivity( int percent )
 	}
 }
 
-void input_update( retro_input_state_t input_state_cb )
+void input_update(bool supports_bitmasks,
+      retro_input_state_t input_state_cb )
 {
 	// For each player (logical controller)
 	for ( unsigned iplayer = 0; iplayer < players; ++iplayer )
 	{
 		INPUT_DATA* p_input = &(input_data[ iplayer ]);
+      int16_t ret;
 
 		// reset input
 		p_input->buttons = 0;
+
+      if (supports_bitmasks)
+         ret = input_state_cb( iplayer, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_MASK );
 
 		// What kind of controller is connected?
 		switch ( input_type[ iplayer ] )
@@ -557,15 +562,26 @@ void input_update( retro_input_state_t input_state_cb )
 
 		case RETRO_DEVICE_JOYPAD:
 		case RETRO_DEVICE_SS_PAD:
+         //
+         // -- standard control pad buttons + d-pad
 
-			{
-				//
-				// -- standard control pad buttons + d-pad
-
-				// input_map_pad is configured to quickly map libretro buttons to the correct bits for the Saturn.
-				for ( int i = 0; i < INPUT_MAP_PAD_SIZE; ++i ) {
-					p_input->buttons |= input_state_cb( iplayer, RETRO_DEVICE_JOYPAD, 0, input_map_pad[ i ] ) ? ( 1 << i ) : 0;
+         // input_map_pad is configured to quickly map libretro buttons to the correct bits for the Saturn.
+         if (supports_bitmasks)
+         {
+				for ( int i = 0; i < INPUT_MAP_PAD_SIZE; ++i )
+            {
+               if (ret & (1 << input_map_pad[ i ]))
+                  p_input->buttons |= ( 1 << i );
 				}
+
+				// .. the left trigger on the Saturn is a special case since there's a gap in the bits.
+            if (ret & (1 << RETRO_DEVICE_ID_JOYPAD_L2))
+               p_input->buttons |= ( 1 << 15 );
+         }
+         else
+			{
+				for ( int i = 0; i < INPUT_MAP_PAD_SIZE; ++i )
+					p_input->buttons |= input_state_cb( iplayer, RETRO_DEVICE_JOYPAD, 0, input_map_pad[ i ] ) ? ( 1 << i ) : 0;
 				// .. the left trigger on the Saturn is a special case since there's a gap in the bits.
 				p_input->buttons |=
 					input_state_cb( iplayer, RETRO_DEVICE_JOYPAD, 0, input_map_pad_left_shoulder ) ? ( 1 << 15 ) : 0;
@@ -602,25 +618,50 @@ void input_update( retro_input_state_t input_state_cb )
 				if ( analog_rx <= -thresh )
 					p_input->buttons |= ( 1 << 2 ); // Left <-(X)
 
-				// left trigger
-				p_input->buttons |=
-					input_state_cb( iplayer, RETRO_DEVICE_JOYPAD, 0, input_map_twinstick_left_trigger ) ? ( 1 << 15 ) : 0;
+            if (supports_bitmasks)
+            {
+               // left trigger
+               if (ret & (1 << input_map_twinstick_left_trigger))
+                  p_input->buttons |= (1 << 15);
 
-				// left button
-				p_input->buttons |=
-					input_state_cb( iplayer, RETRO_DEVICE_JOYPAD, 0, input_map_twinstick_left_button ) ? ( 1 << 3 ) : 0;
+               // left button
+               if (ret & (1 << input_map_twinstick_left_button))
+                  p_input->buttons |= ( 1 << 3 );
 
-				// right trigger
-				p_input->buttons |=
-					input_state_cb( iplayer, RETRO_DEVICE_JOYPAD, 0, input_map_twinstick_right_trigger ) ? ( 1 << 10 ) : 0;
+               // right trigger
+               if (ret & (1 << input_map_twinstick_right_trigger))
+                  p_input->buttons |= ( 1 << 10 );
 
-				// right button
-				p_input->buttons |=
-					input_state_cb( iplayer, RETRO_DEVICE_JOYPAD, 0, input_map_twinstick_right_button ) ? ( 1 << 9 ) : 0;
+               // right button
+               if (ret & (1 << input_map_twinstick_right_button))
+                  p_input->buttons |= ( 1 << 9 );
 
-				// start
-				p_input->buttons |=
-					input_state_cb( iplayer, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_START ) ? ( 1 << 11 ) : 0;
+               // start
+               if (ret & (1 << RETRO_DEVICE_ID_JOYPAD_START))
+                  p_input->buttons |= ( 1 << 11 );
+            }
+            else
+            {
+               // left trigger
+               p_input->buttons |=
+                  input_state_cb( iplayer, RETRO_DEVICE_JOYPAD, 0, input_map_twinstick_left_trigger ) ? ( 1 << 15 ) : 0;
+
+               // left button
+               p_input->buttons |=
+                  input_state_cb( iplayer, RETRO_DEVICE_JOYPAD, 0, input_map_twinstick_left_button ) ? ( 1 << 3 ) : 0;
+
+               // right trigger
+               p_input->buttons |=
+                  input_state_cb( iplayer, RETRO_DEVICE_JOYPAD, 0, input_map_twinstick_right_trigger ) ? ( 1 << 10 ) : 0;
+
+               // right button
+               p_input->buttons |=
+                  input_state_cb( iplayer, RETRO_DEVICE_JOYPAD, 0, input_map_twinstick_right_button ) ? ( 1 << 9 ) : 0;
+
+               // start
+               p_input->buttons |=
+                  input_state_cb( iplayer, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_START ) ? ( 1 << 11 ) : 0;
+            }
 			}
 			break;
 
@@ -629,11 +670,19 @@ void input_update( retro_input_state_t input_state_cb )
 			{
 				//
 				// -- 3d control pad buttons
+            // input_map_3d_pad is configured to quickly map libretro buttons to the correct bits for the Saturn.
 
-				// input_map_3d_pad is configured to quickly map libretro buttons to the correct bits for the Saturn.
-				for ( int i = 0; i < INPUT_MAP_3D_PAD_SIZE; ++i ) {
-					p_input->buttons |= input_state_cb( iplayer, RETRO_DEVICE_JOYPAD, 0, input_map_3d_pad[ i ] ) ? ( 1 << i ) : 0;
-				}
+            if (supports_bitmasks)
+            {
+               for ( int i = 0; i < INPUT_MAP_3D_PAD_SIZE; ++i )
+                  if (ret & (1 << input_map_3d_pad[ i ]))
+                     p_input->buttons |= ( 1 << i );
+            }
+            else
+            {
+               for ( int i = 0; i < INPUT_MAP_3D_PAD_SIZE; ++i )
+                  p_input->buttons |= input_state_cb( iplayer, RETRO_DEVICE_JOYPAD, 0, input_map_3d_pad[ i ] ) ? ( 1 << i ) : 0;
+            }
 
 				//
 				// -- analog stick
@@ -661,8 +710,15 @@ void input_update( retro_input_state_t input_state_cb )
 				{
 					// Handle MODE button as a switch
 					uint16_t prev = ( input_mode[iplayer] & INPUT_MODE_3D_PAD_PREVIOUS_MASK );
-					uint16_t held = input_state_cb( iplayer, RETRO_DEVICE_JOYPAD, 0, input_map_3d_pad_mode_switch )
-						? INPUT_MODE_3D_PAD_PREVIOUS_MASK : 0;
+					uint16_t held = 0;
+               if (supports_bitmasks)
+               {
+                  if (ret & (1 << input_map_3d_pad_mode_switch))
+                     held = INPUT_MODE_3D_PAD_PREVIOUS_MASK;
+               }
+               else
+                  held = input_state_cb( iplayer, RETRO_DEVICE_JOYPAD, 0, input_map_3d_pad_mode_switch )
+                     ? INPUT_MODE_3D_PAD_PREVIOUS_MASK : 0;
 
 					// Rising edge trigger
 					if ( !prev && held )
@@ -689,9 +745,8 @@ void input_update( retro_input_state_t input_state_cb )
 				// -- format input data
 
 				// Apply analog/digital mode switch bit.
-				if ( input_mode[iplayer] & INPUT_MODE_3D_PAD_ANALOG ) {
+				if ( input_mode[iplayer] & INPUT_MODE_3D_PAD_ANALOG )
 					p_input->buttons |= 0x1000; // set bit 12
-				}
 
 				p_input->u8[0x2] = ((thumb_x >> 0) & 0xff);
 				p_input->u8[0x3] = ((thumb_x >> 8) & 0xff);
@@ -712,14 +767,33 @@ void input_update( retro_input_state_t input_state_cb )
 				// -- Wheel buttons
 
 				// input_map_wheel is configured to quickly map libretro buttons to the correct bits for the Saturn.
-				for ( int i = 0; i < INPUT_MAP_WHEEL_SIZE; ++i ) {
-					const uint16_t bit = ( 1 << ( i + INPUT_MAP_WHEEL_BITSHIFT ) );
-					p_input->buttons |= input_state_cb( iplayer, RETRO_DEVICE_JOYPAD, 0, input_map_wheel[ i ] ) ? bit : 0;
-				}
+            if (supports_bitmasks)
+            {
+               for ( int i = 0; i < INPUT_MAP_WHEEL_SIZE; ++i )
+               {
+                  const uint16_t bit = ( 1 << ( i + INPUT_MAP_WHEEL_BITSHIFT ) );
+                  if (ret & (1 << input_map_wheel[ i ]))
+                     p_input->buttons |= bit;
+               }
 
-				// shift-paddles
-				p_input->buttons |= input_state_cb( iplayer, RETRO_DEVICE_JOYPAD, 0, input_map_wheel_shift_left ) ? ( 1 << 0 ) : 0;
-				p_input->buttons |= input_state_cb( iplayer, RETRO_DEVICE_JOYPAD, 0, input_map_wheel_shift_right ) ? ( 1 << 1 ) : 0;
+               // shift-paddles
+               if (ret & (1 << input_map_wheel_shift_left))
+                  p_input->buttons |= ( 1 << 0 );
+               if (ret & (1 << input_map_wheel_shift_right))
+                  p_input->buttons |= ( 1 << 1 );
+            }
+            else
+            {
+               for ( int i = 0; i < INPUT_MAP_WHEEL_SIZE; ++i )
+               {
+                  const uint16_t bit = ( 1 << ( i + INPUT_MAP_WHEEL_BITSHIFT ) );
+                  p_input->buttons |= input_state_cb( iplayer, RETRO_DEVICE_JOYPAD, 0, input_map_wheel[ i ] ) ? bit : 0;
+               }
+
+               // shift-paddles
+               p_input->buttons |= input_state_cb( iplayer, RETRO_DEVICE_JOYPAD, 0, input_map_wheel_shift_left ) ? ( 1 << 0 ) : 0;
+               p_input->buttons |= input_state_cb( iplayer, RETRO_DEVICE_JOYPAD, 0, input_map_wheel_shift_right ) ? ( 1 << 1 ) : 0;
+            }
 
 				//
 				// -- analog wheel
@@ -750,17 +824,14 @@ void input_update( retro_input_state_t input_state_cb )
 				// mouse buttons
 				p_input->u8[0x4] = 0;
 
-				if ( input_state_cb( iplayer, RETRO_DEVICE_MOUSE, 0, RETRO_DEVICE_ID_MOUSE_LEFT ) ) {
+				if ( input_state_cb( iplayer, RETRO_DEVICE_MOUSE, 0, RETRO_DEVICE_ID_MOUSE_LEFT ) )
 					p_input->u8[0x4] |= ( 1 << 0 ); // A
-				}
 
-				if ( input_state_cb( iplayer, RETRO_DEVICE_MOUSE, 0, RETRO_DEVICE_ID_MOUSE_RIGHT ) ) {
+				if ( input_state_cb( iplayer, RETRO_DEVICE_MOUSE, 0, RETRO_DEVICE_ID_MOUSE_RIGHT ) )
 					p_input->u8[0x4] |= ( 1 << 1 ); // B
-				}
 
-				if ( input_state_cb( iplayer, RETRO_DEVICE_MOUSE, 0, RETRO_DEVICE_ID_MOUSE_MIDDLE ) ) {
+				if ( input_state_cb( iplayer, RETRO_DEVICE_MOUSE, 0, RETRO_DEVICE_ID_MOUSE_MIDDLE ) )
 					p_input->u8[0x4] |= ( 1 << 2 ); // C
-				}
 
 				if ( input_state_cb( iplayer, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_START ) ||
 					 input_state_cb( iplayer, RETRO_DEVICE_MOUSE, 0, RETRO_DEVICE_ID_MOUSE_BUTTON_4 ) ||
@@ -788,12 +859,26 @@ void input_update( retro_input_state_t input_state_cb )
 				// -- mission stick buttons
 
 				// input_map_mission is configured to quickly map libretro buttons to the correct bits for the Saturn.
-				for ( int i = 0; i < INPUT_MAP_MISSION_SIZE; ++i ) {
-					p_input->buttons |= input_state_cb( iplayer, RETRO_DEVICE_JOYPAD, 0, input_map_mission[ i ] ) ? ( 1 << i ) : 0;
-				}
-				// .. the left trigger is a special case, there's a gap in the bits.
-				p_input->buttons |=
-					input_state_cb( iplayer, RETRO_DEVICE_JOYPAD, 0, input_map_mission_left_shoulder ) ? ( 1 << 11 ) : 0;
+            if (supports_bitmasks)
+            {
+               for ( int i = 0; i < INPUT_MAP_MISSION_SIZE; ++i )
+               {
+                  if (ret & (1 << input_map_mission[ i ]))
+                     p_input->buttons |= ( 1 << i );
+               }
+
+               // .. the left trigger is a special case, there's a gap in the bits.
+               if (ret & (1 << input_map_mission_left_shoulder))
+                  p_input->buttons |= ( 1 << 11 );
+            }
+            else
+            {
+               for ( int i = 0; i < INPUT_MAP_MISSION_SIZE; ++i )
+                  p_input->buttons |= input_state_cb( iplayer, RETRO_DEVICE_JOYPAD, 0, input_map_mission[ i ] ) ? ( 1 << i ) : 0;
+               // .. the left trigger is a special case, there's a gap in the bits.
+               p_input->buttons |=
+                  input_state_cb( iplayer, RETRO_DEVICE_JOYPAD, 0, input_map_mission_left_shoulder ) ? ( 1 << 11 ) : 0;
+            }
 
 				//
 				// -- analog stick
@@ -811,15 +896,11 @@ void input_update( retro_input_state_t input_state_cb )
 
 				int16_t throttle;
 				if ( input_mode[iplayer] & INPUT_MODE_MISSION_THROTTLE_LATCH )
-				{
 					// Use latched value
 					throttle = input_throttle_latch[iplayer];
-				}
 				else
-				{
 					// Direct read
 					throttle = throttle_real;
-				}
 
 
 				//
@@ -828,8 +909,19 @@ void input_update( retro_input_state_t input_state_cb )
 				{
 					// Handle MODE button as a switch
 					uint16_t prev = ( input_mode[iplayer] & INPUT_MODE_MISSION_THROTTLE_PREV );
-					uint16_t held = input_state_cb( iplayer, RETRO_DEVICE_JOYPAD, 0, input_map_mission_throttle_latch )
-						? INPUT_MODE_MISSION_THROTTLE_PREV : 0;
+					uint16_t held = 0;
+               
+
+               if (supports_bitmasks)
+               {
+                  if (ret & (1 << input_map_mission_throttle_latch))
+                     held          = INPUT_MODE_MISSION_THROTTLE_PREV;
+               }
+               else
+               {
+                  held          = input_state_cb( iplayer, RETRO_DEVICE_JOYPAD, 0, input_map_mission_throttle_latch )
+                     ? INPUT_MODE_MISSION_THROTTLE_PREV : 0;
+               }
 
 					// Rising edge trigger?
 					if ( !prev && held )
@@ -886,12 +978,25 @@ void input_update( retro_input_state_t input_state_cb )
 				// -- mission stick buttons
 
 				// input_map_mission is configured to quickly map libretro buttons to the correct bits for the Saturn.
-				for ( int i = 0; i < INPUT_MAP_MISSION_SIZE; ++i ) {
-					p_input->buttons |= input_state_cb( iplayer, RETRO_DEVICE_JOYPAD, 0, input_map_mission[ i ] ) ? ( 1 << i ) : 0;
-				}
-				// .. the left trigger is a special case, there's a gap in the bits.
-				p_input->buttons |=
-					input_state_cb( iplayer, RETRO_DEVICE_JOYPAD, 0, input_map_mission_left_shoulder ) ? ( 1 << 11 ) : 0;
+            if (supports_bitmasks)
+            {
+               for ( int i = 0; i < INPUT_MAP_MISSION_SIZE; ++i )
+               {
+                  if (ret & (1 << input_map_mission[ i ]))
+                     p_input->buttons |= ( 1 << i );
+               }
+               // .. the left trigger is a special case, there's a gap in the bits.
+               if (ret & (1 << input_map_mission_left_shoulder))
+                  p_input->buttons |= ( 1 << 11 );
+            }
+            else
+            {
+               for ( int i = 0; i < INPUT_MAP_MISSION_SIZE; ++i )
+                  p_input->buttons |= input_state_cb( iplayer, RETRO_DEVICE_JOYPAD, 0, input_map_mission[ i ] ) ? ( 1 << i ) : 0;
+               // .. the left trigger is a special case, there's a gap in the bits.
+               p_input->buttons |=
+                  input_state_cb( iplayer, RETRO_DEVICE_JOYPAD, 0, input_map_mission_left_shoulder ) ? ( 1 << 11 ) : 0;
+            }
 
 				//
 				// -- analog sticks
@@ -996,7 +1101,9 @@ void input_update( retro_input_state_t input_state_cb )
 						pointer_cycles_after_released = 0;
 						pointer_pressed_last_x = gun_x;
 						pointer_pressed_last_y = gun_y;
-					} else if ( pointer_pressed ) {
+					}
+               else if ( pointer_pressed )
+               {
 						pointer_cycles_after_released++;
 						pointer_pressed = 0;
 						p_input->gun_pos[ 0 ] = pointer_pressed_last_x;
@@ -1018,22 +1125,16 @@ void input_update( retro_input_state_t input_state_cb )
 					// offscreen touch: Reload
 					int touch_count = input_state_cb( iplayer, RETRO_DEVICE_POINTER, 0, RETRO_DEVICE_ID_POINTER_COUNT );
 					if ( touch_count == 3 )
-					{
 						p_input->u8[ 4 ] |= 0x2;
-					}
 					else if ( touch_count == 2 )
-					{
 						p_input->u8[ 4 ] |= 0x4;
-					}
 					else if ( touch_count == 1 && is_offscreen )
-					{
 						p_input->u8[ 4 ] |= 0x4;
-					} else if ( touch_count == 1 )
-					{
+					else if ( touch_count == 1 )
 						p_input->u8[ 4 ] |= 0x1;
-					}
-
-				} else {   // Lightgun input is default
+				}
+            else
+            {   // Lightgun input is default
 					uint8_t shot_type;
 					int gun_x, gun_y;
 					int forced_reload;
@@ -1078,14 +1179,12 @@ void input_update( retro_input_state_t input_state_cb )
 					p_input->u8[ 4 ] = 0;
 
 					// trigger
-					if ( input_state_cb( iplayer, RETRO_DEVICE_LIGHTGUN, 0, RETRO_DEVICE_ID_LIGHTGUN_TRIGGER ) || forced_reload ) {
+					if ( input_state_cb( iplayer, RETRO_DEVICE_LIGHTGUN, 0, RETRO_DEVICE_ID_LIGHTGUN_TRIGGER ) || forced_reload )
 						p_input->u8[ 4 ] |= shot_type;
-					}
 
 					// start
-					if ( input_state_cb( iplayer, RETRO_DEVICE_LIGHTGUN, 0, RETRO_DEVICE_ID_LIGHTGUN_START ) ) {
+					if ( input_state_cb( iplayer, RETRO_DEVICE_LIGHTGUN, 0, RETRO_DEVICE_ID_LIGHTGUN_START ) )
 						p_input->u8[ 4 ] |= 0x2;
-					}
 
 				}
 
@@ -1093,9 +1192,9 @@ void input_update( retro_input_state_t input_state_cb )
 
 			break;
 
-		}; // switch ( input_type[ iplayer ] )
+		} // switch ( input_type[ iplayer ] )
 
-	}; // for each player
+	} // for each player
 }
 
 // save state function for input

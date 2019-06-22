@@ -79,6 +79,8 @@ char retro_cd_base_name[4096];
    static char retro_slash = '/';
 #endif
 
+static bool libretro_supports_bitmasks = false;
+
 extern MDFNGI EmulatedSS;
 MDFNGI *MDFNGameInfo = NULL;
 
@@ -836,7 +838,7 @@ static sscpu_timestamp_t MidSync(const sscpu_timestamp_t timestamp)
 
     input_poll_cb();
 
-    input_update( input_state_cb );
+    input_update(libretro_supports_bitmasks, input_state_cb );
 
     UpdateSMPCInput(timestamp);
 
@@ -1746,6 +1748,9 @@ void retro_init(void)
    setting_initial_scanline_pal = 0;
    setting_last_scanline_pal = 287;
 
+   if (environ_cb(RETRO_ENVIRONMENT_GET_INPUT_BITMASKS, NULL))
+      libretro_supports_bitmasks = true;
+
    check_system_specs();
 }
 
@@ -2202,7 +2207,7 @@ void retro_run(void)
 
    input_poll_cb();
 
-   input_update( input_state_cb );
+   input_update(libretro_supports_bitmasks, input_state_cb );
 
    static int32 rects[MEDNAFEN_CORE_GEOMETRY_MAX_H];
    rects[0] = ~0;
@@ -2329,6 +2334,8 @@ void retro_deinit(void)
          MEDNAFEN_CORE_NAME, (double)audio_frames / video_frames);
    log_cb(RETRO_LOG_INFO, "[%s]: Estimated FPS: %.5f\n",
          MEDNAFEN_CORE_NAME, (double)video_frames * 44100 / audio_frames);
+
+   libretro_supports_bitmasks = false;
 }
 
 unsigned retro_get_region(void)
