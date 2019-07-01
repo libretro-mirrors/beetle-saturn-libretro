@@ -31,6 +31,17 @@ SOURCES_CXX += beetle_ss_griffin.cpp
 SOURCES_C += beetle_ss_griffin_c.c
 endif
 
+ifeq ($(HAVE_CDROM), 1)
+   FLAGS += -DHAVE_CDROM
+
+   SOURCES_C += $(LIBRETRO_DIR)/cdrom/cdrom.c \
+                $(LIBRETRO_DIR)/vfs/vfs_implementation_cdrom.c
+
+   ifeq ($(CDROM_DEBUG), 1)
+      FLAGS += -DCDROM_DEBUG
+   endif
+endif
+
 ifeq ($(NEED_THREADING), 1)
    FLAGS += -DWANT_THREADING -DHAVE_THREADS
 endif
@@ -229,6 +240,7 @@ SOURCES_CXX += $(MEDNAFEN_DIR)/hash/sha256.cpp \
 
 ifneq ($(STATIC_LINKING), 1)
 SOURCES_C += $(LIBRETRO_DIR)/streams/file_stream.c \
+				 $(LIBRETRO_DIR)/file/file_path.c \
 				 $(LIBRETRO_DIR)/vfs/vfs_implementation.c \
 				 $(LIBRETRO_DIR)/compat/compat_strl.c \
 				 $(LIBRETRO_DIR)/compat/compat_strcasestr.c \
