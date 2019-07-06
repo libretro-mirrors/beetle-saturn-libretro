@@ -2121,7 +2121,7 @@ bool retro_load_game(const struct retro_game_info *info)
 
    snprintf(tocbasepath, sizeof(tocbasepath), "%s%c%s.toc", retro_cd_base_directory, retro_slash, retro_cd_base_name);
 
-   if (filestream_exists(tocbasepath))
+   if (!strstr(tocbasepath, "cdrom://") && filestream_exists(tocbasepath))
       snprintf(retro_cd_path, sizeof(retro_cd_path), "%s", tocbasepath);
    else
       snprintf(retro_cd_path, sizeof(retro_cd_path), "%s", info->path);
