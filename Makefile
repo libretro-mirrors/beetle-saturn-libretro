@@ -4,6 +4,7 @@ HAVE_RUST = 0
 HAVE_OPENGL = 0
 HAVE_JIT = 0
 HAVE_CHD = 1
+HAVE_CDROM = 0
 
 IS_64BIT = 1
 
@@ -85,6 +86,7 @@ ifneq (,$(findstring unix,$(platform)))
          GL_LIB := -lGL
       endif
    endif
+	HAVE_CDROM = 1
 
 # OS X
 else ifeq ($(platform), osx)
@@ -435,6 +437,7 @@ else
    ifeq ($(HAVE_OPENGL),1)
       GL_LIB := -lopengl32
    endif
+	HAVE_CDROM = 1
 
 endif
 
