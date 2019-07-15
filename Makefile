@@ -20,15 +20,15 @@ filter_out2 = $(call filter_out1,$(call filter_out1,$1))
 
 ifeq ($(platform),)
    platform = unix
-   ifeq ($(shell uname -a),)
+   ifeq ($(shell uname -s),)
       platform = win
-   else ifneq ($(findstring Darwin,$(shell uname -a)),)
+   else ifneq ($(findstring Darwin,$(shell uname -s)),)
       platform = osx
       arch = intel
       ifeq ($(shell uname -p),powerpc)
          arch = ppc
       endif
-   else ifneq ($(findstring MINGW,$(shell uname -a)),)
+   else ifneq ($(findstring MINGW,$(shell uname -s)),)
       platform = win
    endif
 else ifneq (,$(findstring armv,$(platform)))
@@ -36,7 +36,7 @@ else ifneq (,$(findstring armv,$(platform)))
 endif
 
 ifneq ($(platform), osx)
-   ifeq ($(findstring Haiku,$(shell uname -a)),)
+   ifeq ($(findstring Haiku,$(shell uname -s)),)
       PTHREAD_FLAGS = -pthread
    endif
 endif
