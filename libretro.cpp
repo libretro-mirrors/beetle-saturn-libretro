@@ -1674,9 +1674,8 @@ static void alloc_surface() {
   uint32_t width  = MEDNAFEN_CORE_GEOMETRY_MAX_W;
   uint32_t height = MEDNAFEN_CORE_GEOMETRY_MAX_H;
 
-  if (surf != NULL) {
+  if (surf != NULL)
     delete surf;
-  }
 
   surf = new MDFN_Surface(NULL, width, height, width, pix_fmt);
 }
@@ -2562,18 +2561,20 @@ void MDFND_DispMessage(unsigned char *str)
 
 void MDFN_DispMessage(const char *format, ...)
 {
-   char *str = new char[4096];
-   struct retro_message msg;
    va_list ap;
-   va_start(ap,format);
+   struct retro_message msg;
    const char *strc = NULL;
+   char *str        = (char*)malloc(4096 * sizeof(char));
+
+   va_start(ap,format);
 
    vsnprintf(str, 4096, format, ap);
    va_end(ap);
-   strc = str;
+   strc       = str;
 
    msg.frames = 180;
-   msg.msg = strc;
+   msg.msg    = strc;
 
    environ_cb(RETRO_ENVIRONMENT_SET_MESSAGE, &msg);
+   free(str);
 }
