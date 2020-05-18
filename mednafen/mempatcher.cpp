@@ -284,14 +284,16 @@ static bool TestConditions(const char *string)
  //printf("TR: %s\n", string);
  while(sscanf(string, "%u %c %63s %63s %63s", &bytelen, &endian, address, operation, value) == 5 && passed)
  {
-  uint32 v_address;
   uint64 v_value;
   uint64 value_at_address;
+#if 0
+  uint32 v_address;
 
   if(address[0] == '0' && address[1] == 'x')
    v_address = strtoul(address + 2, NULL, 16);
   else
    v_address = strtoul(address, NULL, 10);
+#endif
 
   if(value[0] == '0' && value[1] == 'x')
    v_value = strtoull(value + 2, NULL, 16);

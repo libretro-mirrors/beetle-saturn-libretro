@@ -867,7 +867,9 @@ bool CDAccess_Image::ImageOpen(const std::string& path, bool image_memcache)
    NumTracks = 1 + LastTrack - FirstTrack;
 
    int32_t RunningLBA = 0;
+#if 0
    int32_t LastIndex = 0;
+#endif
    long FileOffset = 0;
 
    RunningLBA -= 150;
@@ -919,7 +921,9 @@ bool CDAccess_Image::ImageOpen(const std::string& path, bool image_memcache)
       {
          if(Tracks[x].FirstFileInstance) 
          {
+#if 0
             LastIndex = 0;
+#endif
             FileOffset = 0;
          }
 
@@ -1240,6 +1244,7 @@ int32_t CDAccess_Image::MakeSubPQ(int32_t lba, uint8_t *SubPWBuf) const
    uint32_t ma, sa, fa;
    uint32_t m, s, f;
    uint8_t pause_or = 0x00;
+#if 0
    bool track_found = false;
 
    for(track = FirstTrack; track < (FirstTrack + NumTracks); track++)
@@ -1253,6 +1258,7 @@ int32_t CDAccess_Image::MakeSubPQ(int32_t lba, uint8_t *SubPWBuf) const
 
    if(!track_found)
       throw(MDFN_Error(0, _("Could not find track for sector %u!"), lba));
+#endif
 
    if(lba < Tracks[track].LBA)
       lba_relative = Tracks[track].LBA - 1 - lba;
