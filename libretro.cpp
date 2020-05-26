@@ -2454,16 +2454,6 @@ void retro_cheat_reset(void)
 void retro_cheat_set(unsigned, bool, const char *)
 {}
 
-#ifdef _WIN32
-static void sanitize_path(std::string &path)
-{
-   size_t size = path.size();
-   for (size_t i = 0; i < size; i++)
-      if (path[i] == '/')
-         path[i] = '\\';
-}
-#endif
-
 // Use a simpler approach to make sure that things go right for libretro.
 const char *MDFN_MakeFName(MakeFName_Type type, int id1, const char *cd1)
 {
