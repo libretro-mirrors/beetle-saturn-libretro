@@ -86,7 +86,9 @@ ifneq (,$(findstring unix,$(platform)))
          GL_LIB := -lGL
       endif
    endif
-	HAVE_CDROM = 1
+   ifneq ($(findstring Linux,$(shell uname -s)),)
+      HAVE_CDROM = 1
+   endif
 
 # OS X
 else ifeq ($(platform), osx)
