@@ -240,6 +240,7 @@ SOURCES_CXX += $(MEDNAFEN_DIR)/hash/sha256.cpp \
 
 ifneq ($(STATIC_LINKING), 1)
 SOURCES_C += $(LIBRETRO_DIR)/streams/file_stream.c \
+				 $(LIBRETRO_DIR)/streams/file_stream_transforms.c \
 				 $(LIBRETRO_DIR)/file/file_path.c \
 				 $(LIBRETRO_DIR)/file/retro_dirent.c \
 				 $(LIBRETRO_DIR)/lists/dir_list.c \
