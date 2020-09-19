@@ -27,17 +27,10 @@
 #include <mednafen/mednafen.h>
 #include <mednafen/hw_cpu/m68k/m68k.h>
 
-#ifndef MDFN_SSFPLAY_COMPILE
 #include "ss.h"
 #include "sound.h"
 #include "scu.h"
 #include "cdb.h"
-
-#else
-namespace MDFN_IEN_SSFPLAY
-{
-#endif
-
 #include "scsp.h"
 
 static SS_SCSP SCSP;
@@ -59,9 +52,7 @@ static INLINE void SCSP_SoundIntChanged(unsigned level)
 
 static INLINE void SCSP_MainIntChanged(bool state)
 {
- #ifndef MDFN_SSFPLAY_COMPILE
  SCU_SetInt(SCU_INT_SCSP, state);
- #endif
 }
 
 #include "scsp.inc"
@@ -104,10 +95,8 @@ void SOUND_Init(void)
  SoundCPU.BusIntAck = SoundCPU_BusIntAck;
  SoundCPU.BusRESET = SoundCPU_BusRESET;
 
- #ifndef MDFN_SSFPLAY_COMPILE
  SoundCPU.DBG_Warning = SS_DBG_Wrap<SS_DBG_WARNING | SS_DBG_M68K>;
  SoundCPU.DBG_Verbose = SS_DBG_Wrap<SS_DBG_M68K>;
- #endif
 
  SS_SetPhysMemMap(0x05A00000, 0x05A7FFFF, SCSP.GetRAMPtr(), 0x80000, true);
  // TODO: MEM4B: SS_SetPhysMemMap(0x05A00000, 0x05AFFFFF, SCSP.GetRAMPtr(), 0x40000, true);
@@ -345,8 +334,3 @@ void SOUND_SetSCSPRegister(const unsigned id, const uint32 value)
 {
  SCSP.SetRegister(id, value);
 }
-
-#ifdef MDFN_SSFPLAY_COMPILE
-}
-#endif
-
