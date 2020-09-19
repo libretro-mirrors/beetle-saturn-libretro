@@ -13,6 +13,8 @@
 
 #include "math_ops.h"
 #include "git.h"
+#include "mednafen-endian.h"
+#include "settings.h"
 
 #ifdef _WIN32
 #define strcasecmp _stricmp
@@ -24,15 +26,10 @@
 
 extern MDFNGI *MDFNGameInfo;
 
-#include "settings.h"
-
 void MDFN_DispMessage(const char *format, ...);
 
 void MDFN_LoadGameCheats(void *override);
 void MDFN_FlushGameCheats(int nosave);
 
-#include "mednafen-driver.h"
-
-#include "mednafen-endian.h"
 
 #endif
