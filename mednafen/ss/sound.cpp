@@ -106,11 +106,57 @@ static MDFN_FASTCALL uint16 SoundCPU_BusRead_uint16(uint32 A)
 }
 
 
-static MDFN_FASTCALL uint16 SoundCPU_BusReadInstr(uint32 A);
+//
+//
+// TODO: test masks.
+//
+static MDFN_FASTCALL uint16 SoundCPU_BusReadInstr(uint32 A)
+{
+ uint16 ret;
 
-static MDFN_FASTCALL void SoundCPU_BusRMW(uint32 A, uint8 (MDFN_FASTCALL *cb)(M68K*, uint8));
-static MDFN_FASTCALL unsigned SoundCPU_BusIntAck(uint8 level);
-static MDFN_FASTCALL void SoundCPU_BusRESET(bool state);
+ SoundCPU.timestamp += 4;
+
+ //if(MDFN_UNLIKELY(SoundCPU.timestamp >= next_scsp_time))
+ // RunSCSP();
+
+ SCSP.RW<uint16, false>(A & 0x1FFFFF, ret);
+
+ SoundCPU.timestamp += 2;
+
+ return ret;
+}
+
+static MDFN_FASTCALL void SoundCPU_BusRMW(uint32 A, uint8 (MDFN_FASTCALL *cb)(M68K*, uint8))
+{
+ uint8 tmp;
+
+ SoundCPU.timestamp += 4;
+
+ if(MDFN_UNLIKELY(SoundCPU.timestamp >= next_scsp_time))
+  RunSCSP();
+
+ SCSP.RW<uint8, false>(A & 0x1FFFFF, tmp);
+
+ tmp = cb(&SoundCPU, tmp);
+
+ SoundCPU.timestamp += 6;
+
+ SCSP.RW<uint8, true>(A & 0x1FFFFF, tmp);
+
+ SoundCPU.timestamp += 2;
+}
+
+static MDFN_FASTCALL unsigned SoundCPU_BusIntAck(uint8 level)
+{
+ return M68K::BUS_INT_ACK_AUTO;
+}
+
+static MDFN_FASTCALL void SoundCPU_BusRESET(bool state)
+{
+   //SS_DBG(SS_DBG_WARNING, "[M68K] RESET: %d @ time %d\n", state, SoundCPU.timestamp);
+   if(state)
+      SoundCPU.Reset(false);
+}
 
 static MDFN_FASTCALL void SoundCPU_BusWrite_uint16(uint32 A, uint16 V)
 {
@@ -287,60 +333,6 @@ void SOUND_StateAction(StateMem* sm, const unsigned load, const bool data_only)
 
  SoundCPU.StateAction(sm, load, data_only, "M68K");
  SCSP.StateAction(sm, load, data_only, "SCSP");
-}
-
-//
-//
-// TODO: test masks.
-//
-static MDFN_FASTCALL uint16 SoundCPU_BusReadInstr(uint32 A)
-{
- uint16 ret;
-
- SoundCPU.timestamp += 4;
-
- //if(MDFN_UNLIKELY(SoundCPU.timestamp >= next_scsp_time))
- // RunSCSP();
-
- SCSP.RW<uint16, false>(A & 0x1FFFFF, ret);
-
- SoundCPU.timestamp += 2;
-
- return ret;
-}
-
-static MDFN_FASTCALL void SoundCPU_BusRMW(uint32 A, uint8 (MDFN_FASTCALL *cb)(M68K*, uint8))
-{
- uint8 tmp;
-
- SoundCPU.timestamp += 4;
-
- if(MDFN_UNLIKELY(SoundCPU.timestamp >= next_scsp_time))
-  RunSCSP();
-
- SCSP.RW<uint8, false>(A & 0x1FFFFF, tmp);
-
- tmp = cb(&SoundCPU, tmp);
-
- SoundCPU.timestamp += 6;
-
- SCSP.RW<uint8, true>(A & 0x1FFFFF, tmp);
-
- SoundCPU.timestamp += 2;
-}
-
-static MDFN_FASTCALL unsigned SoundCPU_BusIntAck(uint8 level)
-{
- return M68K::BUS_INT_ACK_AUTO;
-}
-
-static MDFN_FASTCALL void SoundCPU_BusRESET(bool state)
-{
- //SS_DBG(SS_DBG_WARNING, "[M68K] RESET: %d @ time %d\n", state, SoundCPU.timestamp);
- if(state)
- {
-  SoundCPU.Reset(false);
- }
 }
 
 uint32 SOUND_GetSCSPRegister(const unsigned id, char* const special, const uint32 special_len)
