@@ -37,17 +37,20 @@
 
 CartInfo Cart;
 
-template<typename T>
 static MDFN_HOT void DummyRead(uint32 A, uint16* DB)
 {
  // Don't set *DB here.
- SS_DBG(SS_DBG_WARNING, "[CART] Unknown %zu-byte read from 0x%08x\n", sizeof(T), A);
+ SS_DBG(SS_DBG_WARNING, "[CART] Unknown %zu-byte read from 0x%08x\n", sizeof(uint16), A);
 }
 
-template<typename T>
-static MDFN_HOT void DummyWrite(uint32 A, uint16* DB)
+static MDFN_HOT void DummyWrite_uint8(uint32 A, uint16* DB)
 {
- SS_DBG(SS_DBG_WARNING, "[CART] Unknown %zu-byte write to 0x%08x(DB=0x%04x)\n", sizeof(T), A, *DB);
+ SS_DBG(SS_DBG_WARNING, "[CART] Unknown %zu-byte write to 0x%08x(DB=0x%04x)\n", sizeof(uint8), A, *DB);
+}
+
+static MDFN_HOT void DummyWrite_uint16(uint32 A, uint16* DB)
+{
+ SS_DBG(SS_DBG_WARNING, "[CART] Unknown %zu-byte write to 0x%08x(DB=0x%04x)\n", sizeof(uint16), A, *DB);
 }
 
 static sscpu_timestamp_t DummyUpdate(sscpu_timestamp_t timestamp)
@@ -130,8 +133,8 @@ void CartInfo::CS2M_SetRW8W16(uint8 Ostart, uint8 Oend, void (*r16)(uint32 A, ui
 
 void CART_Init(const int cart_type)
 {
- Cart.CS01_SetRW8W16(0x02000000, 0x04FFFFFF, DummyRead<uint16>, DummyWrite<uint8>, DummyWrite<uint16>);
- Cart.CS2M_SetRW8W16(0x00, 0x3F, DummyRead<uint16>, DummyWrite<uint8>, DummyWrite<uint16>);
+ Cart.CS01_SetRW8W16(0x02000000, 0x04FFFFFF, DummyRead, DummyWrite_uint8, DummyWrite_uint16);
+ Cart.CS2M_SetRW8W16(0x00, 0x3F, DummyRead, DummyWrite_uint8, DummyWrite_uint16);
 
  Cart.Reset = DummyReset;
  Cart.Kill = DummyKill;
