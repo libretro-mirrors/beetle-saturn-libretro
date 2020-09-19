@@ -830,10 +830,10 @@ static sscpu_timestamp_t MidSync(const sscpu_timestamp_t timestamp)
     // (which is not a problem in and of itself, but it's preferable to keep settings from altering emulation behavior when they don't need to).
     //
     //printf("MidSync: %d\n", VDP2::PeekLine());
-    {
+    //{
 //       espec->SoundBufSize += SOUND_FlushOutput();
 //       espec->MasterCycles = timestamp * cur_clock_div;
-    }
+    //}
     //printf("%d\n", espec->SoundBufSize);
 
     SMPC_UpdateOutput();
@@ -1076,7 +1076,7 @@ static bool InitCommon(const unsigned cpucache_emumode, const unsigned cart_type
 
    // Call InitFastMemMap() before functions like SOUND_Init()
    InitFastMemMap();
-   SS_SetPhysMemMap(0x00000000, 0x000FFFFF, BIOSROM, sizeof(BIOSROM));
+   SS_SetPhysMemMap(0x00000000, 0x000FFFFF, BIOSROM, sizeof(BIOSROM), false);
    SS_SetPhysMemMap(0x00200000, 0x003FFFFF, WorkRAML, WORKRAM_BANK_SIZE_BYTES, true);
    SS_SetPhysMemMap(0x06000000, 0x07FFFFFF, WorkRAMH, WORKRAM_BANK_SIZE_BYTES, true);
    MDFNMP_RegSearchable(0x00200000, WORKRAM_BANK_SIZE_BYTES);
@@ -1610,9 +1610,7 @@ void retro_init(void)
    const char *dir = NULL;
 
    if (environ_cb(RETRO_ENVIRONMENT_GET_SYSTEM_DIRECTORY, &dir) && dir)
-   {
-      snprintf(retro_base_directory, sizeof(retro_base_directory), "%s", dir);
-   }
+      strlcpy(retro_base_directory, dir, sizeof(retro_base_directory));
    else
    {
       /* TODO: Add proper fallback */
@@ -1624,15 +1622,15 @@ void retro_init(void)
    {
       // If save directory is defined use it, otherwise use system directory
       if (dir)
-         snprintf(retro_save_directory, sizeof(retro_save_directory), "%s", dir);
+         strlcpy(retro_save_directory, dir, sizeof(retro_save_directory));
       else
-         snprintf(retro_save_directory, sizeof(retro_save_directory), "%s", retro_base_directory);
+         strlcpy(retro_save_directory, retro_base_directory, sizeof(retro_save_directory));
    }
    else
    {
       /* TODO: Add proper fallback */
       log_cb(RETRO_LOG_WARN, "Save directory is not defined. Fallback on using SYSTEM directory ...\n");
-      snprintf(retro_save_directory, sizeof(retro_save_directory), "%s", retro_base_directory);
+      strlcpy(retro_save_directory, retro_base_directory, sizeof(retro_save_directory));
    }
 
    disc_init( environ_cb );
@@ -2024,9 +2022,9 @@ bool retro_load_game(const struct retro_game_info *info)
    snprintf(tocbasepath, sizeof(tocbasepath), "%s%c%s.toc", retro_cd_base_directory, retro_slash, retro_cd_base_name);
 
    if (!strstr(tocbasepath, "cdrom://") && filestream_exists(tocbasepath))
-      snprintf(retro_cd_path, sizeof(retro_cd_path), "%s", tocbasepath);
+      strlcpy(retro_cd_path, tocbasepath, sizeof(retro_cd_path));
    else
-      snprintf(retro_cd_path, sizeof(retro_cd_path), "%s", info->path);
+      strlcpy(retro_cd_path, info->path, sizeof(retro_cd_path));
 
    check_variables(true);
    //make sure shared memory cards and save states are enabled only at startup

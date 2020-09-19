@@ -145,7 +145,7 @@ typedef sscpu_timestamp_t (*ss_event_handler)(const sscpu_timestamp_t timestamp)
  // (length is in units of bytes, not 16-bit units)
  //
  // is_writeable is mostly for cheat stuff.
- void SS_SetPhysMemMap(uint32 Astart, uint32 Aend, uint16* ptr, uint32 length, bool is_writeable = false);
+ void SS_SetPhysMemMap(uint32 Astart, uint32 Aend, uint16* ptr, uint32 length, bool is_writeable);
 
  void SS_Reset(bool powering_up) MDFN_COLD;
 
