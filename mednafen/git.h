@@ -372,15 +372,6 @@ typedef struct
 	// Sound rate.  Set by driver side.
 	double SoundRate;
 
-	// Pointer to sound buffer, set by the driver code, that the emulation code should render sound to.
-	// Guaranteed to be at least 500ms in length, but emulation code really shouldn't exceed 40ms or so.  Additionally, if emulation code
-	// generates >= 100ms, 
-	// DEPRECATED: Emulation code may set this pointer to a sound buffer internal to the emulation module.
-	int16 *SoundBuf;
-
-	// Maximum size of the sound buffer, in frames.  Set by the driver code.
-	int32 SoundBufMaxSize;
-
 	// Number of frames currently in internal sound buffer.  Set by the system emulation code, to be read by the driver code.
 	int32 SoundBufSize;
 	int32 SoundBufSizeALMS;	// SoundBufSize value at last MidSync(), 0

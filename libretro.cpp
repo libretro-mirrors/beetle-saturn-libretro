@@ -2114,13 +2114,10 @@ void retro_run(void)
    static int32 rects[MEDNAFEN_CORE_GEOMETRY_MAX_H];
    rects[0] = ~0;
 
-   static int16_t sound_buf[0x10000];
    EmulateSpecStruct spec = {0};
    spec.surface = surf;
    spec.SoundRate = 44100;
-   spec.SoundBuf = sound_buf;
    spec.LineWidths = rects;
-   spec.SoundBufMaxSize = sizeof(sound_buf) / 2;
    spec.SoundVolume = 1.0;
    spec.soundmultiplier = 1.0;
    spec.SoundBufSize = 0;
