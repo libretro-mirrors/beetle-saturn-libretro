@@ -57,19 +57,82 @@ static INLINE void SCSP_MainIntChanged(bool state)
 
 #include "scsp.inc"
 
-//
-//
-template<typename T>
-static MDFN_FASTCALL T SoundCPU_BusRead(uint32 A);
+static NO_INLINE void RunSCSP(void)
+{
+ CDB_GetCDDA(SCSP.GetEXTSPtr());
+ //
+ //
+ int16* const bp = IBuffer[IBufferCount];
+ SCSP.RunSample(bp);
+ //bp[0] = rand();
+ //bp[1] = rand();
+ bp[0] = (bp[0] * 27 + 16) >> 5;
+ bp[1] = (bp[1] * 27 + 16) >> 5;
+
+ IBufferCount = (IBufferCount + 1) & 1023;
+ next_scsp_time += 256;
+}
+
+static MDFN_FASTCALL uint8 SoundCPU_BusRead_uint8(uint32 A)
+{
+ uint8 ret;
+
+ SoundCPU.timestamp += 4;
+
+ if(MDFN_UNLIKELY(SoundCPU.timestamp >= next_scsp_time))
+  RunSCSP();
+
+ SCSP.RW<uint8, false>(A & 0x1FFFFF, ret);
+
+ SoundCPU.timestamp += 2;
+
+ return ret;
+}
+
+static MDFN_FASTCALL uint16 SoundCPU_BusRead_uint16(uint32 A)
+{
+ uint16 ret;
+
+ SoundCPU.timestamp += 4;
+
+ if(MDFN_UNLIKELY(SoundCPU.timestamp >= next_scsp_time))
+  RunSCSP();
+
+ SCSP.RW<uint16, false>(A & 0x1FFFFF, ret);
+
+ SoundCPU.timestamp += 2;
+
+ return ret;
+}
+
 
 static MDFN_FASTCALL uint16 SoundCPU_BusReadInstr(uint32 A);
-
-template<typename T>
-static MDFN_FASTCALL void SoundCPU_BusWrite(uint32 A, T V);
 
 static MDFN_FASTCALL void SoundCPU_BusRMW(uint32 A, uint8 (MDFN_FASTCALL *cb)(M68K*, uint8));
 static MDFN_FASTCALL unsigned SoundCPU_BusIntAck(uint8 level);
 static MDFN_FASTCALL void SoundCPU_BusRESET(bool state);
+
+static MDFN_FASTCALL void SoundCPU_BusWrite_uint16(uint32 A, uint16 V)
+{
+ if(MDFN_UNLIKELY(SoundCPU.timestamp >= next_scsp_time))
+  RunSCSP();
+
+ SoundCPU.timestamp += 2;
+ SCSP.RW<uint16, true>(A & 0x1FFFFF, V);
+ SoundCPU.timestamp += 2;
+}
+
+static MDFN_FASTCALL void SoundCPU_BusWrite_uint8(uint32 A, uint8 V)
+{
+ if(MDFN_UNLIKELY(SoundCPU.timestamp >= next_scsp_time))
+  RunSCSP();
+
+ SoundCPU.timestamp += 2;
+ SCSP.RW<uint8, true>(A & 0x1FFFFF, V);
+ SoundCPU.timestamp += 2;
+}
+
+
 //
 //
 
@@ -82,11 +145,11 @@ void SOUND_Init(void)
  next_scsp_time = 0;
  lastts = 0;
 
- SoundCPU.BusRead8 = SoundCPU_BusRead<uint8>;
- SoundCPU.BusRead16 = SoundCPU_BusRead<uint16>;
+ SoundCPU.BusRead8 = SoundCPU_BusRead_uint8;
+ SoundCPU.BusRead16 = SoundCPU_BusRead_uint16;
 
- SoundCPU.BusWrite8 = SoundCPU_BusWrite<uint8>;
- SoundCPU.BusWrite16 = SoundCPU_BusWrite<uint16>;
+ SoundCPU.BusWrite8 = SoundCPU_BusWrite_uint8;
+ SoundCPU.BusWrite16 = SoundCPU_BusWrite_uint16;
 
  SoundCPU.BusReadInstr = SoundCPU_BusReadInstr;
 
@@ -160,22 +223,6 @@ void SOUND_Write16(uint32 A, uint16 V)
  SCSP.RW<uint16, true>(A, V);
 }
 
-static NO_INLINE void RunSCSP(void)
-{
- CDB_GetCDDA(SCSP.GetEXTSPtr());
- //
- //
- int16* const bp = IBuffer[IBufferCount];
- SCSP.RunSample(bp);
- //bp[0] = rand();
- //bp[1] = rand();
- bp[0] = (bp[0] * 27 + 16) >> 5;
- bp[1] = (bp[1] * 27 + 16) >> 5;
-
- IBufferCount = (IBufferCount + 1) & 1023;
- next_scsp_time += 256;
-}
-
 // Ratio between SH-2 clock and 68K clock (sound clock / 2)
 void SOUND_SetClockRatio(uint32 ratio)
 {
@@ -246,23 +293,6 @@ void SOUND_StateAction(StateMem* sm, const unsigned load, const bool data_only)
 //
 // TODO: test masks.
 //
-template<typename T>
-static MDFN_FASTCALL T SoundCPU_BusRead(uint32 A)
-{
- T ret;
-
- SoundCPU.timestamp += 4;
-
- if(MDFN_UNLIKELY(SoundCPU.timestamp >= next_scsp_time))
-  RunSCSP();
-
- SCSP.RW<T, false>(A & 0x1FFFFF, ret);
-
- SoundCPU.timestamp += 2;
-
- return ret;
-}
-
 static MDFN_FASTCALL uint16 SoundCPU_BusReadInstr(uint32 A)
 {
  uint16 ret;
@@ -278,18 +308,6 @@ static MDFN_FASTCALL uint16 SoundCPU_BusReadInstr(uint32 A)
 
  return ret;
 }
-
-template<typename T>
-static MDFN_FASTCALL void SoundCPU_BusWrite(uint32 A, T V)
-{
- if(MDFN_UNLIKELY(SoundCPU.timestamp >= next_scsp_time))
-  RunSCSP();
-
- SoundCPU.timestamp += 2;
- SCSP.RW<T, true>(A & 0x1FFFFF, V);
- SoundCPU.timestamp += 2;
-}
-
 
 static MDFN_FASTCALL void SoundCPU_BusRMW(uint32 A, uint8 (MDFN_FASTCALL *cb)(M68K*, uint8))
 {
