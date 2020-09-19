@@ -5,8 +5,6 @@
 #include <vector>
 #include <string>
 
-#include "settings-common.h"
-
 extern std::vector<MDFNGI *>MDFNSystems;
 
 // Call this function as early as possible, even before MDFNI_Initialize()

@@ -21,7 +21,6 @@
 #include <map>
 
 #include "mednafen.h"
-#include "driver.h"
 #include "general.h"
 #include "state.h"
 #include "video.h"

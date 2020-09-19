@@ -2,9 +2,6 @@
 #include "../video.h"
 #include "../general.h"
 #include "../state.h"
-#include "../driver.h"
-
-extern "C" uint8_t psx_gpu_upscale_shift;
 
 #include "Deinterlacer.h"
 Deinterlacer::Deinterlacer() : FieldBuffer(NULL), StateValid(false), DeintType(DEINT_WEAVE)
@@ -89,9 +86,6 @@ void Deinterlacer::InternalProcess(MDFN_Surface *surface, MDFN_Rect &DisplayRect
    int32 *dest_lw = &LineWidths[(y * 2) + (field ^ 1) + DisplayRect.y];
 
    *dest_lw = LWBuffer[y];
-
-   if (psx_gpu_upscale_shift == 0)
-      memcpy(dest, src, LWBuffer[y] * sizeof(T));
   }
   else if(DeintType == DEINT_BOB)
   {

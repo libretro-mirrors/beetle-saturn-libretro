@@ -7,12 +7,8 @@
 #include <libretro.h>
 
 #include "video.h"
+#include "state.h"
 
-typedef struct
-{
- const char *extension; // Example ".nes"
- const char *description; // Example "iNES Format ROM Image"
-} FileExtensionSpecStruct;
 
 enum
 {
@@ -38,9 +34,6 @@ typedef enum
  GMT_ARCADE,	// VS Unisystem, PC-10...
  GMT_PLAYER	// Music player(NSF, HES, GSF)
 } GameMediumTypes;
-
-#include "state.h"
-#include "settings-common.h"
 
 #ifdef WANT_DEBUGGER
 // #ifdef WANT_DEBUGGER
@@ -489,8 +482,6 @@ struct CustomPalette_Spec
 
 typedef struct
 {
- const MDFNSetting *Settings;
-
  // Time base for EmulateSpecStruct::MasterCycles
  // MasterClock must be >= MDFN_MASTERCLOCK_FIXED(1.0)
  // All or part of the fractional component may be ignored in some timekeeping operations in the emulator to prevent integer overflow,
@@ -545,8 +536,6 @@ typedef struct
  GameMediumTypes GameType;	// Deprecated.
 
  RMD_Layout* RMD;
-
- const char *cspecial;  /* Special cart expansion: DIP switches, barcode reader, etc. */
 
  std::vector<const char *>DesiredInput; // Desired input device for the input ports, NULL for don't care
 
