@@ -545,7 +545,6 @@ class SH7095 final
  void SetRegister(const unsigned id, const uint32 value) MDFN_COLD;
 
  void CheckRWBreakpoints(void (*MRead)(unsigned len, uint32 addr), void (*MWrite)(unsigned len, uint32 addr)) const;
- static void Disassemble(const uint16 instr, const uint32 PC, char* buffer, uint16 (*DisPeek16)(uint32), uint32 (*DisPeek32)(uint32));
  private:
  bool CBH_Setting;
  uint32 PC_IF, PC_ID;	// Debug-related variables.
