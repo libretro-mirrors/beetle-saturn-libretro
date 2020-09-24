@@ -279,8 +279,8 @@ uint8 IODevice_Keyboard::UpdateBus(const sscpu_timestamp_t timestamp, const uint
 
 static const IDIIS_StatusState Lock_SS[] =
 {
- { "off", gettext_noop("Off") },
- { "on", gettext_noop("On") },
+ { "off", "Off" },
+ { "on", "On" },
 };
 
 const IDIISG IODevice_Keyboard_US101_IDII =

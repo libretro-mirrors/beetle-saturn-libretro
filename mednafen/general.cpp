@@ -183,4 +183,3 @@ void MDFN_trim(std::string &string)
  MDFN_rtrim(string);
  MDFN_ltrim(string);
 }
-

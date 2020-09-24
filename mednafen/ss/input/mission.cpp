@@ -194,19 +194,19 @@ uint8 IODevice_Mission::UpdateBus(const sscpu_timestamp_t timestamp, const uint8
 
 static const IDIIS_SwitchPos SpeedSwitchPositions[] =
 {
- { "1", gettext_noop("1/7"), gettext_noop("Slowest") },
- { "2", gettext_noop("2/7") },
- { "3", gettext_noop("3/7") },
- { "4", gettext_noop("4/7") },
- { "5", gettext_noop("5/7") },
- { "6", gettext_noop("6/7") },
- { "7", gettext_noop("7/7"), gettext_noop("Fastest") },
+ { "1", "1/7", "Slowest" },
+ { "2", "2/7" },
+ { "3", "3/7" },
+ { "4", "4/7" },
+ { "5", "5/7" },
+ { "6", "6/7" },
+ { "7", "7/7", "Fastest" },
 };
 
 static const IDIIS_SwitchPos AFSwitchPositions[] =
 {
- { "off", gettext_noop("• (Off)"), },
- { "on", gettext_noop("•• (On)") },
+ { "off", "• (Off)", },
+ { "on", "•• (On)" },
 };
 
 IDIISG IODevice_Mission_IDII =
