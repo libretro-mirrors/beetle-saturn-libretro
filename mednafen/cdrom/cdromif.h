@@ -19,7 +19,7 @@
 #define __MDFN_CDROM_CDROMIF_H
 
 #include "CDUtility.h"
-#include <mednafen/Stream.h>
+#include "../Stream.h"
 
 #include <queue>
 

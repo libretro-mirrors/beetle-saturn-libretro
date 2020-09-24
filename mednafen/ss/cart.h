@@ -22,7 +22,7 @@
 #ifndef __MDFN_SS_CART_H
 #define __MDFN_SS_CART_H
 
-#include <mednafen/state.h>
+#include "../state.h"
 
 struct CartInfo
 {

@@ -19,11 +19,10 @@
 ** 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 */
 
-#include <mednafen/mednafen.h>
 #include "CDAFReader.h"
 #include "CDAFReader_MPC.h"
 
-#include <mednafen/mpcdec/mpcdec.h>
+#include "../mpcdec/mpcdec.h"
 
 class CDAFReader_MPC : public CDAFReader
 {
