@@ -6,7 +6,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define trio_sprintf sprintf /*compatibility with mednafen on libretro*/
 #define trio_snprintf snprintf /*compatibility with mednafen on libretro*/
 
 #define _(String) (String)
