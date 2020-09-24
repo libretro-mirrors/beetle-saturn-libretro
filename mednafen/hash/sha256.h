@@ -24,6 +24,8 @@
 
 #include <array>
 
+#include "../mednafen-types.h"
+
 typedef std::array<uint8, 32> sha256_digest;
 
 void sha256_test(void);

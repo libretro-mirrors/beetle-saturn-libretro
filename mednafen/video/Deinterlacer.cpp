@@ -1,4 +1,3 @@
-#include "../mednafen.h"
 #include "../general.h"
 #include "../state.h"
 

@@ -36,6 +36,7 @@
 #include "common.h"
 #include "jpkeyboard.h"
 
+#include "../../mednafen-endian.h"
 
 IODevice_JPKeyboard::IODevice_JPKeyboard() : phys{0,0,0,0}
 {
@@ -143,7 +144,7 @@ void IODevice_JPKeyboard::StateAction(StateMem* sm, const unsigned load, const b
   SFEND
  };
  char section_name[64];
- trio_snprintf(section_name, sizeof(section_name), "%s_Keyboard", sname_prefix);
+ snprintf(section_name, sizeof(section_name), "%s_Keyboard", sname_prefix);
 
  if(!MDFNSS_StateAction(sm, load, data_only, StateRegs, section_name, true) && load)
   Power();

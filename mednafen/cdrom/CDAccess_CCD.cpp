@@ -19,14 +19,15 @@
 ** 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 */
 
-#include <mednafen/mednafen.h>
-#include <mednafen/general.h>
-
 #include "CDAccess_CCD.h"
 
 #include <limits>
 #include <limits.h>
 #include <map>
+
+#include "../mednafen-types.h"
+#include "../git.h"
+#include "../general.h"
 
 static void MDFN_strtoupper(std::string &str)
 {
@@ -51,7 +52,7 @@ static T CCD_ReadInt(CCD_Section &s, const std::string &propname, const bool hav
       if(have_defval)
          return defval;
       else
-         throw MDFN_Error(0, _("Missing property: %s"), propname.c_str());
+         throw MDFN_Error(0, "Missing property: %s", propname.c_str());
    }
 
    const std::string &v = zit->second;
@@ -75,7 +76,7 @@ static T CCD_ReadInt(CCD_Section &s, const std::string &propname, const bool hav
 
    if(!vp[0] || ep[0])
    {
-      throw MDFN_Error(0, _("Property %s: Malformed integer: %s"), propname.c_str(), v.c_str());
+      throw MDFN_Error(0, "Property %s: Malformed integer: %s", propname.c_str(), v.c_str());
    }
 
    return ret;

@@ -3,6 +3,8 @@
 
 #include <stdio.h>
 
+#include <string>
+
 #include "CDUtility.h"
 
 class CDAccess

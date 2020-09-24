@@ -19,8 +19,7 @@
 ** 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 */
 
-#include <mednafen/mednafen.h>
-#include <mednafen/FileStream.h>
+#include "../FileStream.h"
 
 #include "ss.h"
 #include "smpc.h"

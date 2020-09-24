@@ -27,12 +27,10 @@
 #include <boolean.h>
 #include <libretro.h>
 
-#include "mednafen.h"
-
 #include "general.h"
 #include "hash/md5.h"
 #include "mempatcher.h"
-
+#include "settings.h"
 
 extern retro_log_printf_t log_cb;
 

@@ -26,9 +26,8 @@
 
 #include "ss.h"
 #include "ss_endian.h"
-#include <mednafen/mednafen.h>
-#include <mednafen/general.h>
-#include <mednafen/FileStream.h>
+#include "../general.h"
+#include "../FileStream.h"
 #include "vdp1.h"
 #include "vdp2.h"
 #include "scu.h"
@@ -1031,7 +1030,7 @@ uint32 GetRegister(const unsigned id, char* const special, const uint32 special_
 	 ret = (RawRegs[(0x10 >> 1) + (idx << 1)] << 16) | RawRegs[(0x12 >> 1) + (idx << 1)];
 
 	 if(special)
-	  trio_snprintf(special, special_len, "0: %s, 1: %s, 2: %s, 3: %s, 4: %s, 5: %s, 6: %s, 7: %s",
+	  snprintf(special, special_len, "0: %s, 1: %s, 2: %s, 3: %s, 4: %s, 5: %s, 6: %s, 7: %s",
 		tab[(ret >> 28) & 0xF], tab[(ret >> 24) & 0xF], tab[(ret >> 20) & 0xF], tab[(ret >> 16) & 0xF],
 		tab[(ret >> 12) & 0xF], tab[(ret >>  8) & 0xF], tab[(ret >>  4) & 0xF], tab[(ret >>  0) & 0xF]);
 	}

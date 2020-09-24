@@ -22,6 +22,8 @@
 #include "common.h"
 #include "wheel.h"
 
+#include "../../mednafen-endian.h"
+
 IODevice_Wheel::IODevice_Wheel() : dbuttons(0)
 {
 
@@ -76,7 +78,7 @@ void IODevice_Wheel::StateAction(StateMem* sm, const unsigned load, const bool d
   SFEND
  };
  char section_name[64];
- trio_snprintf(section_name, sizeof(section_name), "%s_Wheel", sname_prefix);
+ snprintf(section_name, sizeof(section_name), "%s_Wheel", sname_prefix);
 
  if(!MDFNSS_StateAction(sm, load, data_only, StateRegs, section_name, true) && load)
   Power();

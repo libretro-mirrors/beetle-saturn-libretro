@@ -51,13 +51,13 @@
 // TODO: Test play command while filesys op is in progress.
 
 #include "ss.h"
-#include <mednafen/mednafen.h>
 #include "scu.h"
 #include "sound.h"
 #include "cdb.h"
 
-#include <mednafen/cdrom/CDUtility.h>
-#include <mednafen/cdrom/cdromif.h>
+#include "../cdrom/CDUtility.h"
+#include "../cdrom/cdromif.h"
+#include "../mednafen-endian.h"
 
 enum
 {

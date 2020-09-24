@@ -6,6 +6,7 @@
 #include <vector>
 #include <libretro.h>
 
+#include "mednafen-types.h"
 #include "video/surface.h"
 #include "state.h"
 

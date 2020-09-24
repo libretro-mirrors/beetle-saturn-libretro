@@ -1,5 +1,5 @@
 #include <stdarg.h>
-#include "mednafen/mednafen.h"
+#include "mednafen/git.h"
 #include "mednafen/mempatcher.h"
 #include "mednafen/git.h"
 #include "mednafen/general.h"
@@ -16,11 +16,16 @@
 #include "input.h"
 #include "disc.h"
 
-#include <mednafen/cdrom/cdromif.h>
-#include <mednafen/FileStream.h>
-#include <mednafen/hash/sha256.h>
+#include "mednafen/settings.h"
+#include "mednafen/cdrom/cdromif.h"
+#include "mednafen/FileStream.h"
+#include "mednafen/hash/sha256.h"
 #include "mednafen/hash/md5.h"
 #include "mednafen/ss/ss.h"
+
+/* Forward declarations */
+void MDFN_LoadGameCheats(void *override_ptr);
+void MDFN_FlushGameCheats(int nosave);
 
 static INLINE bool DBG_NeedCPUHooks(void) { return false; } // <-- replaces debug.inc
 
@@ -30,6 +35,36 @@ static INLINE bool DBG_NeedCPUHooks(void) { return false; } // <-- replaces debu
 #include <bitset>
 
 #include <zlib.h>
+
+struct retro_perf_callback perf_cb;
+retro_get_cpu_features_t perf_get_cpu_features_cb = NULL;
+retro_log_printf_t log_cb;
+static retro_audio_sample_t audio_cb;
+static retro_audio_sample_batch_t audio_batch_cb;
+static retro_input_poll_t input_poll_cb;
+static retro_input_state_t input_state_cb;
+static retro_environment_t environ_cb;
+
+
+void MDFN_DispMessage(const char *format, ...)
+{
+   va_list ap;
+   struct retro_message msg;
+   const char *strc = NULL;
+   char *str        = (char*)malloc(4096 * sizeof(char));
+
+   va_start(ap,format);
+
+   vsnprintf(str, 4096, format, ap);
+   va_end(ap);
+   strc       = str;
+
+   msg.frames = 180;
+   msg.msg    = strc;
+
+   environ_cb(RETRO_ENVIRONMENT_SET_MESSAGE, &msg);
+   free(str);
+}
 
 #define MEDNAFEN_CORE_NAME                   "Beetle Saturn"
 #define MEDNAFEN_CORE_VERSION                "v1.22.2"
@@ -42,15 +77,6 @@ static INLINE bool DBG_NeedCPUHooks(void) { return false; } // <-- replaces debu
 #define MEDNAFEN_CORE_GEOMETRY_MAX_H         576
 #define MEDNAFEN_CORE_GEOMETRY_ASPECT_RATIO  (4.0 / 3.0)
 #define FB_WIDTH                             MEDNAFEN_CORE_GEOMETRY_MAX_W
-
-struct retro_perf_callback perf_cb;
-retro_get_cpu_features_t perf_get_cpu_features_cb = NULL;
-retro_log_printf_t log_cb;
-static retro_audio_sample_t audio_cb;
-static retro_audio_sample_batch_t audio_batch_cb;
-static retro_input_poll_t input_poll_cb;
-static retro_input_state_t input_state_cb;
-static retro_environment_t environ_cb;
 
 static unsigned frame_count = 0;
 static unsigned internal_frame_count = 0;
@@ -1011,11 +1037,11 @@ static bool InitCommon(const unsigned cpucache_emumode, const unsigned cart_type
    const char* name;
   } CPUCacheEmuModes[] =
   {
-   { CPUCACHE_EMUMODE_DATA_CB,   _("Data only, with high-level bypass") },
-   { CPUCACHE_EMUMODE_DATA,   _("Data only") },
-   { CPUCACHE_EMUMODE_FULL,   _("Full") },
+   { CPUCACHE_EMUMODE_DATA_CB,   "Data only, with high-level bypass" },
+   { CPUCACHE_EMUMODE_DATA,   "Data only" },
+   { CPUCACHE_EMUMODE_FULL,   "Full" },
   };
-  const char* cem = _("Unknown");
+  const char* cem = "Unknown";
 
   for(auto const& ceme : CPUCacheEmuModes)
   {
@@ -1038,8 +1064,8 @@ static bool InitCommon(const unsigned cpucache_emumode, const unsigned cart_type
          { CART_EXTRAM_4M, "4MiB Extended RAM" },
          { CART_KOF95, "King of Fighters '95 ROM" },
          { CART_ULTRAMAN, "Ultraman ROM" },
-         { CART_CS1RAM_16M, _("16MiB CS1 RAM") },
-         { CART_NLMODEM, _("Netlink Modem") },
+         { CART_CS1RAM_16M, "16MiB CS1 RAM" },
+         { CART_NLMODEM, "Netlink Modem" },
          { CART_MDFN_DEBUG, "Mednafen Debug" }
       };
       const char* cn = nullptr;
@@ -2424,22 +2450,3 @@ void MDFND_DispMessage(unsigned char *str)
    environ_cb(RETRO_ENVIRONMENT_SET_MESSAGE, &msg);
 }
 
-void MDFN_DispMessage(const char *format, ...)
-{
-   va_list ap;
-   struct retro_message msg;
-   const char *strc = NULL;
-   char *str        = (char*)malloc(4096 * sizeof(char));
-
-   va_start(ap,format);
-
-   vsnprintf(str, 4096, format, ap);
-   va_end(ap);
-   strc       = str;
-
-   msg.frames = 180;
-   msg.msg    = strc;
-
-   environ_cb(RETRO_ENVIRONMENT_SET_MESSAGE, &msg);
-   free(str);
-}

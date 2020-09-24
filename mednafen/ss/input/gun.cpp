@@ -25,6 +25,11 @@
 #include "gun.h"
 #include "libretro_settings.h"
 
+#include "../../mednafen-endian.h"
+#include "../../git.h"
+
+extern MDFNGI *MDFNGameInfo;
+
 IODevice_Gun::IODevice_Gun() : state(0x4C), light_phase(true), light_phase_counter(0x7FFFFFFF)
 {
 
@@ -243,7 +248,7 @@ void IODevice_Gun::StateAction(StateMem* sm, const unsigned load, const bool dat
   SFEND
  };
  char section_name[64];
- trio_snprintf(section_name, sizeof(section_name), "%s_Gun", sname_prefix);
+ snprintf(section_name, sizeof(section_name), "%s_Gun", sname_prefix);
 
  if(!MDFNSS_StateAction(sm, load, data_only, StateRegs, section_name, true) && load)
   Power();

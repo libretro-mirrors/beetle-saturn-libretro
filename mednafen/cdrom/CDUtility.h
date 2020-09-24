@@ -1,6 +1,11 @@
 #ifndef __MDFN_CDROM_CDUTILITY_H
 #define __MDFN_CDROM_CDUTILITY_H
 
+#include <stdint.h>
+#include <string.h>
+
+#include <retro_inline.h>
+
  // Call once at app startup before creating any threads that could potentially cause re-entrancy to these functions.
  // It will also be called automatically if needed for the first time a function in this namespace that requires
  // the initialization function to be called is called, for potential

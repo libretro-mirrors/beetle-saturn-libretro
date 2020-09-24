@@ -117,7 +117,7 @@ void IODevice_Multitap::StateAction(StateMem* sm, const unsigned load, const boo
   SFEND
  };
  char section_name[32];
- trio_snprintf(section_name, sizeof(section_name), "%s_Multitap", sname_prefix);
+ snprintf(section_name, sizeof(section_name), "%s_Multitap", sname_prefix);
 
  if(!MDFNSS_StateAction(sm, load, data_only, StateRegs, section_name, true) && load)
   Power();
@@ -130,7 +130,7 @@ void IODevice_Multitap::StateAction(StateMem* sm, const unsigned load, const boo
  {
   char snsp[32];
 
-  trio_snprintf(snsp, sizeof(snsp), "%sP%u", section_name, i);
+  snprintf(snsp, sizeof(snsp), "%sP%u", section_name, i);
   devices[i]->StateAction(sm, load, data_only, snsp);
  }
 }

@@ -51,7 +51,7 @@ void IODevice_Gamepad::StateAction(StateMem* sm, const unsigned load, const bool
   SFEND
  };
  char section_name[64];
- trio_snprintf(section_name, sizeof(section_name), "%s_Gamepad", sname_prefix);
+ snprintf(section_name, sizeof(section_name), "%s_Gamepad", sname_prefix);
 
  if(!MDFNSS_StateAction(sm, load, data_only, StateRegs, section_name, true) && load)
   Power();

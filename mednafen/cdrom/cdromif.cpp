@@ -15,18 +15,19 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#include "../mednafen.h"
 #include <string.h>
 #include <sys/types.h>
-#include "cdromif.h"
-#include "CDAccess.h"
-#include "../general.h"
-
-#include <algorithm>
 
 #include <boolean.h>
 #include <rthreads/rthreads.h>
 #include <retro_miscellaneous.h>
+
+#include <algorithm>
+
+#include "cdromif.h"
+#include "CDAccess.h"
+#include "../git.h"
+#include "../general.h"
 
 enum
 {
@@ -511,7 +512,7 @@ int CDIF::ReadSector(uint8_t* buf, int32_t lba, uint32_t sector_count, bool supp
       {
          if(!suppress_uncorrectable_message)
          {
-            MDFN_DispMessage("Uncorrectable data at sector %d", lba);
+            //MDFN_DispMessage("Uncorrectable data at sector %d", lba);
             log_cb(RETRO_LOG_ERROR, "Uncorrectable data at sector %d\n", lba);
          }
 

@@ -20,10 +20,12 @@
 #include <boolean.h>
 #include <map>
 
-#include "mednafen.h"
-#include "general.h"
-#include "state.h"
 #include <compat/msvc.h>
+
+#include "git.h"
+#include "general.h"
+#include "mednafen-endian.h"
+#include "state.h"
 
 #define RLSB 		MDFNSTATE_RLSB	//0x80000000
 

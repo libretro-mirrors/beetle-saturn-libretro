@@ -20,6 +20,7 @@
 #ifndef _MEMORY_STREAM_H
 #define _MEMORY_STREAM_H
 
+#include "mednafen-types.h"
 #include "Stream.h"
 
 class MemoryStream : public Stream

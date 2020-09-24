@@ -7,6 +7,8 @@
 #define ALPHA_SHIFT 24
 #define MAKECOLOR(r, g, b, a) ((r << RED_SHIFT) | (g << GREEN_SHIFT) | (b << BLUE_SHIFT) | (a << ALPHA_SHIFT))
 
+#include "../mednafen-types.h"
+
 struct MDFN_PaletteEntry
 {
  uint8 r, g, b;

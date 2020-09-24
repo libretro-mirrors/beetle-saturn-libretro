@@ -3,6 +3,8 @@
 
 #include <string>
 
+#include "../mednafen-types.h"
+
 class md5_context
 {
  public:

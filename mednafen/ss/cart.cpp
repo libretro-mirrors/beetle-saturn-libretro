@@ -20,10 +20,10 @@
 */
 
 #include "ss.h"
-#include <mednafen/mednafen.h>
-#include <mednafen/general.h>
 #include <streams/file_stream.h>
+#include "../general.h"
 #include "../mednafen-endian.h"
+#include "../settings.h"
 
 #include "cart.h"
 #include "cart/backup.h"

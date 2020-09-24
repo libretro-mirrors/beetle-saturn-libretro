@@ -32,12 +32,12 @@
 //       end of hblank instead of the beginning.
 
 #include "ss.h"
-#include <mednafen/mednafen.h>
-#include <mednafen/FileStream.h>
 #include "scu.h"
 #include "vdp1.h"
 #include "vdp2.h"
 #include "vdp1_common.h"
+
+#include "../FileStream.h"
 
 enum : int { VDP1_UpdateTimingGran = 263 };
 enum : int { VDP1_IdleTimingGran = 1019 };

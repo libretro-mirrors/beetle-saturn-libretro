@@ -22,8 +22,8 @@
 #ifndef __MDFN_SS_VDP1_H
 #define __MDFN_SS_VDP1_H
 
-#include <mednafen/state.h>
-
+#include "../mednafen-endian.h"
+#include "../state.h"
 
 namespace VDP1
 {

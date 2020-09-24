@@ -19,11 +19,10 @@
 ** 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 */
 
-#include <mednafen/mednafen.h>
 #include "CDAFReader.h"
 #include "CDAFReader_Vorbis.h"
 
-#include <mednafen/tremor/ivorbisfile.h>
+#include "../tremor/ivorbisfile.h"
 
 class CDAFReader_Vorbis : public CDAFReader
 {

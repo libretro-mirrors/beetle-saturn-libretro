@@ -22,6 +22,7 @@
 #ifndef __MDFN_SS_VDP2_RENDER_H
 #define __MDFN_SS_VDP2_RENDER_H
 
+#include "../git.h"
 
 void VDP2REND_Init(const bool IsPAL) MDFN_COLD;
 void VDP2REND_SetGetVideoParams(MDFNGI* gi, const bool caspect, const int sls, const int sle, const bool show_h_overscan, const bool dohblend) MDFN_COLD;

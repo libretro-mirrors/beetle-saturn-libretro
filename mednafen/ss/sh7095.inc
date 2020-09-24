@@ -5071,7 +5071,7 @@ INLINE uint32 SH7095::GetRegister(const unsigned id, char* const special, const 
 	ret = VCRC;
 	if(special)
 	{
-	 trio_snprintf(special, special_len, "FIC: 0x%02x, FOC: 0x%02x", (ret >> 8) & 0x7F, ret & 0x7F);
+	 snprintf(special, special_len, "FIC: 0x%02x, FOC: 0x%02x", (ret >> 8) & 0x7F, ret & 0x7F);
 	}
 	break;
 

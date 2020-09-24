@@ -44,8 +44,9 @@
 	CMPM (a7)+,(a7)+
 */
 
-#include <mednafen/mednafen.h>
 #include "m68k.h"
+
+#include "../../mednafen-endian.h"
 
 #include <tuple>
 
@@ -132,7 +133,7 @@ void M68K::LoadOldState(const uint8* osm)
  old_IRQLine = MDFN_de32lsb(osm); osm += 4;
 
  if(MDFN_de32lsb(osm) != 0xDEADBEEF)
-  throw MDFN_Error(0, _("Malformed old 68K save state."));
+  throw MDFN_Error(0, "Malformed old 68K save state.");
  //
  //
  Flag_C = (old_C >> 8) & 1;

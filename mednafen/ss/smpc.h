@@ -19,10 +19,13 @@
 ** 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 */
 
-#include <time.h>
-
 #ifndef __MDFN_SS_SMPC_H
 #define __MDFN_SS_SMPC_H
+
+#include <time.h>
+
+#include "../git.h"
+#include "../state.h"
 
 #include "../Stream.h"
 

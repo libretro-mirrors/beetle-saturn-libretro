@@ -25,6 +25,8 @@
 #include <retro_inline.h>
 #include <type_traits>
 
+#include "mednafen-types.h"
+
 typedef struct
 {
    uint8_t *data;

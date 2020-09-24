@@ -26,7 +26,6 @@
 
 #include "ss.h"
 #include "ss_memory.h"
-#include <mednafen/mednafen.h>
 #include "vdp2_common.h"
 #include "vdp2_render.h"
 

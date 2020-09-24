@@ -24,6 +24,8 @@
 
 #include <stdint.h>
 
+#include "../state.h"
+
 extern int16_t IBuffer[1024][2];
 
 void SOUND_Init(void) MDFN_COLD;

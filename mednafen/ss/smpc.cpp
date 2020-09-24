@@ -24,11 +24,12 @@
 	CD On/Off
 */
 
+#include <time.h>
+
 #include "ss.h"
-#include <mednafen/mednafen.h>
-#include <mednafen/general.h>
-#include <mednafen/Stream.h>
-#include <mednafen/cdrom/CDUtility.h>
+#include "../general.h"
+#include "../Stream.h"
+#include "../cdrom/CDUtility.h"
 
 #include "smpc.h"
 #include "smpc_iodevice.h"
@@ -47,7 +48,6 @@
 #include "input/keyboard.h"
 #include "input/jpkeyboard.h"
 
-#include <time.h>
 #include "input/multitap.h"
 
 #include "sh7095.h"

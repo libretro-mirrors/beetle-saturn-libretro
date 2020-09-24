@@ -18,12 +18,10 @@
 ** along with this program; if not, write to the Free Software Foundation, Inc.,
 ** 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 */
-
-#include <mednafen/mednafen.h>
-#include "sha256.h"
-
 #include <stdio.h>
 #include <string.h>
+
+#include "sha256.h"
 
 #include "../ss/ss_endian.h"
 

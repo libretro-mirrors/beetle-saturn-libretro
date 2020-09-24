@@ -22,7 +22,10 @@
 #ifndef __MDFN_M68K_H
 #define __MDFN_M68K_H
 
-#include <mednafen/mednafen.h>
+#include <boolean.h>
+
+#include "../../mednafen-types.h"
+#include "../../state.h"
 
 class M68K
 {
