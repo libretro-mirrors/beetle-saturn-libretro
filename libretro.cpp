@@ -70,15 +70,15 @@ static bool is_pal = false;
 // display_internal_framerate is true.
 #define INTERNAL_FPS_SAMPLE_PERIOD 32
 
-char retro_save_directory[4096];
-char retro_base_directory[4096];
 static char retro_cd_base_directory[4096];
 static char retro_cd_path[4096];
-char retro_cd_base_name[4096];
+extern "C" char retro_cd_base_name[4096];
+extern "C" char retro_save_directory[4096];
+extern "C" char retro_base_directory[4096];
 #ifdef _WIN32
-   static char retro_slash = '\\';
+static char retro_slash = '\\';
 #else
-   static char retro_slash = '/';
+static char retro_slash = '/';
 #endif
 
 static bool libretro_supports_bitmasks = false;

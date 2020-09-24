@@ -218,7 +218,6 @@ endif
 
 SOURCES_CXX += \
 	$(MEDNAFEN_DIR)/error.cpp \
-	$(MEDNAFEN_DIR)/settings.cpp \
 	$(MEDNAFEN_DIR)/general.cpp \
 	$(MEDNAFEN_DIR)/FileStream.cpp \
 	$(MEDNAFEN_DIR)/MemoryStream.cpp \
@@ -233,7 +232,8 @@ SOURCES_CXX += \
 	$(CORE_DIR)/libretro.cpp \
 	$(CORE_DIR)/libretro_settings.cpp
 
-SOURCES_C += $(MEDNAFEN_DIR)/mednafen-endian.c
+SOURCES_C += $(MEDNAFEN_DIR)/mednafen-endian.c \
+				 $(MEDNAFEN_DIR)/settings.c
 
 SOURCES_CXX += $(MEDNAFEN_DIR)/hash/sha256.cpp \
 					$(MEDNAFEN_DIR)/hash/md5.cpp
