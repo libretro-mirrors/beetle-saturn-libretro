@@ -1,8 +1,8 @@
 #include "../mednafen.h"
-#include "../video.h"
 #include "../general.h"
 #include "../state.h"
 
+#include "surface.h"
 #include "Deinterlacer.h"
 Deinterlacer::Deinterlacer() : FieldBuffer(NULL), StateValid(false), DeintType(DEINT_WEAVE)
 {

@@ -6,9 +6,8 @@
 #include <vector>
 #include <libretro.h>
 
-#include "video.h"
+#include "video/surface.h"
 #include "state.h"
-
 
 enum
 {
