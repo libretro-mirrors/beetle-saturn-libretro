@@ -6,7 +6,6 @@
 #include "mednafen/ss/smpc.h"
 #include "mednafen/state.h"
 #include <math.h>
-#include <stdio.h>
 
 //------------------------------------------------------------------------------
 // Locals

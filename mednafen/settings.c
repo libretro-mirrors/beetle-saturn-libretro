@@ -15,7 +15,6 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#include <stdio.h>
 #include <errno.h>
 #include <string.h>
 
@@ -35,8 +34,6 @@ uint64_t MDFN_GetSettingUI(const char *name)
       return setting_smpc_autortc_lang;
    if (!strcmp("ss.dbg_mask", name))
       return 1;
-
-   fprintf(stderr, "unhandled setting UI: %s\n", name);
    return 0;
 }
 
@@ -50,7 +47,6 @@ int64 MDFN_GetSettingI(const char *name)
       return setting_last_scanline;
    if (!strcmp("ss.slendp", name))
       return setting_last_scanline_pal;
-   fprintf(stderr, "unhandled setting I: %s\n", name);
    return 0;
 }
 
@@ -71,7 +67,6 @@ bool MDFN_GetSettingB(const char *name)
    /* FILESYS */
    if (!strcmp("filesys.untrusted_fip_check", name))
       return 0;
-   fprintf(stderr, "unhandled setting B: %s\n", name);
    return 0;
 }
 
@@ -90,6 +85,5 @@ const char *MDFN_GetSettingS(const char *name)
       return retro_save_directory;
    if (!strcmp("filesys.path_state", name))
       return retro_save_directory;
-   fprintf(stderr, "unhandled setting S: %s\n", name);
    return 0;
 }

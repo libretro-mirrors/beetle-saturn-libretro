@@ -1,7 +1,6 @@
 #ifndef __MDFN_ENDIAN_H
 #define __MDFN_ENDIAN_H
 
-#include <stdio.h>
 #include <stdint.h>
 #include <retro_inline.h>
 #include <retro_miscellaneous.h>
@@ -57,7 +56,6 @@
 extern "C" {
 #endif
 
-int read32le(uint32_t *Bufo, FILE *fp);
 void Endian_A16_Swap(void *src, uint32_t nelements);
 void Endian_A32_Swap(void *src, uint32_t nelements);
 void Endian_A64_Swap(void *src, uint32_t nelements);
@@ -66,8 +64,6 @@ void Endian_A16_LE_to_NE(void *src, uint32_t nelements);
 void Endian_A16_BE_to_NE(void *src, uint32_t nelements);
 void Endian_A32_LE_to_NE(void *src, uint32_t nelements);
 void Endian_A64_LE_to_NE(void *src, uint32_t nelements);
-
-void FlipByteOrder(uint8_t *src, uint32_t count);
 
 #if defined(__cplusplus)
 }
