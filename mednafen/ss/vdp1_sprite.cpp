@@ -289,8 +289,7 @@ int32 CMD_DistortedSprite(const uint16* cmd_data)
 {
  if(cmd_data[0x2] & 0x4) // gouraud
   return SpriteBase<FORMAT_DISTORTED, true>(cmd_data);
- else
-  return SpriteBase<FORMAT_DISTORTED, false>(cmd_data);
+ return SpriteBase<FORMAT_DISTORTED, false>(cmd_data);
 }
 
 
@@ -298,16 +297,14 @@ int32 CMD_NormalSprite(const uint16* cmd_data)
 {
  if(cmd_data[0x2] & 0x4) // gouraud
   return SpriteBase<FORMAT_NORMAL, true>(cmd_data);
- else
-  return SpriteBase<FORMAT_NORMAL, false>(cmd_data);
+ return SpriteBase<FORMAT_NORMAL, false>(cmd_data);
 }
 
 int32 CMD_ScaledSprite(const uint16* cmd_data)
 {
  if(cmd_data[0x2] & 0x4) // gouraud
   return SpriteBase<FORMAT_SCALED, true>(cmd_data);
- else
-  return SpriteBase<FORMAT_SCALED, false>(cmd_data);
+ return SpriteBase<FORMAT_SCALED, false>(cmd_data);
 }
 
 

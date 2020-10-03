@@ -67,8 +67,7 @@ static int32 (*LineFuncTab[2][3][0x20][8 + 1])(void) =
  #undef LINEFN_BC
 };
 
-template<bool gourauden>
-static INLINE int32 CMD_PolygonG_T(const uint16* cmd_data)
+static INLINE int32 CMD_PolygonG_gouraud_true(const uint16* cmd_data)
 {
  const uint16 mode = cmd_data[0x2];
  line_vertex p[4];
@@ -96,20 +95,74 @@ static INLINE int32 CMD_PolygonG_T(const uint16* cmd_data)
   p[i].y = sign_x_to_s32(13, cmd_data[0x7 + (i << 1)]) + LocalY;
  }
 
- if(gourauden)
  {
   const uint16* gtb = &VRAM[cmd_data[0xE] << 2];
 
   ret += 4;
-  for(unsigned i = 0; i < 4; i++)
-   p[i].g = gtb[i];
+  p[0].g = gtb[0];
+  p[1].g = gtb[1];
+  p[2].g = gtb[2];
+  p[3].g = gtb[3];
  }
  //
  //
  //
  const int32 dmax = std::max<int32>(std::max<int32>(abs(p[3].x - p[0].x), abs(p[3].y - p[0].y)),
 				    std::max<int32>(abs(p[2].x - p[1].x), abs(p[2].y - p[1].y)));
- EdgeStepper<gourauden> e[2];
+ EdgeStepper<true> e[2];
+
+ e[0].Setup(p[0], p[3], dmax);
+ e[1].Setup(p[1], p[2], dmax);
+
+ for(int32 i = 0; i <= dmax; i++)
+ {
+  e[0].GetVertex(&LineSetup.p[0]);
+  e[1].GetVertex(&LineSetup.p[1]);
+  //
+  //printf("%d:%d -> %d:%d\n", lp[0].x, lp[0].y, lp[1].x, lp[1].y);
+  ret += fnptr();
+  //
+  e[0].Step();
+  e[1].Step();
+ }
+
+ return ret;
+}
+
+static INLINE int32 CMD_PolygonG_gouraud_false(const uint16* cmd_data)
+{
+ const uint16 mode = cmd_data[0x2];
+ line_vertex p[4];
+ int32 ret = 0;
+ //
+ //
+ bool SPD_Opaque = true;	// Abusing the SPD bit passed to the line draw function to denote non-transparency when == 1, transparent when == 0.
+
+ LineSetup.tex_base = 0;
+ LineSetup.color = cmd_data[0x3];
+ LineSetup.PCD = mode & 0x800;
+
+ if(((mode >> 3) & 0x7) < 0x6)
+  SPD_Opaque = (int32)(TexFetchTab[(mode >> 3) & 0x1F](0xFFFFFFFF)) >= 0;
+ //
+ //
+ //
+ auto* fnptr = LineFuncTab[(bool)(FBCR & FBCR_DIE)][(TVMR & TVMR_8BPP) ? ((TVMR & TVMR_ROTATE) ? 2 : 1) : 0][((mode >> 6) & 0x1E) | SPD_Opaque /*(mode >> 6) & 0x1F*/][(mode & 0x8000) ? 8 : (mode & 0x7)];
+
+ CheckUndefClipping();
+
+ for(unsigned i = 0; i < 4; i++)
+ {
+  p[i].x = sign_x_to_s32(13, cmd_data[0x6 + (i << 1)]) + LocalX;
+  p[i].y = sign_x_to_s32(13, cmd_data[0x7 + (i << 1)]) + LocalY;
+ }
+
+ //
+ //
+ //
+ const int32 dmax = std::max<int32>(std::max<int32>(abs(p[3].x - p[0].x), abs(p[3].y - p[0].y)),
+				    std::max<int32>(abs(p[2].x - p[1].x), abs(p[2].y - p[1].y)));
+ EdgeStepper<false> e[2];
 
  e[0].Setup(p[0], p[3], dmax);
  e[1].Setup(p[1], p[2], dmax);
@@ -131,10 +184,9 @@ static INLINE int32 CMD_PolygonG_T(const uint16* cmd_data)
 
 int32 CMD_Polygon(const uint16* cmd_data)
 {
- if(cmd_data[0x2] & 0x4) // gouraud
-  return CMD_PolygonG_T<true>(cmd_data);
- else
-  return CMD_PolygonG_T<false>(cmd_data);
+   if(cmd_data[0x2] & 0x4) // gouraud
+      return CMD_PolygonG_gouraud_true(cmd_data);
+   return CMD_PolygonG_gouraud_false(cmd_data);
 }
 
 

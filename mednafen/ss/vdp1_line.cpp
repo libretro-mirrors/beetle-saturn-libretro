@@ -67,8 +67,7 @@ static int32 (*LineFuncTab[2][3][0x20][8 + 1])(void) =
  #undef LINEFN_BC
 };
 
-template<unsigned num_lines>
-static INLINE int32 CMD_Line_Polyline_T(const uint16* cmd_data)
+static INLINE int32 CMD_Line_Polyline_num_lines_4(const uint16* cmd_data)
 {
  const uint16 mode = cmd_data[0x2];
  int32 ret = 0;
@@ -89,7 +88,50 @@ static INLINE int32 CMD_Line_Polyline_T(const uint16* cmd_data)
 
  CheckUndefClipping();
 
- for(unsigned n = 0; n < num_lines; n++)
+ for(unsigned n = 0; n < 4; n++)
+ {
+  LineSetup.p[0].x = sign_x_to_s32(13, cmd_data[0x6 + (((n << 1) + 0) & 0x7)] & 0x1FFF) + LocalX;
+  LineSetup.p[0].y = sign_x_to_s32(13, cmd_data[0x7 + (((n << 1) + 0) & 0x7)] & 0x1FFF) + LocalY;
+  LineSetup.p[1].x = sign_x_to_s32(13, cmd_data[0x6 + (((n << 1) + 2) & 0x7)] & 0x1FFF) + LocalX;
+  LineSetup.p[1].y = sign_x_to_s32(13, cmd_data[0x7 + (((n << 1) + 2) & 0x7)] & 0x1FFF) + LocalY;
+
+  if(mode & 0x4) // Gouraud
+  {
+   const uint16* gtb = &VRAM[cmd_data[0xE] << 2];
+
+   ret += 2;
+   LineSetup.p[0].g = gtb[(n + 0) & 0x3];
+   LineSetup.p[1].g = gtb[(n + 1) & 0x3];
+  }
+
+  ret += fnptr();
+ }
+
+ return ret;
+}
+
+static INLINE int32 CMD_Line_Polyline_num_lines_1(const uint16* cmd_data)
+{
+ const uint16 mode = cmd_data[0x2];
+ int32 ret = 0;
+ //
+ //
+ bool SPD_Opaque = true;	// Abusing the SPD bit passed to the line draw function to denote non-transparency when == 1, transparent when == 0.
+
+ LineSetup.tex_base = 0;
+ LineSetup.color = cmd_data[0x3];
+ LineSetup.PCD = mode & 0x800;
+
+ if(((mode >> 3) & 0x7) < 0x6)
+  SPD_Opaque = (int32)(TexFetchTab[(mode >> 3) & 0x1F](0xFFFFFFFF)) >= 0;
+ //
+ //
+ //
+ auto* fnptr = LineFuncTab[(bool)(FBCR & FBCR_DIE)][(TVMR & TVMR_8BPP) ? ((TVMR & TVMR_ROTATE) ? 2 : 1) : 0][((mode >> 6) & 0x1E) | SPD_Opaque /*(mode >> 6) & 0x1F*/][(mode & 0x8000) ? 8 : (mode & 0x7)];
+
+ CheckUndefClipping();
+
+ for(unsigned n = 0; n < 1; n++)
  {
   LineSetup.p[0].x = sign_x_to_s32(13, cmd_data[0x6 + (((n << 1) + 0) & 0x7)] & 0x1FFF) + LocalX;
   LineSetup.p[0].y = sign_x_to_s32(13, cmd_data[0x7 + (((n << 1) + 0) & 0x7)] & 0x1FFF) + LocalY;
@@ -113,12 +155,12 @@ static INLINE int32 CMD_Line_Polyline_T(const uint16* cmd_data)
 
 int32 CMD_Polyline(const uint16* cmd_data)
 {
- return CMD_Line_Polyline_T<4>(cmd_data);
+ return CMD_Line_Polyline_num_lines_4(cmd_data);
 }
 
 int32 CMD_Line(const uint16* cmd_data)
 {
- return CMD_Line_Polyline_T<1>(cmd_data);
+ return CMD_Line_Polyline_num_lines_1(cmd_data);
 }
 
 }
