@@ -323,8 +323,10 @@ void subpw_synth_udapp_lba(const TOC& toc, const int32_t lba, const int32_t lba_
    uint32_t ma, sa, fa;
    uint32_t m, s, f;
 
+#if 0
    if(lba < -150 || lba >= 0)
       printf("[BUG] subpw_synth_udapp_lba() lba out of range --- %d\n", lba);
+#endif
 
    {
       int32_t lba_tmp = lba + lba_subq_relative_offs;

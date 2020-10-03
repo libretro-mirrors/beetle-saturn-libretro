@@ -64,7 +64,9 @@ GaloisTables* CreateGaloisTables(int32_t gf_generator)
 
    if(b!=1) 
    {
+#if 0
     printf("Failed to create the Galois field log tables!\n");
+#endif
     exit(1);
    }
 
