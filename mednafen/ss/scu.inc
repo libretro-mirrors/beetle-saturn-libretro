@@ -599,7 +599,9 @@ static INLINE void SCU_RegRW_DB(uint32 A, uint32* DB)
 	 {
 	  auto& d = DMALevel[level];
 
+#ifdef HAVE_DEBUG
 	  SS_DBG(SS_DBG_WARNING | SS_DBG_SCU, "[SCU] Forced stop of DMA level %u\n", level);
+#endif
 
 	  d.Active = false;
 	  d.GoGoGadget = false;
@@ -674,7 +676,9 @@ static INLINE void SCU_RegRW_DB(uint32 A, uint32* DB)
   switch(A & 0xFC)
   {
    default:
+#ifdef HAVE_DEBUG
 	SS_DBG(SS_DBG_WARNING | SS_DBG_SCU, "[SCU] Unknown %zu-byte read from 0x%08x.\n", sizeof(T), A);
+#endif
 	*DB = 0;
 	break;
 
@@ -920,6 +924,7 @@ static INLINE void BBusRW_DB(uint32 A, uint16* DB, int32* time_thing, int32* dma
  if(dma_time_thing != NULL)
   *dma_time_thing -= 1;
 
+#ifdef HAVE_DEBUG
  if(IsWrite)
   SS_DBG(SS_DBG_WARNING | SS_DBG_SCU, "[B-Bus] Unknown %zu-byte write of 0x%08x(DB=0x%04x)\n", sizeof(T), A, *DB);
  else
@@ -928,6 +933,10 @@ static INLINE void BBusRW_DB(uint32 A, uint16* DB, int32* time_thing, int32* dma
 
   *DB = 0;
  }
+#else
+ if (!IsWrite)
+    *DB = 0;
+#endif
 }
 
 template<typename T, bool IsWrite, bool SH32 = false>
@@ -1400,9 +1409,13 @@ static void CheckDMAStart(DMALevelS* d)
    d->CurTableAddr = d->StartWriteAddr & 0x07FFFFFC;	// Tested, lower 2 bits are 0 on DMA end when write address update enabled.
    tb = AddressToBus(d->CurTableAddr);
 
+#ifdef HAVE_DEBUG
    if(tb < 0)
     SS_DBG(SS_DBG_WARNING | SS_DBG_SCU, "[SCU] Invalid DMA indirect mode table address 0x%08x\n", d->CurTableAddr);
    else
+#else
+   if(tb >= 0)
+#endif
    {
     d->TableReadFunc = rftab[tb];
 
@@ -1814,7 +1827,9 @@ static NO_INLINE NO_CLONE void DMAInstr(void)
 
   if(MDFN_UNLIKELY(WriteBus == -1))
   {
+#ifdef HAVE_DEBUG
    SS_DBG(SS_DBG_WARNING | SS_DBG_SCU | SS_DBG_SCU_DSP, "[SCU] Bad DSP DMA to 0x%08x --- Instr=0x%08x, Next_Instr=0x%08x, PC=0x%02x\n", addr, instr, (unsigned)(DSP.NextInstr >> 32), DSP.PC);
+#endif
    return;
   }
 
@@ -1870,7 +1885,9 @@ static NO_INLINE NO_CLONE void DMAInstr(void)
 
   if(MDFN_UNLIKELY(ReadBus == -1))
   {
+#ifdef HAVE_DEBUG
    SS_DBG(SS_DBG_WARNING | SS_DBG_SCU | SS_DBG_SCU_DSP, "[SCU] Bad DSP DMA from 0x%08x --- Instr=0x%08x, Next_Instr=0x%08x, PC=0x%02x\n", addr, instr, (unsigned)(DSP.NextInstr >> 32), DSP.PC);
+#endif
    return;
   }
 

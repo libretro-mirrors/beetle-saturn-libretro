@@ -685,7 +685,9 @@ void SMPC_Write(const sscpu_timestamp_t timestamp, uint8 A, uint8 V)
  BusBuffer = V;
  A &= 0x3F;
 
+#ifdef HAVE_DEBUG
  SS_DBGTI(SS_DBG_SMPC_REGW, "[SMPC] Write to 0x%02x:0x%02x", A, V);
+#endif
 
  //
  // Call VDP2::Update() to prevent out-of-temporal-order calls to SMPC_Update() from here and the event system.
@@ -773,7 +775,9 @@ void SMPC_Write(const sscpu_timestamp_t timestamp, uint8 A, uint8 V)
 	break;
 
   default:
+#ifdef HAVE_DEBUG
 	SS_DBG(SS_DBG_WARNING | SS_DBG_SMPC, "[SMPC] Unknown write of 0x%02x to 0x%02x\n", V, A);
+#endif
 	break;
 
  }
@@ -795,7 +799,9 @@ uint8 SMPC_Read(const sscpu_timestamp_t timestamp, uint8 A)
  switch(A)
  {
   default:
+#ifdef HAVE_DEBUG
 	SS_DBG(SS_DBG_WARNING | SS_DBG_SMPC, "[SMPC] Unknown read from 0x%02x\n", A);
+#endif
 	break;
 
     case 0x10: case 0x11: case 0x12: case 0x13: case 0x14: case 0x15: case 0x16: case 0x17:
@@ -971,12 +977,11 @@ static void RTC_IncTime(void)
 enum : int { SubPhaseBias = __COUNTER__ + 1 };
 sscpu_timestamp_t SMPC_Update(sscpu_timestamp_t timestamp)
 {
- int64 clocks;
+ int64 clocks = 0;
 
  if(MDFN_UNLIKELY(timestamp < lastts))
  {
   //SS_DBG(SS_DBG_WARNING | SS_DBG_SMPC, "[SMPC] [BUG] timestamp(%d) < lastts(%d)\n", timestamp, lastts);
-  clocks = 0;
  }
  else
  {
@@ -1059,7 +1064,9 @@ sscpu_timestamp_t SMPC_Update(sscpu_timestamp_t timestamp)
    {
     OREG[0x1F] = ExecutingCommand;
 
+#ifdef HAVE_DEBUG
     SS_DBGTI(SS_DBG_SMPC, "[SMPC] Command 0x%02x --- 0x%02x 0x%02x 0x%02x 0x%02x 0x%02x 0x%02x 0x%02x", ExecutingCommand, IREG[0], IREG[1], IREG[2], IREG[3], IREG[4], IREG[5], IREG[6]);
+#endif
 
     if(ExecutingCommand == CMD_MSHON)
     {
@@ -1174,8 +1181,8 @@ sscpu_timestamp_t SMPC_Update(sscpu_timestamp_t timestamp)
 
      if(IREG[1] & 0x8)
      {
-      #define JR_WAIT(cond)	{ SMPC_WAIT_UNTIL_COND((cond) || PendingVB); if(PendingVB) { SS_DBGTI(SS_DBG_SMPC, "[SMPC] abortjr wait"); goto AbortJR; } }
-      #define JR_EAT(n)		{ SMPC_EAT_CLOCKS(n); if(PendingVB) { SS_DBGTI(SS_DBG_SMPC, "[SMPC] abortjr eat"); goto AbortJR; } }
+      #define JR_WAIT(cond)	{ SMPC_WAIT_UNTIL_COND((cond) || PendingVB); if(PendingVB) { goto AbortJR; } }
+      #define JR_EAT(n)		{ SMPC_EAT_CLOCKS(n); if(PendingVB) { goto AbortJR; } }
       #define JR_WRNYB(val)															\
 	{																	\
 	 if(!JRS.OWP)																\
@@ -1191,7 +1198,6 @@ sscpu_timestamp_t SMPC_Update(sscpu_timestamp_t timestamp)
 	   JR_WAIT((bool)(IREG[0] & 0x80) == JRS.NextContBit || (IREG[0] & 0x40));								\
            if(IREG[0] & 0x40)															\
            {																	\
-            SS_DBGTI(SS_DBG_SMPC, "[SMPC] Big Read Break");											\
             goto AbortJR;															\
 	   }																	\
 	   JRS.NextContBit = !JRS.NextContBit;													\
@@ -1221,7 +1227,9 @@ sscpu_timestamp_t SMPC_Update(sscpu_timestamp_t timestamp)
        JR_WAIT((bool)(IREG[0] & 0x80) == JRS.NextContBit || (IREG[0] & 0x40));
        if(IREG[0] & 0x40)
        {
+#ifdef HAVE_DEBUG
         SS_DBGTI(SS_DBG_SMPC, "[SMPC] Break");
+#endif
         goto AbortJR;
        }
        JRS.NextContBit = !JRS.NextContBit;
@@ -1241,7 +1249,9 @@ sscpu_timestamp_t SMPC_Update(sscpu_timestamp_t timestamp)
        SMPC_WAIT_UNTIL_COND_TIMEOUT(PendingVB, JRS.OptEatTime);
        if(PendingVB)
        {
+#ifdef HAVE_DEBUG
 	SS_DBGTI(SS_DBG_SMPC, "[SMPC] abortjr timeopt");
+#endif
 	goto AbortJR;
        }
        SS_SetEventNT(&events[SS_EVENT_MIDSYNC], timestamp + 1);

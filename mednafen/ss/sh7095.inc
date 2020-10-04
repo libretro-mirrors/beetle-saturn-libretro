@@ -446,7 +446,9 @@ INLINE void SH7095::DMA_DoTransfer(unsigned ch)
 
  if(!tcr)
  {
+#ifdef HAVE_DEBUG
   SS_DBGTI(SS_DBG_SH2, "[%s] DMA %d finished.", cpu_name, ch);
+#endif
 
   DMACH[ch].CHCR |= 2;
   DMACH[ch].CHCRM |= 2;
@@ -460,13 +462,18 @@ INLINE void SH7095::DMA_DoTransfer(unsigned ch)
 
 sscpu_timestamp_t SH7095::DMA_Update(sscpu_timestamp_t et)
 {
+#ifdef HAVE_DEBUG
  if(MDFN_UNLIKELY(et < dma_lastts))
  {
   // et < dma_lastts may happen...look into it.
   if(et < dma_lastts)
    SS_DBG(SS_DBG_WARNING | SS_DBG_SH2, "[%s] DMA_Update called with et(%u) < dma_lastts(%u).\n", cpu_name, et, dma_lastts);
  }
- else if(MDFN_UNLIKELY(ExtHalt))
+ else
+#else
+ if(MDFN_UNLIKELY(et < dma_lastts)) { }
+#endif
+ if(MDFN_UNLIKELY(ExtHalt))
  {
   dma_lastts = et;
   return dma_lastts + 128;
@@ -710,7 +717,9 @@ void SH7095::FRT_WDT_Update(void)
    }
    else if(MDFN_UNLIKELY(WDT.WTCSR & 0x40))	// Watchdog timer mode
    {
+#ifdef HAVE_DEBUG
     SS_DBG(SS_DBG_WARNING | SS_DBG_SH2, "[%s] WDT overflow in WDT mode!\n", cpu_name);
+#endif
     WDT.RSTCSR |= 0x80;
 
     WDT.WTCNT = 0;
@@ -742,11 +751,13 @@ void SH7095::SetFTI(bool state)
 
  if((prev ^ state) & (prev ^ (FRT.TCR >> 7)))
  {
+#ifdef HAVE_DEBUG
   SS_DBGTI(SS_DBG_SH2, "[%s] FTI input capture triggered.", cpu_name);
   if((FRT.FTCSR & 0x80) || (FRT.FTCSRM & 0x80))
   {
    SS_DBG(SS_DBG_WARNING | SS_DBG_SH2, "[%s] FTI Input capture interrupt while software not ready? FTCSR=0x%02x, FTCSRM=0x%02x\n", cpu_name, FRT.FTCSR, FRT.FTCSRM);
   }
+#endif
 
   FRT.FICR = FRT.FRC;
   if(!(FRT.FTCSR & 0x80))
@@ -959,7 +970,9 @@ NO_INLINE void SH7095::OnChipRegWrite(uint32 A, uint32 V)
   switch(A)
   {
    default:
+#ifdef HAVE_DEBUG
 	SS_DBG(SS_DBG_WARNING | SS_DBG_SH2, "[%s] Unhandled %zu-byte write to on-chip high register area; address=0x%08x value=0x%08x\n", cpu_name, sizeof(T), A, V);
+#endif
 	break;
 
    //
@@ -1038,12 +1051,14 @@ NO_INLINE void SH7095::OnChipRegWrite(uint32 A, uint32 V)
 	 const unsigned ch = (A >> 4) & 1;
 
 	 DMACH[ch].CHCR = (V & ~2) | (DMACH[ch].CHCR & (V | DMACH[ch].CHCRM) & 2);
+#ifdef HAVE_DEBUG
 	 SS_DBGTI(SS_DBG_SH2, "[%s] DMA %d CHCR Write: CHCR=0x%04x SAR=0x%08x DAR=0x%08x TCR=0x%04x", cpu_name, ch, DMACH[ch].CHCR, DMACH[ch].SAR, DMACH[ch].DAR, DMACH[ch].TCR);
 
 	 if((DMACH[ch].CHCR & 0x1) && (DMACH[ch].CHCR & 0x3E8) != 0x200)
 	 {
 	  SS_DBG(SS_DBG_WARNING | SS_DBG_SH2, "[%s] Unhandled CHCR on DMA channel %u: 0x%08x\n", cpu_name, ch, DMACH[ch].CHCR);
 	 }
+#endif
 	}
 	DMA_RecalcRunning();
 	DMA_StartSG();
@@ -1070,10 +1085,12 @@ NO_INLINE void SH7095::OnChipRegWrite(uint32 A, uint32 V)
 	{
  	 BSC.BCR1 = (BSC.BCR1 & 0x8000) | (V & 0x1FF7);
 
+#ifdef HAVE_DEBUG
 	 if((BSC.BCR1 & 0x7FFF) != 0x3F1)
 	 {
 	  SS_DBG(SS_DBG_WARNING | SS_DBG_SH2, "[%s] Unusual BCR1 register value: 0x%04x\n", cpu_name, BSC.BCR1);
 	 }
+#endif
 	}
 	break;
 
@@ -1082,10 +1099,12 @@ NO_INLINE void SH7095::OnChipRegWrite(uint32 A, uint32 V)
 	{
  	 BSC.BCR2 = V & 0xFC;
 
+#ifdef HAVE_DEBUG
 	 if(BSC.BCR2 != 0xFC)
 	 {
 	  SS_DBG(SS_DBG_WARNING | SS_DBG_SH2, "[%s] Unusual BCR2 register value: 0x%02x\n", cpu_name, BSC.BCR2);
 	 }
+#endif
 	}
 	break;
 
@@ -1094,10 +1113,12 @@ NO_INLINE void SH7095::OnChipRegWrite(uint32 A, uint32 V)
 	{
  	 BSC.WCR = V & 0xFFFF;
 
+#ifdef HAVE_DEBUG
 	 if(BSC.WCR != 0x5555)
 	 {
 	  SS_DBG(SS_DBG_WARNING | SS_DBG_SH2, "[%s] Unusual WCR register value: 0x%04x\n", cpu_name, BSC.WCR);
 	 }
+#endif
 	}
 	break;
 
@@ -1106,10 +1127,12 @@ NO_INLINE void SH7095::OnChipRegWrite(uint32 A, uint32 V)
 	{
  	 BSC.MCR = V & 0xFEFC;
 
+#ifdef HAVE_DEBUG
 	 if(BSC.MCR != 0x0078 && BSC.MCR != 0x0070)
 	 {
 	  SS_DBG(SS_DBG_WARNING | SS_DBG_SH2, "[%s] Unusual MCR register value: 0x%04x\n", cpu_name, BSC.MCR);
 	 }
+#endif
 	}
 	break;
 
@@ -1118,10 +1141,12 @@ NO_INLINE void SH7095::OnChipRegWrite(uint32 A, uint32 V)
 	{
  	 BSC.RTCSR = (V & 0x78) | (BSC.RTCSR & 0x80 & (V | ~BSC.RTCSRM));
 
+#ifdef HAVE_DEBUG
 	 if((BSC.RTCSR & 0x78) != 0x08)
 	 {
 	  SS_DBG(SS_DBG_WARNING | SS_DBG_SH2, "[%s] Unusual RTCSR register value: 0x%02x\n", cpu_name, BSC.RTCSR);
 	 }
+#endif
 	}
 	break;
 
@@ -1130,7 +1155,9 @@ NO_INLINE void SH7095::OnChipRegWrite(uint32 A, uint32 V)
 	{
  	 BSC.RTCNT = V & 0xFF;
 
+#ifdef HAVE_DEBUG
 	 SS_DBG(SS_DBG_WARNING | SS_DBG_SH2, "[%s] RTCNT written with: 0x%02x\n", cpu_name, BSC.RTCNT);
+#endif
 	}
 	break;
 
@@ -1139,10 +1166,12 @@ NO_INLINE void SH7095::OnChipRegWrite(uint32 A, uint32 V)
 	{
  	 BSC.RTCOR = V & 0xFF;
 
+#ifdef HAVE_DEBUG
 	 if(BSC.RTCOR != 0x36)
 	 {
 	  SS_DBG(SS_DBG_WARNING | SS_DBG_SH2, "[%s] Unusual RTCOR register value: 0x%02x\n", cpu_name, BSC.RTCOR);
 	 }
+#endif
 	}
 	break;
   }
@@ -1167,7 +1196,9 @@ NO_INLINE void SH7095::OnChipRegWrite(uint32 A, uint32 V)
   switch(A & 0xFF)
   {
    default:
+#ifdef HAVE_DEBUG
 	SS_DBG(SS_DBG_WARNING | SS_DBG_SH2, "[%s] Unhandled %zu-byte write to on-chip low register area; address=0x%08x value=0x%08x\n", cpu_name, sizeof(T), A, V);
+#endif
 	break;
 
 #if 0
@@ -1375,10 +1406,12 @@ NO_INLINE void SH7095::OnChipRegWrite(uint32 A, uint32 V)
 	if(WDT.WTCSR & 0x20)
 	 SBYCR &= 0x7F;
 
+#ifdef HAVE_DEBUG
 	if(SBYCR != 0)
 	{
 	 SS_DBG(SS_DBG_WARNING | SS_DBG_SH2, "[%s] SBYCR set to non-zero value: 0x%02x\n", cpu_name, V);
 	}
+#endif
 	break;
 
    case 0x92: case 0x93: case 0x94: case 0x95:
@@ -1421,10 +1454,12 @@ NO_INLINE void SH7095::OnChipRegWrite(uint32 A, uint32 V)
    case 0xE0:
    case 0xE1:
 	ICR = (ICR &~ mask) | ((V << shift) & mask & 0x0101);
+#ifdef HAVE_DEBUG
 	if(ICR & 0x0100)
 	{
 	 SS_DBG(SS_DBG_WARNING | SS_DBG_SH2, "[%s] NMIE=1\n", cpu_name);
 	}
+#endif
 	RecalcPendingIntPEX();
 	break;
 
@@ -1462,7 +1497,9 @@ INLINE T SH7095::OnChipRegRead(uint32 A)
   switch(A)
   {
    default:
+#ifdef HAVE_DEBUG
 	SS_DBG(SS_DBG_WARNING | SS_DBG_SH2, "[%s] Unhandled %zu-byte read from on-chip high register area; address=0x%08x\n", cpu_name, sizeof(T), A);
+#endif
 	break;
 
    //
@@ -1602,14 +1639,18 @@ INLINE T SH7095::OnChipRegRead(uint32 A)
 	ret = BSC.RTCSR;
 	BSC.RTCSRM = BSC.RTCSR & 0x80;
 
+#ifdef HAVE_DEBUG
 	SS_DBG(SS_DBG_WARNING | SS_DBG_SH2, "[%s] Read from RTCSR\n", cpu_name);
+#endif
 	break;
 
    case 0xF4:	// RTCNT
    case 0xF6:
 	ret = BSC.RTCNT;
 
+#ifdef HAVE_DEBUG
 	SS_DBG(SS_DBG_WARNING | SS_DBG_SH2, "[%s] Read from RTCNT\n", cpu_name);
+#endif
 	break;
 
    case 0xF8:	// RTCOR
@@ -1642,7 +1683,9 @@ INLINE T SH7095::OnChipRegRead(uint32 A)
   else switch(Am)
   {
    default:
+#ifdef HAVE_DEBUG
 	SS_DBG(SS_DBG_WARNING | SS_DBG_SH2, "[%s] Unhandled %zu-byte read from on-chip low register area; address=0x%08x\n", cpu_name, sizeof(T), A);
+#endif
 	break;
 
 #if 0
@@ -1950,7 +1993,9 @@ INLINE T SH7095::MemReadRT(uint32 A)
  {
   if(MDFN_UNLIKELY(A & (sizeof(T) - 1)))
   {
+#ifdef HAVE_DEBUG
    SS_DBG(SS_DBG_WARNING | SS_DBG_SH2, "[%s] Misaligned %zu-byte read from 0x%08x\n", cpu_name, sizeof(T), A);
+#endif
    A &= ~(sizeof(T) - 1);
    SetPEX(PEX_CPUADDR);
   }
@@ -1967,10 +2012,12 @@ INLINE T SH7095::MemReadRT(uint32 A)
    const uint32 pcm = PC & 0x07FFFFFF;
    bool match = (pcm >= 0x100000) && (pcm < 0x06000600 || pcm >= 0x06000A00);
 
+#ifdef HAVE_DEBUG
    if(match && !BWMIgnoreAddr[0][A & 0x1FF])
    {
     SS_DBG(SS_DBG_BIOS, "[%s] Read from BIOS area of RAM 0x%08x; PC=0x%08x\n", cpu_name, A, PC);
    }
+#endif
   }
 
   if((A & 0xC7FFFFFF) >= 0x00000200/*0x00000004*//*0x00000000*/ && (A & 0xC7FFFFFF) <= 0x000FFFFF)
@@ -2398,7 +2445,9 @@ void SH7095::SetNMI(bool level)
  //printf("NMI: %d, %d %d\n", NMILevel, level, (bool)(ICR & 0x100));
  if(NMILevel != level && level == (bool)(ICR & 0x100))
  {
+#ifdef HAVE_DEBUG
   SS_DBG(SS_DBG_WARNING | SS_DBG_SH2, "[%s] NMI - Standby=%u\n", cpu_name, Standby);
+#endif
 
   SetPEX(PEX_NMI);
 
@@ -4519,7 +4568,9 @@ INLINE void SH7095::Step(void)
 	//
 	if(MDFN_UNLIKELY(SBYCR & 0x80))
 	{
+#ifdef HAVE_DEBUG
 	 SS_DBG(SS_DBG_WARNING | SS_DBG_SH2, "[%s] Entering standby mode.\n", cpu_name);
+#endif
 
 	 for(unsigned ch = 0; ch < 2; ch++)
 	 {
@@ -4568,7 +4619,9 @@ INLINE void SH7095::Step(void)
 	}
 	else 
 	{
+#ifdef HAVE_DEBUG
 	 SS_DBG(SS_DBG_WARNING | SS_DBG_SH2, "[%s] Exiting standby mode.\n", cpu_name);
+#endif
 
 	 FRT_Reset();	// Reset again(for the counter) because we didn't stop clocking it.
 
@@ -4782,7 +4835,9 @@ INLINE void SH7095::Step(void)
 	  //	:"r"(0), "r"(0xFFFFFE88), "r"(0xA500 | 0x00)
 	  // 	: "memory");
 	  //
+#ifdef HAVE_DEBUG
 	  SS_DBG(SS_DBG_WARNING | SS_DBG_SH2, "[%s] Spurious EPENDING. IPR=0x%02x SR=0x%04x EPending=0x%08x Pipe_ID=0x%08x PC=0x%08x\n", cpu_name, ipr, SR, EPending, Pipe_ID, PC);
+#endif
 
 	  Pipe_ID = (uint16)Pipe_ID;
 	  Pipe_ID |= InstrDecodeTab[Pipe_ID] << 24;

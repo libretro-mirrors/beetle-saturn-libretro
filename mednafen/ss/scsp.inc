@@ -209,6 +209,7 @@ INLINE void SS_SCSP::RW(uint32 A, T& DBV)
  {
   if(MDFN_UNLIKELY(A >= 0x80000))
   {
+#ifdef HAVE_DEBUG
    if(IsWrite)
     SS_DBG(SS_DBG_WARNING | SS_DBG_SCSP, "[SCSP] %zu-byte write of value 0x%08x to unmapped SCSP RAM address 0x%06x\n", sizeof(T), DBV, A);
    else
@@ -216,6 +217,10 @@ INLINE void SS_SCSP::RW(uint32 A, T& DBV)
     SS_DBG(SS_DBG_WARNING | SS_DBG_SCSP, "[SCSP] %zu-byte read from unmapped SCSP RAM address 0x%06x\n", sizeof(T), A);
     DBV = 0;
    }
+#else
+   if (!IsWrite)
+      DBV = 0;
+#endif
   }
   else
   {
@@ -274,10 +279,12 @@ INLINE void SS_SCSP::RW(uint32 A, T& DBV)
 	break;
 
     case 0x05:
+#ifdef HAVE_DEBUG
 	if(SRV & 0x8000)
 	{
 	 //SS_DBG(SS_DBG_WARNING | SS_DBG_SCSP, "[SCSP] Unknown bits non-zero in slot %u, register %u\n", slotnum, (A >> 1) & 0xF);
 	}
+#endif
 
 	s->EnvRates[ENV_PHASE_RELEASE] = SRV & 0x1F;
 	s->DecayLevel = (SRV >> 5) & 0x1F;
@@ -287,10 +294,12 @@ INLINE void SS_SCSP::RW(uint32 A, T& DBV)
 
     case 0x06:
 	SRV &= 0x0FFF;
+#ifdef HAVE_DEBUG
 	if(SRV & 0x0C00)
 	{
 	 //SS_DBG(SS_DBG_WARNING | SS_DBG_SCSP, "[SCSP] Unknown bits non-zero in slot %u, register %u\n", slotnum, (A >> 1) & 0xF);
 	}
+#endif
 
 	s->TotalLevel = SRV & 0xFF;
 	s->SoundDirect = (SRV >> 8) & 0x1;
@@ -304,10 +313,12 @@ INLINE void SS_SCSP::RW(uint32 A, T& DBV)
 	break;
 
     case 0x08:
+#ifdef HAVE_DEBUG
 	if(SRV & 0x8400)
 	{
 	 //SS_DBG(SS_DBG_WARNING | SS_DBG_SCSP, "[SCSP] Unknown bits non-zero in slot %u, register %u\n", slotnum, (A >> 1) & 0xF);
 	}
+#endif
 
 	s->FreqNum = SRV & 0x7FF;
 	s->Octave = (SRV >> 11) & 0xF;
@@ -324,10 +335,12 @@ INLINE void SS_SCSP::RW(uint32 A, T& DBV)
 
     case 0x0A:
 	SRV &= 0x00FF;
+#ifdef HAVE_DEBUG
 	if(SRV & 0x0080)
 	{
 	 //SS_DBG(SS_DBG_WARNING | SS_DBG_SCSP, "[SCSP] Unknown bits non-zero in slot %u, register %u\n", slotnum, (A >> 1) & 0xF);
 	}
+#endif
 	s->ToDSPLevel = SRV & 0x7;
 	s->ToDSPSelect = (SRV >> 3) & 0xF;
 	break;
@@ -776,6 +789,7 @@ INLINE void SS_SCSP::RW(uint32 A, T& DBV)
   return;
  }
 
+#ifdef HAVE_DEBUG
  if(IsWrite)
   SS_DBG(SS_DBG_WARNING | SS_DBG_SCSP, "[SCSP] Unknown %zu-byte write of value 0x%08x to address 0x%08x\n", sizeof(T), DBV, A);
  else
@@ -783,6 +797,10 @@ INLINE void SS_SCSP::RW(uint32 A, T& DBV)
   SS_DBG(SS_DBG_WARNING | SS_DBG_SCSP, "[SCSP] Unknown %zu-byte read from address 0x%08x\n", sizeof(T), A);
   DBV = 0;
  }
+#else
+ if (!IsWrite)
+    DBV = 0;
+#endif
 }
 
 
@@ -1084,7 +1102,7 @@ INLINE void SS_SCSP::RunDSP(void)
   const bool TWT = (instr >> 55) & 1;
   const unsigned TEMPReadAddr = ((instr >> 56) + DSP.MDEC_CT) & 0x7F;
 
-#if 0
+#ifdef HAVE_DEBUG
   if(!(step & 1) && (MWT || MRT))
    SS_DBG(SS_DBG_WARNING | SS_DBG_SCSP, "[SCSP] Memory access requested at even DSP step %u; 0x%016llx\n", step, instr);
 
