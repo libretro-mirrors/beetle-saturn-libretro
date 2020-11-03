@@ -23,7 +23,7 @@
 #include "../MemoryStream.h"
 
 #include "CDAccess.h"
-#include "chd.h"
+#include <libchdr/chd.h>
 
 struct CHDFILE_TRACK_INFO
 {
