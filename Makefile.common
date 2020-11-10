@@ -9,8 +9,7 @@ CDROM_DIR    := $(MEDNAFEN_DIR)/cdrom
 
 INCFLAGS := -I$(CORE_DIR) -I$(MEDNAFEN_DIR) -I$(MEDNAFEN_DIR)/include -I$(MEDNAFEN_DIR)/intl -I$(MEDNAFEN_DIR)/hw_sound -I$(MEDNAFEN_DIR)/hw_cpu -I$(MEDNAFEN_DIR)/hw_misc -I$(LIBRETRO_DIR)/include
 ZLIB_INCFLAGS = -I$(DEPS_DIR)/zlib-1.2.11
-
-SOURCES_C += \
+ZLIB_SOURCES_C = \
 		$(DEPS_DIR)/zlib-1.2.11/adler32.c \
 		$(DEPS_DIR)/zlib-1.2.11/compress.c \
 		$(DEPS_DIR)/zlib-1.2.11/crc32.c \
@@ -25,6 +24,14 @@ SOURCES_C += \
 		$(DEPS_DIR)/zlib-1.2.11/trees.c \
 		$(DEPS_DIR)/zlib-1.2.11/uncompr.c \
 		$(DEPS_DIR)/zlib-1.2.11/zutil.c
+
+    ifeq ($(SYSTEM_ZLIB), 1)
+       INCFLAGS += $(shell pkg-config --cflags zlib)
+       LIBS += $(shell pkg-config --libs zlib)
+    else
+       INCFLAGS += $(ZLIB_INCFLAGS)
+       SOURCES_C += $(ZLIB_SOURCES_C)
+    endif
 
 ifeq ($(HAVE_GRIFFIN),1)
 SOURCES_CXX += beetle_ss_griffin.cpp
