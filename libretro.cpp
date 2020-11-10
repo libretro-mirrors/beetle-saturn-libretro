@@ -34,8 +34,6 @@ static INLINE bool DBG_NeedCPUHooks(void) { return false; } // <-- replaces debu
 
 #include <bitset>
 
-#include <zlib.h>
-
 struct retro_perf_callback perf_cb;
 retro_get_cpu_features_t perf_get_cpu_features_cb = NULL;
 retro_log_printf_t log_cb;
