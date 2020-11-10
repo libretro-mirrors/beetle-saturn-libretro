@@ -25,14 +25,6 @@ ZLIB_SOURCES_C = \
 		$(DEPS_DIR)/zlib-1.2.11/uncompr.c \
 		$(DEPS_DIR)/zlib-1.2.11/zutil.c
 
-    ifeq ($(SYSTEM_ZLIB), 1)
-       INCFLAGS += $(shell pkg-config --cflags zlib)
-       LIBS += $(shell pkg-config --libs zlib)
-    else
-       INCFLAGS += $(ZLIB_INCFLAGS)
-       SOURCES_C += $(ZLIB_SOURCES_C)
-    endif
-
 ifeq ($(HAVE_GRIFFIN),1)
 SOURCES_CXX += beetle_ss_griffin.cpp
 
