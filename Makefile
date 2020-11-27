@@ -116,7 +116,7 @@ else ifneq (,$(findstring ios,$(platform)))
    fpic := -fPIC
    SHARED := -dynamiclib
    LDFLAGS += $(PTHREAD_FLAGS)
-   FLAGS += $(PTHREAD_FLAGS)
+   FLAGS += $(PTHREAD_FLAGS)  -DHAVE_UNISTD_H
    ifeq ($(IOSSDK),)
       IOSSDK := $(shell xcrun -sdk iphoneos -show-sdk-path)
    endif
@@ -146,6 +146,7 @@ else ifeq ($(platform), tvos-arm64)
    TARGET := $(TARGET_NAME)_libretro_tvos.dylib
    fpic := -fPIC
    SHARED := -dynamiclib
+   FLAGS += -DHAVE_UNISTD_H
 
 ifeq ($(IOSSDK),)
    IOSSDK := $(shell xcodebuild -version -sdk appletvos Path)
