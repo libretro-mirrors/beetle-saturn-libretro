@@ -2,7 +2,7 @@
 /* Mednafen Sega Saturn Emulation Module                                      */
 /******************************************************************************/
 /* scu.inc - SCU Emulation
-**  Copyright (C) 2015-2018 Mednafen Team
+**  Copyright (C) 2015-2019 Mednafen Team
 **
 ** This program is free software; you can redistribute it and/or
 ** modify it under the terms of the GNU General Public License
@@ -166,6 +166,7 @@ static struct DMALevelS
 static sscpu_timestamp_t SCU_DMA_TimeCounter;
 static sscpu_timestamp_t SCU_DMA_RunUntil;
 static int32 SCU_DMA_ReadOverhead;	// range -whatever to 0.
+static uint32 SCU_DMA_SDRAM_Slowdown_Counter;
 
 static uint32 SCU_DMA_VDP1WriteIgnoreKludge;
 
@@ -179,6 +180,8 @@ static uint32 IPending;
 static uint32 IMask;
 
 static uint32 ABusIProhibit;
+static uint32 ASR0, ASR1;
+static uint8 AREF;
 static bool RSEL;
 
 static uint8 ILevel, IVec;
@@ -494,6 +497,18 @@ static INLINE void SCU_RegRW_DB(uint32 A, uint32* DB)
 	 ABusIProhibit = 0; //&= ~IAsserted;
 	 ABusIRQCheck();
 	}
+	break;
+
+   case 0xB0:
+	ASR0 = (ASR0 &~ mask) | (*DB & mask & 0xFFFDFFFD);
+	break;
+
+   case 0xB4:
+	ASR1 = (ASR1 &~ mask) | (*DB & mask & 0xF00DFFFD);
+	break;
+
+   case 0xB8:
+	AREF = (AREF &~ mask) | (*DB & mask & 0x1F);
 	break;
 
    case 0xC4:
@@ -817,6 +832,9 @@ static INLINE void BBusRW_DB(uint32 A, uint16* DB, int32* time_thing, int32* dma
 
   if(IsWrite)
   {
+   if(time_thing != NULL)
+    VDP1::Write_CheckDrawSlowdown(A, *time_thing);
+
    if(sizeof(T) == 1)
     VDP1::Write8_DB(A, *DB);
    else
@@ -824,6 +842,9 @@ static INLINE void BBusRW_DB(uint32 A, uint16* DB, int32* time_thing, int32* dma
   }
   else
   {
+   if(time_thing != NULL)
+    VDP1::Read_CheckDrawSlowdown(A, *time_thing);
+
    *DB = VDP1::Read16_DB(A);
   }
 
@@ -841,6 +862,8 @@ static INLINE void BBusRW_DB(uint32 A, uint16* DB, int32* time_thing, int32* dma
   if(dma_time_thing != NULL)
   {
    *dma_time_thing -= 1;
+   //if(A & 0x00100000)
+   // *dma_time_thing -= 1;
   }
 
   if(time_thing != NULL)
@@ -938,13 +961,38 @@ static INLINE void ABusRW_DB(uint32 A, uint16* DB, int32* time_thing, int32* dma
  //
  if(A >= 0x02000000 && A <= 0x04FFFFFF)
  {
-  // [(bool)(A & 0x04000000)]
+  {
+   const unsigned buscfg = ASR0 >> ((A & 0x04000000) ? 0 : 16);
 
-  if(sh2_dma_time_thing != NULL)
-   *sh2_dma_time_thing -= 1;	// TODO
+   if(time_thing != NULL)
+   {
+    if(!IsWrite && ((buscfg >> 15) & 0x1))
+    {
+     // TODO/FIXME
+     *time_thing += 2;
+    }
+    else
+    {
+     if(!SH32 || !((buscfg >> 2) & 0x3))
+      *time_thing += 5 + ((buscfg >> 4) & 0xF) + ((buscfg >> (13 + IsWrite)) & 1);
+     else
+      *time_thing += 2 + ((buscfg >> 8) & 0xF);
+    }
+   }
 
-  if(dma_time_thing != NULL)
-   *dma_time_thing -= 1;	// TODO
+   // TODO: SCU seems to have its own internal write buffering...or something else complex going on, that complicates
+   // getting the SH-2 DMA timing right. 
+   if(sh2_dma_time_thing != NULL)
+    *sh2_dma_time_thing -= 1;
+
+   if(dma_time_thing != NULL)
+   {
+    if((buscfg >> 2) & 0x3)
+     *dma_time_thing -= 2 + ((buscfg >> 8) & 0xF);
+    else
+     *dma_time_thing -= 5 + ((buscfg >> 4) & 0xF) + ((buscfg >> (13 + IsWrite)) & 1);
+   }
+  }
 
   if(IsWrite)
   {
@@ -1208,6 +1256,16 @@ static uint32 DMA_ReadBBus(uint32 offset)
 
 static uint32 DMA_ReadCBus(uint32 offset)
 {
+ //
+ // TODO: Determine the nature of this slowdown/overhead.
+ //
+ SCU_DMA_SDRAM_Slowdown_Counter++;
+ if(SCU_DMA_SDRAM_Slowdown_Counter >= 31)
+ {
+  SCU_DMA_SDRAM_Slowdown_Counter = 0;
+  SCU_DMA_ReadOverhead -= 6;
+ }
+
  return ne16_rbo_be<uint32>(WorkRAMH, offset & 0xFFFFC);
 }
 
@@ -1621,7 +1679,7 @@ static NO_INLINE void ForceDMAFinish(void)
    continue;
 
 #ifdef HAVE_DEBUG
-   SS_DBG(SS_DBG_WARNING | SS_DBG_SCU, "[SCU] Forcing hacky early DMA level %d completion.\n", level);
+  SS_DBG(SS_DBG_WARNING | SS_DBG_SCU, "[SCU] Forcing hacky early DMA level %d completion.\n", level);
 #endif
 
   if(DMALevel[level].Active > 0)
@@ -1755,7 +1813,7 @@ void DSP_Init(void)
 
 void DSP_FinishPRAMDMA(void)
 {
- //SS_DBG(SS_DBG_SCU_DSP, "[SCU] Finishing %u-count DMA to program RAM; PC=0x%02x, TOP=0x%02x\n", DSP.PRAMDMABufCount, DSP.PC, DSP.TOP);
+ SS_DBG(SS_DBG_SCU_DSP, "[SCU] Finishing %u-count DMA to program RAM; PC=0x%02x, TOP=0x%02x\n", DSP.PRAMDMABufCount, DSP.PC, DSP.TOP);
 
  if(DSP.T0_Until < DSP.CycleCounter)
   DSP.CycleCounter = DSP.T0_Until &~ 1;
@@ -1874,8 +1932,8 @@ static NO_INLINE NO_CLONE void DMAInstr(void)
    return;
   }
 
-  //if(drw & 0x4)
-  // SS_DBG(SS_DBG_WARNING | SS_DBG_SCU | SS_DBG_SCU_DSP, "[SCU] DSP DMA from 0x%08x to %s --- Instr=0x%08x, Next_Instr=0x%08x, PC=0x%02x\n", addr, ((drw == 0x4) ? "program RAM" : "unknown"), instr, (unsigned)(DSP.NextInstr >> 32), DSP.PC);
+  if(drw & 0x4)
+   SS_DBG(SS_DBG_WARNING | SS_DBG_SCU | SS_DBG_SCU_DSP, "[SCU] DSP DMA from 0x%08x to %s --- Instr=0x%08x, Next_Instr=0x%08x, PC=0x%02x\n", addr, ((drw == 0x4) ? "program RAM" : "unknown"), instr, (unsigned)(DSP.NextInstr >> 32), DSP.PC);
 
   DSP.PRAMDMABufCount = 0;
 
@@ -1929,7 +1987,7 @@ static NO_INLINE NO_CLONE void DMAInstr(void)
  }
 }
 
-extern void (*const DSP_DMAFuncTable[2][8][8])(void) =
+MDFN_HIDE extern void (*const DSP_DMAFuncTable[2][8][8])(void) =
 {
  #include "scu_dsp_dmatab.inc"
 };
@@ -1955,8 +2013,28 @@ void SCU_Reset(bool powering_up)
  IMask = 0xBFFF;
  IPending = 0;
  ABusIProhibit = 0;
+ ASR0 = 0;
+ ASR1 = 0;
+ AREF = 0;
  RSEL = 0;
+ //
+ //
+ if(powering_up)
+ {
+  // TODO: check if only power-on, or reset too.
+  Timer0_Counter = 0;
+  Timer0_Compare = 0;
+  Timer0_Met = false;
 
+  Timer1_Reload = 0;
+  Timer1_Counter = 0;
+  Timer1_Mode = 0;
+  Timer1_Met = false;
+
+  Timer_Enable = false;
+ }
+ //
+ //
  if(powering_up)
   memset(DMALevel, 0x00, sizeof(DMALevel));
 
@@ -1972,7 +2050,7 @@ void SCU_Reset(bool powering_up)
   d.Indirect = false;
   d.ReadUpdate = false;
   d.WriteUpdate = false;
-  d.SF = 0;
+  d.SF = 0x7;
 
   d.WATable = &dma_write_tab.acb[0][0][0][0][0];
   d.ReadFunc = rftab[0];
@@ -1980,6 +2058,8 @@ void SCU_Reset(bool powering_up)
  }
  //SCU_DMA_CycleCounter = 0;
  SCU_DMA_ReadOverhead = 0;
+ 
+ SCU_DMA_SDRAM_Slowdown_Counter = 0;
 
  SCU_DMA_VDP1WriteIgnoreKludge = 0;
 
@@ -2068,7 +2148,7 @@ static MDFN_COLD void SCU_StateAction(StateMem* sm, const unsigned load, const b
   SFVAR(SCU_DMA_TimeCounter),
   SFVAR(SCU_DMA_RunUntil),
   SFVAR(SCU_DMA_ReadOverhead),
-
+  SFVAR(SCU_DMA_SDRAM_Slowdown_Counter),
   SFVAR(SCU_DMA_VDP1WriteIgnoreKludge),
 
   SFVAR(IAsserted),
@@ -2076,6 +2156,9 @@ static MDFN_COLD void SCU_StateAction(StateMem* sm, const unsigned load, const b
   SFVAR(IMask),
 
   SFVAR(ABusIProhibit),
+  SFVAR(ASR0),
+  SFVAR(ASR1),
+  SFVAR(AREF),
   SFVAR(RSEL),
 
   SFVAR(ILevel),
@@ -2150,11 +2233,22 @@ static MDFN_COLD void SCU_StateAction(StateMem* sm, const unsigned load, const b
  //
  //
  //
+ if(load)
+ {
+  // For old save states that didn't save these variables.
+  ASR0 = 0x03301FF0;
+  ASR1 = 0x10001FF0;
+  AREF = 0x13;
+  RSEL = 0x1;
+ }
 
  MDFNSS_StateAction(sm, load, data_only, StateRegs, "SCU", false);
 
  if(load)
  {
+  ILevel &= 0xF;
+  //
+  //
   for(unsigned i = 0; i < 256; i++)
    DSP.ProgRAM[i] = DSP_DecodeInstruction(DSP_ProgRAM[i]);
 
@@ -2193,7 +2287,10 @@ static MDFN_COLD void SCU_StateAction(StateMem* sm, const unsigned load, const b
     uint32 index = DMALevel_WATable[level] & 0x7FFFFFFF;
 
     if(index >= dwt_counts[which]) // || !dwt_ptrs[which][index].write_size)
-     printf("bad watable %08x %zu %08x\n", DMALevel_WATable[level], dwt_counts[which], dwt_ptrs[which][index].write_size);
+    {
+     //printf("bad watable %08x %zu %08x\n", DMALevel_WATable[level], dwt_counts[which], dwt_ptrs[which][index].write_size);
+     printf("bad watable %08x %zu\n", DMALevel_WATable[level], dwt_counts[which]);
+    }
     else
      d.WATable = dwt_ptrs[which] + index;
    }
@@ -2251,7 +2348,68 @@ uint32 SCU_GetRegister(const unsigned id, char* const special, const uint32 spec
   case SCU_GSREG_IMASK:
 	ret = IMask;
 	break;
+  //
+  //
+  //
+  case SCU_GSREG_D0MD:
+  case SCU_GSREG_D1MD:
+  case SCU_GSREG_D2MD:
+	{
+	 auto& d = DMALevel[id - SCU_GSREG_D0MD];
 
+	 ret = (d.Indirect << 24) | (d.ReadUpdate << 16) | (d.WriteUpdate << 8) | (d.SF << 0);
+	}
+	break;
+  //
+  //
+  //
+  case SCU_GSREG_ASR0_CS0:
+  case SCU_GSREG_ASR0_CS1:
+  case SCU_GSREG_ASR1_CS2:
+  case SCU_GSREG_ASR1_CSD:
+	{
+	 const unsigned v[4] = { (uint16)(ASR0 >> 16), (uint16)(ASR0 >> 0), (uint16)(ASR1 >> 16), (uint16)(ASR1 >> 0) };
+
+	 ret = v[id - SCU_GSREG_ASR0_CS0];
+
+	 if(special)
+	 {
+	  if(id == SCU_GSREG_ASR1_CS2)
+	  {
+	   trio_snprintf(special, special_len, "Width: %u-bit; Burst: len=%u; Ext wait: %s; Precharge delay: rd=%d; wr=%d; Seq read opt: %s",
+		((ret >> 0) & 1) ? 8 : 16,
+		(ret >> 2) & 0x3,
+		((ret >> 12) & 1) ? "On" : "Off",
+		(ret >> 13) & 1,
+		(ret >> 14) & 1,
+		((ret >> 15) & 1) ? "On" : "Off");
+	  }
+	  else
+	  {
+	   trio_snprintf(special, special_len, "Width: %u-bit; Norm wait: %u; Burst: len=%u, wait=%u; Ext wait: %s; Precharge delay: rd=%d; wr=%d; Seq read opt: %s",
+		((ret >> 0) & 1) ? 8 : 16,
+		(ret >> 4) & 0xF,
+		(ret >> 2) & 0x3,
+		(ret >> 8) & 0xF,
+		((ret >> 12) & 1) ? "On" : "Off",
+		(ret >> 13) & 1,
+		(ret >> 14) & 1,
+		((ret >> 15) & 1) ? "On" : "Off");
+	  }
+	 }
+	}
+	break;
+
+  case SCU_GSREG_AREF:
+	ret = AREF;
+	break;
+
+  case SCU_GSREG_RSEL:
+	ret = RSEL;
+	break;
+  //
+  //
+  //
   case SCU_GSREG_T0CNT:
 	ret = Timer0_Counter;
 	break;
@@ -2314,6 +2472,32 @@ void SCU_SetRegister(const unsigned id, const uint32 value)
   case SCU_GSREG_IMASK:
 	IMask = value & 0xBFFF;
 	break;
+  //
+  //
+  case SCU_GSREG_ASR0_CS0:
+	ASR0 = (ASR0 & 0x0000FFFF) | ((value & 0xFFFD) << 16);
+	break;
+  
+  case SCU_GSREG_ASR0_CS1:
+	ASR0 = (ASR0 & 0xFFFF0000) | ((value & 0xFFFD) <<  0);
+	break;
+
+  case SCU_GSREG_ASR1_CS2:
+	ASR1 = (ASR1 & 0x0000FFFF) | ((value & 0xF00D) << 16);
+	break;
+
+  case SCU_GSREG_ASR1_CSD:
+	ASR1 = (ASR1 & 0xFFFF0000) | ((value & 0xFFFD) <<  0);
+	break;
+
+  case SCU_GSREG_AREF:
+	AREF = value & 0x1F;
+	break;
+
+  case SCU_GSREG_RSEL:
+	RSEL = value & 0x1;
+	break;
+  //
   //
   case SCU_GSREG_T0CNT:
 	//Timer0_Counter = value & 0x1FF;

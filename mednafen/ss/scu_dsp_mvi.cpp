@@ -81,7 +81,7 @@ static NO_INLINE NO_CLONE void MVIInstr(void)
 }
 
 
-extern void (*const DSP_MVIFuncTable[2][16][128])(void) =
+MDFN_HIDE extern void (*const DSP_MVIFuncTable[2][16][128])(void) =
 {
  #include "scu_dsp_mvitab.inc"
 };

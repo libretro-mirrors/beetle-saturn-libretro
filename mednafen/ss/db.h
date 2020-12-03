@@ -2,7 +2,7 @@
 /* Mednafen Sega Saturn Emulation Module                                      */
 /******************************************************************************/
 /* db.h:
-**  Copyright (C) 2016-2017 Mednafen Team
+**  Copyright (C) 2016-2019 Mednafen Team
 **
 ** This program is free software; you can redistribute it and/or
 ** modify it under the terms of the GNU General Public License
@@ -30,6 +30,8 @@ enum
 };
 
 void DB_Lookup(const char* path, const char* sgid, const uint8* fd_id, unsigned* const region, int* const cart_type, unsigned* const cpucache_emumode);
+uint32 DB_LookupHH(const char* sgid, const uint8* fd_id);
+void DB_GetInternalDB(std::vector<GameDB_Database>* databases) MDFN_COLD;
 
 #endif
 

@@ -2,7 +2,7 @@
 /* Mednafen Sega Saturn Emulation Module                                      */
 /******************************************************************************/
 /* vdp2_render.cpp - VDP2 Rendering
-**  Copyright (C) 2016-2017 Mednafen Team
+**  Copyright (C) 2016-2019 Mednafen Team
 **
 ** This program is free software; you can redistribute it and/or
 ** modify it under the terms of the GNU General Public License
@@ -42,7 +42,7 @@ static EmulateSpecStruct* espec = NULL;
 static bool PAL;
 static bool CorrectAspect;
 static bool ShowHOverscan;
-bool DoHBlend;
+bool DoHBlend; // LibRetro: non-static for accessibility
 static int LineVisFirst, LineVisLast;
 static uint32 NextOutLine;
 static bool Clock28M;
@@ -1704,10 +1704,18 @@ static void T_DrawNBG23(const unsigned n, uint64* bgbuf, const unsigned w, const
  //
  // Note: When/If adding new kludges, check that the NT and CG fetches for the layer each occur only in one bank, to safely handle other cases may require something more complex.
  // printf("(TA_bpp == %d && n == %d && VRAM_Mode == 0x%01x && (HRes & 0x6) == 0x%01x && MDFN_de64lsb(VCPRegs[0]) == 0x%016llxULL && MDFN_de64lsb(VCPRegs[1]) == 0x%016llxULL && MDFN_de64lsb(VCPRegs[2]) == 0x%016llxULL && MDFN_de64lsb(VCPRegs[3]) == 0x%016llxULL) || \n", TA_bpp, n, VRAM_Mode, HRes & 0x6, (unsigned long long)MDFN_de64lsb(VCPRegs[0]), (unsigned long long)MDFN_de64lsb(VCPRegs[1]), (unsigned long long)MDFN_de64lsb(VCPRegs[2]), (unsigned long long)MDFN_de64lsb(VCPRegs[3]));
+ const uint32 lok_modestuff = (VRAM_Mode << 0) | ((HRes & 0x6) << 1) | (tf.PNDSize << 4) | (tf.CharSize << 5);
+ //if(HRes & 0x6)
+ // printf("(TA_bpp == %u && n == %u && lok_modestuff == 0x%02x && MDFN_de32lsb(VCPRegs[0]) == 0x%08x && MDFN_de32lsb(VCPRegs[1]) == 0x%08x && MDFN_de32lsb(VCPRegs[2]) == 0x%08x && MDFN_de32lsb(VCPRegs[3]) == 0x%08x) || \n", TA_bpp, n, lok_modestuff, MDFN_de32lsb(VCPRegs[0]), MDFN_de32lsb(VCPRegs[1]), MDFN_de32lsb(VCPRegs[2]), MDFN_de32lsb(VCPRegs[3]));
+
  if(MDFN_UNLIKELY(
   /* Akumajou Dracula X */ (TA_bpp == 4 && n == 3 && VRAM_Mode == 0x2 && (HRes & 0x6) == 0x0 && MDFN_de64lsb(VCPRegs[0]) == 0x0f0f070406060505ULL && MDFN_de64lsb(VCPRegs[1]) == 0x0f0f0f0f0f0f0f0fULL && MDFN_de64lsb(VCPRegs[2]) == 0x0f0f03000f0f0201ULL && MDFN_de64lsb(VCPRegs[3]) == 0x0f0f0f0f0f0f0f0fULL) ||
   /* Alien Trilogy      */ (TA_bpp == 4 && n == 3 && VRAM_Mode == 0x2 && (HRes & 0x6) == 0x0 && MDFN_de64lsb(VCPRegs[0]) == 0x07050f0f0f0f0606ULL && MDFN_de64lsb(VCPRegs[1]) == 0x0f0f0f0f0f0f0f0fULL && MDFN_de64lsb(VCPRegs[2]) == 0x0f0f0f0f0f0f0f0fULL && MDFN_de64lsb(VCPRegs[3]) == 0x0f0103020f0f0f0fULL) ||
   /* Daytona USA CCE    */ (TA_bpp == 4 && n == 2 && VRAM_Mode == 0x3 && (HRes & 0x6) == 0x0 && MDFN_de64lsb(VCPRegs[0]) == 0x0f0f0f0f00000404ULL && MDFN_de64lsb(VCPRegs[1]) == 0x0f0f0f060f0f0f0fULL && MDFN_de64lsb(VCPRegs[2]) == 0x0f0f0f0f0505070fULL && MDFN_de64lsb(VCPRegs[3]) == 0x0f0f03020f010f00ULL) ||
+  /* Fighters Megamix   */ (TA_bpp == 4           && lok_modestuff == 0x17 && MDFN_de32lsb(VCPRegs[0]) == 0x0e0f0706 && MDFN_de32lsb(VCPRegs[1]) == 0x05050404 && MDFN_de32lsb(VCPRegs[2]) == 0x03020100 && MDFN_de32lsb(VCPRegs[3]) == 0x0f0f0f0f) ||
+  /* Fighters Megamix   */ (TA_bpp == 4 && n == 2 && lok_modestuff == 0x17 && MDFN_de32lsb(VCPRegs[0]) == 0x0e0e0e06 && MDFN_de32lsb(VCPRegs[1]) == 0x0e0e0404 && MDFN_de32lsb(VCPRegs[2]) == 0x0e0e0200 && MDFN_de32lsb(VCPRegs[3]) == 0x0e0e0e0e) ||
+  /* Fighters Megamix   */ (TA_bpp == 4 && n == 2 && lok_modestuff == 0x17 && MDFN_de32lsb(VCPRegs[0]) == 0x0f050506 && MDFN_de32lsb(VCPRegs[1]) == 0x0f0f0f04 && MDFN_de32lsb(VCPRegs[2]) == 0x0f020100 && MDFN_de32lsb(VCPRegs[3]) == 0x0f0f0f0f) ||
+  /* Fighters Megamix   */ (TA_bpp == 4 && n == 2 && lok_modestuff == 0x17 && MDFN_de32lsb(VCPRegs[0]) == 0x0e0f0f06 && MDFN_de32lsb(VCPRegs[1]) == 0x0e050504 && MDFN_de32lsb(VCPRegs[2]) == 0x0e020100 && MDFN_de32lsb(VCPRegs[3]) == 0x0e0f0f0f) ||
   0))
  {
   for(unsigned i = 0; i < 8; i++)
@@ -3130,6 +3138,9 @@ enum
  COMMAND_DRAW_LINE,
 
  COMMAND_SET_LEM,
+
+ COMMAND_SET_BUSYWAIT,
+
  COMMAND_RESET,
  COMMAND_EXIT
 };
@@ -3145,7 +3156,8 @@ static std::array<WQ_Entry, 0x80000> WQ;
 static size_t WQ_ReadPos, WQ_WritePos;
 static std::atomic_int_least32_t WQ_InCount;
 static std::atomic_int_least32_t DrawCounter;
-static int32 LastDrawnLine;
+static bool DoBusyWait;
+static bool DoWakeupIfNecessary;
 
 static INLINE void WWQ(uint16 command, uint32 arg32 = 0, uint16 arg16 = 0)
 {
@@ -3162,7 +3174,7 @@ static INLINE void WWQ(uint16 command, uint32 arg32 = 0, uint16 arg16 = 0)
  WQ_InCount.fetch_add(1, std::memory_order_release);
 }
 
-static void RThreadEntry(void* data)
+static void/*int*/ RThreadEntry(void* data)
 {
  bool Running = true;
 
@@ -3170,7 +3182,7 @@ static void RThreadEntry(void* data)
  {
   while(MDFN_UNLIKELY(WQ_InCount.load(std::memory_order_acquire) == 0))
   {
-   if(LastDrawnLine < 192)
+   if(!DoBusyWait)
     retro_sleep(1);
    else
    {
@@ -3203,7 +3215,6 @@ static void RThreadEntry(void* data)
 	//for(unsigned i = 0; i < 2; i++)
 	DrawLine((uint16)wqe->Arg32, wqe->Arg32 >> 16, wqe->Arg16);
 	//
-	LastDrawnLine = (uint16)wqe->Arg32;
 	DrawCounter.fetch_sub(1, std::memory_order_release);
 	break;
 
@@ -3213,6 +3224,10 @@ static void RThreadEntry(void* data)
 
    case COMMAND_SET_LEM:
 	UserLayerEnableMask = wqe->Arg32;
+	break;
+
+   case COMMAND_SET_BUSYWAIT:
+	DoBusyWait = wqe->Arg32;
 	break;
 
    case COMMAND_EXIT:
@@ -3225,6 +3240,8 @@ static void RThreadEntry(void* data)
   WQ_ReadPos = (WQ_ReadPos + 1) % WQ.size();
   WQ_InCount.fetch_sub(1, std::memory_order_release);
  }
+
+ // return 0; // Libretro fix
 }
 
 
@@ -3233,13 +3250,13 @@ static void RThreadEntry(void* data)
 //
 //
 //
-void VDP2REND_Init(const bool IsPAL)
+void VDP2REND_Init(const bool IsPAL, const uint64 affinity)
 {
  PAL = IsPAL;
  VisibleLines = PAL ? 288 : 240;
  //
  UserLayerEnableMask = ~0U;
-
+ Clock28M = false;
  //
  WQ_ReadPos = 0;
  WQ_WritePos = 0;
@@ -3350,7 +3367,7 @@ void VDP2REND_EndFrame(void)
 
  if(NextOutLine < VisibleLines)
  {
-  //printf("OutLineCounter(%d) < VisibleLines(%d)\n", NextOutLine, VisibleLines);
+  //printf("OutLineCounter(%d) < VisibleLines(%d)\n", OutLineCounter, VisibleLines);
   do
   {
    uint16 out_line = NextOutLine;

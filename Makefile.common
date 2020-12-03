@@ -31,6 +31,8 @@ SOURCES_CXX += beetle_ss_griffin.cpp
 SOURCES_C += beetle_ss_griffin_c.c
 endif
 
+FLAGS += -DLSB_FIRST
+
 ifeq ($(NEED_THREADING), 1)
    FLAGS += -DWANT_THREADING -DHAVE_THREADS
 endif

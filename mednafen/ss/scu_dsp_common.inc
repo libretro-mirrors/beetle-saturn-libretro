@@ -121,7 +121,7 @@ struct DSPS
 //   X Op: bits 23-25	- * 8
 //   Y Op: bits 17-19	- * 8
 //  D1 Op: bits 12-13	- * 4
-extern void (*const DSP_GenFuncTable[2][16][8][8][4])(void);
+MDFN_HIDE extern void (*const DSP_GenFuncTable[2][16][8][8][4])(void);
 
 // Hold/Format/Direction: bits 12-14
 //  Hold: bit 14
@@ -129,27 +129,27 @@ extern void (*const DSP_GenFuncTable[2][16][8][8][4])(void);
 //  Direction: bit 12
 // RAM: bits 8-10
 //
-extern void (*const DSP_DMAFuncTable[2][8][8])(void);
+MDFN_HIDE extern void (*const DSP_DMAFuncTable[2][8][8])(void);
 
 //
 // Dest: bits 26-29
 // Condition: bits 19-25
 //
-extern void (*const DSP_MVIFuncTable[2][16][128])(void);
+MDFN_HIDE extern void (*const DSP_MVIFuncTable[2][16][128])(void);
 
 //
 // Condition: bits 19-25
 //
-extern void (*const DSP_JMPFuncTable[2][128])(void);
+MDFN_HIDE extern void (*const DSP_JMPFuncTable[2][128])(void);
 
 
 //
 // LPS, BTM, END, ENDI(bits 29-31 = 0x7)
 // bits 27-28
 //
-extern void (*const DSP_MiscFuncTable[2][4])(void);
+MDFN_HIDE extern void (*const DSP_MiscFuncTable[2][4])(void);
 
-extern DSPS DSP;
+MDFN_HIDE extern DSPS DSP;
 
 template<bool looped = false>
 static INLINE uint64 DSP_DecodeInstruction(const uint32 instr)

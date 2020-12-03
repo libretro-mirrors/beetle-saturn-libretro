@@ -1002,7 +1002,7 @@ static bool FLS_Run(void)
     FLS_READ(&FLS.record[0], 1);
     if(!FLS.record[0])
      continue;
-    FLS_READ(&FLS.record[1], FLS.record[0] - 1);
+    FLS_READ(&FLS.record[1], (unsigned)(FLS.record[0] - 1));
 
     if(FLS.finfo_offs < 256)
     {
@@ -1262,10 +1262,97 @@ static INLINE void RecalcIRQOut(void)
 
 void CDB_Reset(bool powering_up)
 {
+ if(powering_up)
+ {
+  //
+  //
+  //
+  GetSecLen = 0;
+  PutSecLen = 0;
+
+  AuthDiscType = 0;
+
+  HIRQ = 0;
+  HIRQ_Mask = 0;
+  memset(CData, 0x00, sizeof(CData));
+  memset(Results, 0x00, sizeof(Results));
+  CommandPending = false;
+  SWResetHIRQDeferred = 0;
+  SWResetPending = false;
+
+  CDDevConn = 0;
+  LastBufDest = 0;
+
+  memset(Buffers, 0x00, sizeof(Buffers));
+  memset(Filters, 0x00, sizeof(Filters));
+  memset(Partitions, 0x00, sizeof(Partitions));
+  FirstFreeBuf = 0;
+  FreeBufferCount = 0;
+  memset(&FADSearch, 0x00, sizeof(FADSearch));
+
+  CalcedActualSize = 0;
+  //static bool TrayOpen;
+  //static CDInterface* Cur_CDIF;
+  //static CDUtility::TOC toc;
+  //static sscpu_timestamp_t lastts;
+  CommandPhase = 0;
+  CommandClockCounter = 0;
+  //static uint32 CDB_ClockRatio;
+
+  memset(&CTR, 0x00, sizeof(CTR));
+  memset(&DT, 0x00, sizeof(DT));
+
+  StandbyTime = 0;
+  ECCEnable = 0;
+  RetryCount = 0;
+  ResultsRead = 0;
+  SeekIndexPhase = 0;
+  CurSector = 0;
+  DrivePhase = 0;
+  DriveCounter = 0;
+  PeriodicIdleCounter = 0;
+
+  PlayRepeatCounter = 0;
+  CurPlayRepeat = 0;
+
+  CurPlayStart = 0;
+  CurPlayEnd = 0;
+  PlayEndIRQType = 0;
+
+  PlayCmdStartPos = 0;
+  PlayCmdEndPos = 0;
+  PlayCmdRepCnt = 0;
+
+  memset(CDDABuf, 0x00, sizeof(CDDABuf));
+  CDDABuf_RP = 0;
+  CDDABuf_WP = 0;
+  CDDABuf_Count = 0;
+
+  memset(SecPreBuf, 0x00, sizeof(SecPreBuf));
+  SecPreBuf_In = 0;
+  memset(TOC_Buffer, 0x00, sizeof(TOC_Buffer));
+
+  memset(&CurPosInfo, 0x00, sizeof(CurPosInfo));
+  memset(SubCodeQBuf, 0x00, sizeof(SubCodeQBuf));
+  memset(SubCodeRWBuf, 0x00, sizeof(SubCodeRWBuf));
+  memset(SubQBuf, 0x00, sizeof(SubQBuf));
+  memset(SubQBuf_Safe, 0x00, sizeof(SubQBuf_Safe));
+  SubQBuf_Safe_Valid = false;
+
+  memset(FileInfo, 0x00, sizeof(FileInfo));
+  FileInfoValid = false;
+  memset(&RootDirInfo, 0x00, sizeof(RootDirInfo));
+  RootDirInfoValid = false;
+
+  memset(&FLS, 0x00, sizeof(FLS));
+ }
+ //
+ //
  HIRQ = 0;
  HIRQ_Mask = 0;
  RecalcIRQOut();
-
+ //
+ //
  CDB_ResetCD();
 }
 
@@ -1886,7 +1973,7 @@ static void Drive_Run(int64 clocks)
     else
     {
      const unsigned start_track = std::min<unsigned>(toc.last_track, std::max<unsigned>(toc.first_track, (CurPlayStart >> 8) & 0xFF));
-     const unsigned start_index = std::min<unsigned>(99, std::max<unsigned>(1, CurPlayStart & 0xFF));
+     //const unsigned start_index = std::min<unsigned>(99, std::max<unsigned>(1, CurPlayStart & 0xFF));
 
      end_met |= (CurPosInfo.tno < start_track); //|| (CurPosInfo.tno == start_track && CurPosInfo.idx < start_index);
     }

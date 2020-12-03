@@ -365,6 +365,8 @@ void SMPC_SaveNV(Stream* s)
 
 void SMPC_SetRTC(const struct tm* ht, const uint8 lang)
 {
+ RTC.ClockAccum = 0;
+
  if(!ht)
  {
   RTC.Valid = false;
@@ -403,7 +405,9 @@ void SMPC_Init(const uint8 area_code_arg, const int32 master_clock_arg)
 {
  AreaCode = area_code_arg;
  MasterClock = master_clock_arg;
+ SMPC_ClockRatio = 0;
 
+ ResetButtonPhysStatus = false;
  ResetPending = false;
  vb = false;
  vsync = false;
@@ -474,6 +478,7 @@ void SMPC_Reset(bool powering_up)
  memset(OREG, 0, sizeof(OREG));
  PendingCommand = -1;
  ExecutingCommand = -1;
+ SR = 0x00;
  SF = 0;
 
  BusBuffer = 0x00;
@@ -809,15 +814,15 @@ uint8 SMPC_Read(const sscpu_timestamp_t timestamp, uint8 A)
  	}
 #endif
 
-	ret = (OREG - 0x10)[A];
+	ret = OREG[(size_t)A - 0x10];
 	break;
 
   case 0x30:
 #ifdef HAVE_DEBUG
-   if(MDFN_UNLIKELY(ExecutingCommand >= 0))
- 	{
+	if(MDFN_UNLIKELY(ExecutingCommand >= 0))
+	{
 	 //SS_DBG(SS_DBG_WARNING | SS_DBG_SMPC, "[SMPC] SR port read while command 0x%02x is executing.\n", ExecutingCommand);
- 	}
+	}
 #endif
 
 	ret = SR;
@@ -975,7 +980,7 @@ sscpu_timestamp_t SMPC_Update(sscpu_timestamp_t timestamp)
 
  if(MDFN_UNLIKELY(timestamp < lastts))
  {
-  //SS_DBG(SS_DBG_WARNING | SS_DBG_SMPC, "[SMPC] [BUG] timestamp(%d) < lastts(%d)\n", timestamp, lastts);
+  SS_DBG(SS_DBG_WARNING | SS_DBG_SMPC, "[SMPC] [BUG] timestamp(%d) < lastts(%d)\n", timestamp, lastts);
   clocks = 0;
  }
  else

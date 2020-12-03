@@ -22,6 +22,5 @@ extern int setting_gun_crosshair;
 extern bool setting_disc_test;
 extern bool setting_multitap_port1;
 extern bool setting_multitap_port2;
-extern bool setting_midsync;
 
 #endif

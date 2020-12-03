@@ -32,6 +32,7 @@ class SH7095 final
  void Init(const bool CacheBypassHack) MDFN_COLD;
 
  void StateAction(StateMem* sm, const unsigned load, const bool data_only, const char* sname) MDFN_COLD;
+ void FixupICacheModeState(void) MDFN_COLD;
 
  void ForceInternalEventUpdates(void);
  void AdjustTS(int32 delta, bool force_set = false);
@@ -51,11 +52,17 @@ class SH7095 final
 
   if(ExtHalt)
    SetPEX(PEX_PSEUDO_EXTHALT);	// Only SetPEX() here, ClearPEX() is called in the pseudo exception handling code as necessary.
+
+  ExtHaltDMA = (ExtHaltDMA & ~1) | state;
+ }
+
+ INLINE void SetExtHaltDMAKludgeFromVDP2(bool state)
+ {
+  ExtHaltDMA = (ExtHaltDMA & ~2) | (state << 1);
  }
 
  template<unsigned which, bool EmulateICache, bool DebugMode>
  void Step(void);
-
 
  //private:
  uint32 R[16];
@@ -77,9 +84,6 @@ class SH7095 final
  sscpu_timestamp_t MA_until;
  sscpu_timestamp_t MM_until;
  sscpu_timestamp_t write_finish_timestamp;
-#if 0
- sscpu_timestamp_t WB_until[16];
-#endif
 
  INLINE void SetT(bool new_value) { SR &= ~1; SR |= new_value; }
  INLINE bool GetT(void) { return SR & 1; }
@@ -191,6 +195,8 @@ class SH7095 final
  void (MDFN_FASTCALL *MWFP8[8])(uint32 A, uint8);
  void (MDFN_FASTCALL *MWFP16[8])(uint32 A, uint16);
  void (MDFN_FASTCALL *MWFP32[8])(uint32 A, uint32);
+
+ sscpu_timestamp_t WB_until[16];
 
  //
  //
@@ -386,12 +392,11 @@ class SH7095 final
 
  void SCI_Reset(void) MDFN_COLD;
 
- const char* const cpu_name;
-
  //
  //
  //
  bool ExtHalt;
+ uint8 ExtHaltDMA;
 
  uint8 (*const ExIVecFetch)(void);
  uint8 GetPendingInt(uint8*);
@@ -547,6 +552,7 @@ class SH7095 final
  void CheckRWBreakpoints(void (*MRead)(unsigned len, uint32 addr), void (*MWrite)(unsigned len, uint32 addr)) const;
  static void Disassemble(const uint16 instr, const uint32 PC, char* buffer, uint16 (*DisPeek16)(uint32), uint32 (*DisPeek32)(uint32));
  private:
+ const char* const cpu_name;
  bool CBH_Setting;
  uint32 PC_IF, PC_ID;	// Debug-related variables.
 };

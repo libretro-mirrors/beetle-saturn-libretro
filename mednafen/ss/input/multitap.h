@@ -30,7 +30,7 @@ class IODevice_Multitap final : public IODevice
  virtual ~IODevice_Multitap() override MDFN_COLD;
 
  virtual void Power(void) override MDFN_COLD;
- virtual void StateAction(StateMem* sm, const unsigned load, const bool data_only, const char* sname_prefix) override;
+ virtual void StateAction(StateMem* sm, const unsigned load, const bool data_only, const char* sname_prefix) override MDFN_COLD;
  virtual void Draw(MDFN_Surface* surface, const MDFN_Rect& drect, const int32* lw, int ifield, float gun_x_scale, float gun_x_offs) const override;
  virtual uint8 UpdateBus(const sscpu_timestamp_t timestamp, const uint8 smpc_out, const uint8 smpc_out_asserted) override;
  virtual void LineHook(const sscpu_timestamp_t timestamp, int32 out_line, int32 div, int32 coord_adj) override;

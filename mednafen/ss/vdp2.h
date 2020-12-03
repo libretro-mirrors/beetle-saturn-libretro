@@ -29,7 +29,7 @@ uint32 Write8_DB(uint32 A, uint16 DB) MDFN_HOT;
 uint32 Write16_DB(uint32 A, uint16 DB) MDFN_HOT;
 uint16 Read16_DB(uint32 A) MDFN_HOT;
 
-void Init(const bool IsPAL) MDFN_COLD;
+void Init(const bool IsPAL, const uint64 affinity) MDFN_COLD;
 void SetGetVideoParams(MDFNGI* gi, const bool caspect, const int sls, const int sle, const bool show_h_overscan, const bool dohblend) MDFN_COLD;
 void Kill(void) MDFN_COLD;
 void StateAction(StateMem* sm, const unsigned load, const bool data_only) MDFN_COLD;
@@ -43,14 +43,14 @@ void AdjustTS(const int32 delta);
 void GetGunXTranslation(const bool clock28m, float* scale, float* offs);
 void StartFrame(EmulateSpecStruct* espec, const bool clock28m);
 
-INLINE bool GetVBOut(void) { extern bool VBOut; return VBOut; }
-INLINE bool GetHBOut(void) { extern bool HBOut; return HBOut; }
+INLINE bool GetVBOut(void) { MDFN_HIDE extern bool VBOut; return VBOut; }
+INLINE bool GetHBOut(void) { MDFN_HIDE extern bool HBOut; return HBOut; }
 
 INLINE void SetExtLatch(sscpu_timestamp_t event_timestamp, bool status)
 {
- extern bool ExLatchIn;
- extern bool ExLatchEnable;
- extern bool ExLatchPending;
+ MDFN_HIDE extern bool ExLatchIn;
+ MDFN_HIDE extern bool ExLatchEnable;
+ MDFN_HIDE extern bool ExLatchPending;
 
  if(MDFN_UNLIKELY(ExLatchIn != status))
  {
@@ -140,7 +140,7 @@ void PokeVRAM(uint32 addr, const uint8 val);
 void MakeDump(const std::string& path) MDFN_COLD;
 #endif
 
-INLINE uint32 PeekLine(void) { extern int32 VCounter; return VCounter; }
-INLINE uint32 PeekHPos(void) { extern int32 HCounter; return HCounter; }
+INLINE uint32 PeekLine(void) { MDFN_HIDE extern int32 VCounter; return VCounter; }
+INLINE uint32 PeekHPos(void) { MDFN_HIDE extern int32 HCounter; return HCounter; }
 }
 #endif

@@ -23,7 +23,7 @@
 #define __MDFN_SS_VDP2_RENDER_H
 
 
-void VDP2REND_Init(const bool IsPAL) MDFN_COLD;
+void VDP2REND_Init(const bool IsPAL, const uint64 affinity) MDFN_COLD;
 void VDP2REND_SetGetVideoParams(MDFNGI* gi, const bool caspect, const int sls, const int sle, const bool show_h_overscan, const bool dohblend) MDFN_COLD;
 void VDP2REND_Kill(void) MDFN_COLD;
 void VDP2REND_GetGunXTranslation(const bool clock28m, float* scale, float* offs);

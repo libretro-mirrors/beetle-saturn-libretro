@@ -12,4 +12,3 @@ int setting_gun_crosshair = SETTING_GUN_CROSSHAIR_CROSS;
 bool setting_disc_test = false;
 bool setting_multitap_port1;
 bool setting_multitap_port2;
-bool setting_midsync;

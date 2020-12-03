@@ -35,31 +35,31 @@ int32 CMD_Polygon(const uint16*);
 int32 CMD_Polyline(const uint16*);
 int32 CMD_Line(const uint16*);
 
-extern uint16 VRAM[0x40000];
-extern uint16 FB[2][0x20000];
-extern bool FBDrawWhich;
+MDFN_HIDE extern uint16 VRAM[0x40000];
+MDFN_HIDE extern uint16 FB[2][0x20000];
+MDFN_HIDE extern bool FBDrawWhich;
 
-extern int32 SysClipX, SysClipY;
-extern int32 UserClipX0, UserClipY0, UserClipX1, UserClipY1;
-extern int32 LocalX, LocalY;
+MDFN_HIDE extern int32 SysClipX, SysClipY;
+MDFN_HIDE extern int32 UserClipX0, UserClipY0, UserClipX1, UserClipY1;
+MDFN_HIDE extern int32 LocalX, LocalY;
 
-extern uint32 (MDFN_FASTCALL *const TexFetchTab[0x20])(uint32 x);
+MDFN_HIDE extern uint32 (MDFN_FASTCALL *const TexFetchTab[0x20])(uint32 x);
 
 enum { TVMR_8BPP   = 0x1 };
 enum { TVMR_ROTATE = 0x2 };
 enum { TVMR_HDTV   = 0x4 };
 enum { TVMR_VBE    = 0x8 };
-extern uint8 TVMR;
+MDFN_HIDE extern uint8 TVMR;
 
 enum { FBCR_FCT	   = 0x01 };	// Frame buffer change trigger
 enum { FBCR_FCM	   = 0x02 };	// Frame buffer change mode
 enum { FBCR_DIL	   = 0x04 };	// Double interlace draw line(0=even, 1=odd) (does it affect drawing to FB RAM or reading from FB RAM to VDP2?)
 enum { FBCR_DIE	   = 0x08 };	// Double interlace enable
 enum { FBCR_EOS	   = 0x10 };	// Even/Odd coordinate select(0=even, 1=odd, used with HSS)
-extern uint8 FBCR;
+MDFN_HIDE extern uint8 FBCR;
 
-extern uint8 spr_w_shift_tab[8];
-extern uint8 gouraud_lut[0x40];
+MDFN_HIDE extern uint8 spr_w_shift_tab[8];
+MDFN_HIDE extern uint8 gouraud_lut[0x40];
 
 struct GourauderTheTerrible
 {
@@ -340,7 +340,7 @@ struct line_data
  uint32 tex_base;
 };
 
-extern line_data LineSetup;
+MDFN_HIDE extern line_data LineSetup;
 
 template<bool AA, bool die, unsigned bpp8, bool MSBOn, bool UserClipEn, bool UserClipMode, bool MeshEn, bool ECD, bool SPD, bool Textured, bool GouraudEn, bool HalfFGEn, bool HalfBGEn>
 static int32 DrawLine(void)

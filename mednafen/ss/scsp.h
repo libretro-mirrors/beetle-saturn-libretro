@@ -2,7 +2,7 @@
 /* Mednafen Sega Saturn Emulation Module                                      */
 /******************************************************************************/
 /* scsp.h:
-**  Copyright (C) 2015-2017 Mednafen Team
+**  Copyright (C) 2015-2020 Mednafen Team
 **
 ** This program is free software; you can redistribute it and/or
 ** modify it under the terms of the GNU General Public License
@@ -74,12 +74,12 @@ class SS_SCSP
 
  struct Slot
  {
-  bool KeyBit;
-
   uint32 StartAddr;	// 20 bits, memory address.
   uint16 LoopStart;	// 16 bits, in samples.
   uint16 LoopEnd;	// 16 bits, in samples.
-
+  //
+  bool KeyBit;
+  //
   bool WF8Bit;
   uint8 LoopMode;
   enum
@@ -99,7 +99,7 @@ class SS_SCSP
    SOURCE_UNDEFINED = 3
   };
 
-  uint8 SBControl;
+  uint16 SBXOR;
 
   uint8 EnvRates[4];
 
@@ -109,6 +109,7 @@ class SS_SCSP
 
   uint8 KRS;
   uint8 TotalLevel;
+  bool EGBypass;	// When true, force EG output to 0(no attenuation), but TL and ALFO still have an effect
   bool SoundDirect;	// When true, bypass EG, TL, ALFO volume control
 
   bool StackWriteInhibit;
@@ -138,13 +139,15 @@ class SS_SCSP
   int16 EffectVolume[2];	// 1.14 fixed point, derived from EFSDL and EFPAN
   //
   //
-  uint32 PhaseWhacker;
+  uint32 ShortWaveMask;
+  bool ShortWave;
   uint16 CurrentAddr;
+  uint32 PhaseWhacker;
   bool InLoop;
   bool LoopSub;
   bool WFAllowAccess;
-  uint32 EnvLevel;	// 0 ... 0x3FF
   uint8 EnvPhase;	// ENV_PHASE_ATTACK ... ENV_PHASE_RELEASE (0...3)
+  uint32 EnvLevel;	// 0 ... 0x3FF
   bool EnvGCBTPrev;
 
   uint8 LFOCounter;
@@ -152,6 +155,8 @@ class SS_SCSP
  } Slots[32];
 
  uint16 EXTS[2];
+
+ void RecalcShortWaveMask(Slot* s);
 
  void RunEG(Slot* s, const unsigned key_eg_scale);
 

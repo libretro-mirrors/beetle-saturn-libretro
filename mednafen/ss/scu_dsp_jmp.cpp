@@ -35,7 +35,7 @@ static NO_INLINE NO_CLONE void JMPInstr(void)
   DSP.PC = (uint8)instr;
 }
 
-extern void (*const DSP_JMPFuncTable[2][128])(void) =
+MDFN_HIDE extern void (*const DSP_JMPFuncTable[2][128])(void) =
 {
  #include "scu_dsp_jmptab.inc"
 };

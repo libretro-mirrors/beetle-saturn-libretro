@@ -2,7 +2,7 @@
 /* Mednafen Sega Saturn Emulation Module                                      */
 /******************************************************************************/
 /* ss.h:
-**  Copyright (C) 2015-2016 Mednafen Team
+**  Copyright (C) 2015-2019 Mednafen Team
 **
 ** This program is free software; you can redistribute it and/or
 ** modify it under the terms of the GNU General Public License
@@ -62,10 +62,22 @@
   SS_DBG_SCSP 	   = (1U << 28),
   SS_DBG_SCSP_REGW = (1U << 29),
  };
-#ifdef MDFN_SS_DEV_BUILD
- extern uint32 ss_dbg_mask;
+#ifdef MDFN_ENABLE_DEV_BUILD
+ MDFN_HIDE extern uint32 ss_dbg_mask;
 #else
  enum { ss_dbg_mask = 0 };
+#endif
+
+#if 1
+ enum
+ {
+  HORRIBLEHACK_NOSH2DMALINE106	 = (1U << 0),
+  HORRIBLEHACK_NOSH2DMAPENALTY   = (1U << 1),
+  HORRIBLEHACK_VDP1VRAM5000FIX	 = (1U << 2),
+  HORRIBLEHACK_VDP1RWDRAWSLOWDOWN= (1U << 3),
+  HORRIBLEHACK_VDP1INSTANT	 = (1U << 4),
+ };
+ MDFN_HIDE extern uint32 ss_horrible_hacks;
 #endif
 
  static INLINE void SS_DBG_Dummy(const char* format, ...) { }
@@ -103,9 +115,9 @@
 
  class SH7095;
 
- extern SH7095 CPU[2];	// for smpc.cpp
+ MDFN_HIDE extern SH7095 CPU[2];	// for smpc.cpp
 
- extern int32 SH7095_mem_timestamp;
+ MDFN_HIDE extern int32 SH7095_mem_timestamp;
 
  void SS_RequestMLExit(void);
  void ForceEventUpdates(const sscpu_timestamp_t timestamp);
@@ -137,7 +149,7 @@
   SS_EVENT__COUNT,
  };
 
-typedef sscpu_timestamp_t (*ss_event_handler)(const sscpu_timestamp_t timestamp);
+ typedef sscpu_timestamp_t (*ss_event_handler)(const sscpu_timestamp_t timestamp);
 
  struct event_list_entry
  {
@@ -147,7 +159,7 @@ typedef sscpu_timestamp_t (*ss_event_handler)(const sscpu_timestamp_t timestamp)
   ss_event_handler event_handler;
  };
 
- extern event_list_entry events[SS_EVENT__COUNT];
+ MDFN_HIDE extern event_list_entry events[SS_EVENT__COUNT];
 
  #define SS_EVENT_DISABLED_TS			0x40000000
  void SS_SetEventNT(event_list_entry* e, const sscpu_timestamp_t next_timestamp);

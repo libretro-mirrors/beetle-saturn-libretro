@@ -81,6 +81,6 @@ void SMPC_SetVBVS(sscpu_timestamp_t event_timestamp, bool vb_status, bool vsync_
 
 void SMPC_LineHook(sscpu_timestamp_t event_timestamp, int32 out_line, int32 div, int32 coord_adj);
 
-extern const std::vector<InputPortInfoStruct> SMPC_PortInfo;
+MDFN_HIDE extern const std::vector<InputPortInfoStruct> SMPC_PortInfo;
 
 #endif

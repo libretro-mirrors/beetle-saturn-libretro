@@ -104,6 +104,9 @@ void M68K::StateAction(StateMem* sm, const unsigned load, const bool data_only, 
  };
 
  MDFNSS_StateAction(sm, load, data_only, StateRegs, sname, false);
+
+ if(load)
+  XPending &= XPENDING_MASK__VALID;
 }
 
 void M68K::LoadOldState(const uint8* osm)
@@ -2263,6 +2266,8 @@ void M68K::Reset(bool powering_up)
 {
  if(powering_up)
  {
+  PC = 0;
+
   for(unsigned i = 0; i < 8; i++)
    D[i] = 0;
 
@@ -2273,7 +2278,7 @@ void M68K::Reset(bool powering_up)
 
   SetSR(0);
  }
- XPending = (XPending & ~XPENDING_MASK_STOPPED) | XPENDING_MASK_RESET;
+ XPending = (XPending & ~(XPENDING_MASK_STOPPED | XPENDING_MASK_NMI)) | XPENDING_MASK_RESET;
 }
 
 

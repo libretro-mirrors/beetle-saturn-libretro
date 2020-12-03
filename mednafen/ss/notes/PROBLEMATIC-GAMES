@@ -5,15 +5,23 @@ cache line replacement(or something roughly similar) :(
 Area 51 (USA/Europe)
 Clockwork Knight 2 (USA)
 DeJig - Lassen Art Collection (Japan)
+Dragon Force II (Japan) - Battles(broken math)
 Father Christmas (Japan)
+Fighting Vipers (Japan/Europe/USA)
 Golden Axe The Duel (Japan/Europe/USA)
+House of the Dead (Japan)
+Linkle Liver Story (Japan)
 Sega Saturn Choice Cuts (USA) - Broken FMV playback(except intro FMV).
 Segakore Sega Bible Mogitate SegaSaturn - Zero Divide demo, especially.
 Spot Goes to Hollywood (USA/Japan)
 Street Fighter Zero (Japan)
 Street Fighter Zero 3 (Japan)
 Super Puzzle Fighter II Turbo (USA)
+Theme Park (Europe)
+Virtua Fighter Kids (Java Tea Original)
 Virtual Volleyball (Japan)
+WipEout (Japan/Europe/USA)
+World Series Baseball (USA/Japan)
 
 
 -------------------------------------------------------------------------------
@@ -35,6 +43,7 @@ Device Reign
 Real Sound
 Resident Evil
 SD Gundam G Century S
+Shienryu
 Super Tempo
 Tennis Arena
 Tilk
@@ -61,6 +70,14 @@ Virtua Cop 2
 
 
 -------------------------------------------------------------------------------
+Rely on SH-2 CPU writes/reads to/from VDP1 RAM slowing VDP1 command execution
+-------------------------------------------------------------------------------
+Arcade's Greatest Hits - Credits
+Burning Rangers - Victim transfer text
+Whizz - Gameplay
+
+
+-------------------------------------------------------------------------------
 Rely on VDP1 register writes via SCU DMA being ignored under certain conditions
 -------------------------------------------------------------------------------
 GunBlaze-S - (overly large DMA that exceeds the end of VRAM, would
@@ -83,8 +100,11 @@ Panzer Dragoon - FMV subtitles.
 Rely on illegal VDP2 VRAM cycle pattern settings
 -------------------------------------------------------------------------------
 Akumajou Dracula X
+Alien Trilogy
 Capcom Generation 5 - Art gallery.
 Daytona USA CCE
+Fighters Megamix
+Shichuu Suimei Pitagraph
 
 
 -------------------------------------------------------------------------------
@@ -139,9 +159,12 @@ Primal Rage
 
 
 -------------------------------------------------------------------------------
-Rely on SCSP 18-bit DAC enable
+Rely on rarely-used SCSP features
 -------------------------------------------------------------------------------
-Daytona USA
+Daytona USA - 18-bit DAC enable
+
+Sega Ages: OutRun - Enables short waveform mode for the engine sound effect
+	at high engine speeds, adding a metallic roughness to the sound.
 
 
 -------------------------------------------------------------------------------

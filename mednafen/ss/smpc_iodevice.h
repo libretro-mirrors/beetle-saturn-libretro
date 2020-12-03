@@ -38,7 +38,7 @@ class IODevice
  //
  virtual void UpdateInput(const uint8* data, const int32 time_elapsed);
  virtual void UpdateOutput(uint8* data);
- virtual void StateAction(StateMem* sm, const unsigned load, const bool data_only, const char* sname_prefix);
+ virtual void StateAction(StateMem* sm, const unsigned load, const bool data_only, const char* sname_prefix) MDFN_COLD;
 
  virtual void Draw(MDFN_Surface* surface, const MDFN_Rect& drect, const int32* lw, int ifield, float gun_x_scale, float gun_x_offs) const;
 

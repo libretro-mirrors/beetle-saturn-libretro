@@ -30,8 +30,8 @@ static INLINE bool DBG_NeedCPUHooks(void) { return false; } // <-- replaces debu
 #include <zlib.h>
 
 #define MEDNAFEN_CORE_NAME                   "Beetle Saturn"
-#define MEDNAFEN_CORE_VERSION                "v1.22.2"
-#define MEDNAFEN_CORE_VERSION_NUMERIC        0x00102202
+#define MEDNAFEN_CORE_VERSION                "v1.24.3"
+#define MEDNAFEN_CORE_VERSION_NUMERIC        0x00102403
 #define MEDNAFEN_CORE_EXTENSIONS             "cue|ccd|chd|toc|m3u"
 #define MEDNAFEN_CORE_TIMING_FPS             59.82
 #define MEDNAFEN_CORE_GEOMETRY_BASE_W        320
@@ -98,9 +98,12 @@ MDFNGI *MDFNGameInfo = NULL;
 
 static sscpu_timestamp_t MidSync(const sscpu_timestamp_t timestamp);
 
-#ifdef MDFN_SS_DEV_BUILD
+#ifdef MDFN_ENABLE_DEV_BUILD
 uint32 ss_dbg_mask;
+static std::bitset<0x200> BWMIgnoreAddr[2]; // 0=read, 1=write
 #endif
+uint32 ss_horrible_hacks;
+
 static bool NeedEmuICache;
 static const uint8 BRAM_Init_Data[0x10] = { 0x42, 0x61, 0x63, 0x6b, 0x55, 0x70, 0x52, 0x61, 0x6d, 0x20, 0x46, 0x6f, 0x72, 0x6d, 0x61, 0x74 };
 
@@ -138,7 +141,7 @@ static int64 CartNV_SaveDelay;
 static uintptr_t SH7095_FastMap[1U << (32 - SH7095_EXT_MAP_GRAN_BITS)];
 
 int32 SH7095_mem_timestamp;
-uint32 SH7095_BusLock;
+static uint32 SH7095_BusLock;
 static uint32 SH7095_DB;
 
 #include "mednafen/ss/scu.inc"
@@ -147,6 +150,7 @@ static uint32 SH7095_DB;
 #endif
 
 static sha256_digest BIOS_SHA256;   // SHA-256 hash of the currently-loaded BIOS; used for save state sanity checks.
+static int ActiveCartType;		// Used in save states.
 static std::bitset<1U << (27 - SH7095_EXT_MAP_GRAN_BITS)> FMIsWriteable;
 
 template<typename T>
@@ -680,13 +684,13 @@ static INLINE bool EventHandler(const sscpu_timestamp_t timestamp)
 
  while(timestamp >= (e = events[SS_EVENT__SYNFIRST].next)->event_time)  // If Running = 0, EventHandler() may be called even if there isn't an event per-se, so while() instead of do { ... } while
  {
-#ifdef MDFN_SS_DEV_BUILD
+#ifdef MDFN_ENABLE_DEV_BUILD
   const sscpu_timestamp_t etime = e->event_time;
 #endif
   sscpu_timestamp_t nt;
   nt = e->event_handler(e->event_time);
 
-#ifdef MDFN_SS_DEV_BUILD
+#ifdef MDFN_ENABLE_DEV_BUILD
   if(MDFN_UNLIKELY(nt <= etime))
   {
    fprintf(stderr, "which=%d event_time=%d nt=%d timestamp=%d\n", (int)(e - events), etime, nt, timestamp);
@@ -809,7 +813,7 @@ static int64 UpdateInputLastBigTS;
 static INLINE void UpdateSMPCInput(const sscpu_timestamp_t timestamp)
 {
  SMPC_TransformInput();
-	
+
  int32 elapsed_time = (((int64)timestamp * cur_clock_div * 1000 * 1000) - UpdateInputLastBigTS) / (EmulatedSS.MasterClock / MDFN_MASTERCLOCK_FIXED(1));
 
  UpdateInputLastBigTS += (int64)elapsed_time * (EmulatedSS.MasterClock / MDFN_MASTERCLOCK_FIXED(1));
@@ -851,7 +855,7 @@ static void Emulate(EmulateSpecStruct* espec_arg)
  int32 end_ts;
 
  espec = espec_arg;
- AllowMidSync = setting_midsync;
+ AllowMidSync = true;
 
  cur_clock_div = SMPC_StartFrame(espec);
  UpdateSMPCInput(0);
@@ -985,9 +989,9 @@ typedef struct
    const char *name;
 } CartName;
 
-static bool InitCommon(const unsigned cpucache_emumode, const unsigned cart_type, const unsigned smpc_area)
+static bool MDFN_COLD InitCommon(const unsigned cpucache_emumode, const unsigned horrible_hacks, const unsigned cart_type, const unsigned smpc_area)
 {
-#ifdef MDFN_SS_DEV_BUILD
+#ifdef MDFN_ENABLE_DEV_BUILD
  ss_dbg_mask = SS_DBG_ERROR;
  {
   std::vector<uint64> dms = MDFN_GetSettingMultiUI("ss.dbg_mask");
@@ -1023,6 +1027,9 @@ static bool InitCommon(const unsigned cpucache_emumode, const unsigned cart_type
   }
   log_cb(RETRO_LOG_INFO, "[Mednafen]: CPU Cache Emulation Mode: %s\n", cem);
  }
+ //
+ if(horrible_hacks)
+  log_cb(RETRO_LOG_INFO, "[Mednafen]: Horrible hacks: 0x%08x\n", horrible_hacks);
  //
    {
       log_cb(RETRO_LOG_INFO, "[Mednafen]: Region: 0x%01x.\n", smpc_area);
@@ -1062,6 +1069,10 @@ static bool InitCommon(const unsigned cpucache_emumode, const unsigned cart_type
       CPU[i].Init(cpucache_emumode == CPUCACHE_EMUMODE_DATA_CB);
       CPU[i].SetMD5((bool)i);
    }
+ SH7095_mem_timestamp = 0;
+ SH7095_DB = 0;
+
+ ss_horrible_hacks = horrible_hacks;
 
    //
    // Initialize backup memory.
@@ -1079,6 +1090,7 @@ static bool InitCommon(const unsigned cpucache_emumode, const unsigned cart_type
    MDFNMP_RegSearchable(0x06000000, WORKRAM_BANK_SIZE_BYTES);
 
    CART_Init(cart_type);
+  ActiveCartType = cart_type;
 
    //
    //
@@ -1089,6 +1101,7 @@ static bool InitCommon(const unsigned cpucache_emumode, const unsigned cart_type
    const char* bios_filename;
    int sls = MDFN_GetSettingI(PAL ? "ss.slstartp" : "ss.slstart");
    int sle = MDFN_GetSettingI(PAL ? "ss.slendp" : "ss.slend");
+ const uint64 vdp2_affinity = 0; /*LibRetro: unused*/
 
    if(sls > sle)
       std::swap(sls, sle);
@@ -1133,7 +1146,7 @@ static bool InitCommon(const unsigned cpucache_emumode, const unsigned cart_type
    SCU_Init();
    SMPC_Init(smpc_area, MasterClock);
    VDP1::Init();
-   VDP2::Init(PAL);
+   VDP2::Init(PAL,vdp2_affinity);
    VDP2::SetGetVideoParams(&EmulatedSS, true, sls, sle, true, DoHBlend);
    CDB_Init();
    SOUND_Init();
@@ -1205,7 +1218,7 @@ static bool InitCommon(const unsigned cpucache_emumode, const unsigned cart_type
 
 static MDFN_COLD void CloseGame(void)
 {
-#ifdef MDFN_SS_DEV_BUILD
+#ifdef MDFN_ENABLE_DEV_BUILD
  VDP1::MakeDump("/tmp/vdp1_dump.h");
  VDP2::MakeDump("/tmp/vdp2_dump.h");
 #endif
@@ -1438,10 +1451,12 @@ MDFN_COLD int LibRetro_StateAction( StateMem* sm, const unsigned load, const boo
    if ( data_only == false )
    {
       sha256_digest sr_dig = BIOS_SHA256;
+      int cart_type = ActiveCartType;
 
       SFORMAT SRDStateRegs[] =
       {
          SFPTR8( sr_dig.data(), sr_dig.size() ),
+         SFVAR(cart_type),
          SFEND
       };
 
@@ -1450,12 +1465,22 @@ MDFN_COLD int LibRetro_StateAction( StateMem* sm, const unsigned load, const boo
          return 0;
       }
 
-      if ( load && sr_dig != BIOS_SHA256 ) {
-         log_cb( RETRO_LOG_WARN, "BIOS hash mismatch(save state created under a different BIOS)!\n" );
-         return 0;
+      if ( load )
+      {
+		 if ( sr_dig != BIOS_SHA256 ) {
+           log_cb( RETRO_LOG_WARN, "BIOS hash mismatch(save state created under a different BIOS)!\n" );
+           return 0;
+         }
+         if ( cart_type != ActiveCartType ) {
+           log_cb( RETRO_LOG_WARN, "Cart type mismatch(save state created with a different cart)!\n" );
+           return 0;
+         }
       }
    }
-
+ //
+ //
+ //
+ bool RecordedNeedEmuICache = load ? false : NeedEmuICache;
  EventsPacker ep;
  ep.Save();
 
@@ -1475,6 +1500,8 @@ MDFN_COLD int LibRetro_StateAction( StateMem* sm, const unsigned load, const boo
   SFPTR16(WorkRAML, WORKRAM_BANK_SIZE_BYTES / sizeof(uint16_t)),
   SFPTR16(WorkRAMH, WORKRAM_BANK_SIZE_BYTES / sizeof(uint16_t)),
   SFPTR8(BackupRAM, sizeof(BackupRAM) / sizeof(BackupRAM[0])),
+
+  SFVAR(RecordedNeedEmuICache),
 
   SFEND
  };
@@ -1510,7 +1537,15 @@ MDFN_COLD int LibRetro_StateAction( StateMem* sm, const unsigned load, const boo
       {
          log_cb( RETRO_LOG_WARN, "Bad state events data.\n" );
          InitEvents();
-      }
+	  }
+
+	  if(NeedEmuICache && !RecordedNeedEmuICache)
+	  {
+	   //printf("NeedEmuICache=%d, RecordedNeedEmuICache=%d\n", NeedEmuICache, RecordedNeedEmuICache);
+
+	   for(size_t i = 0; i < 2; i++)
+		CPU[i].FixupICacheModeState();	// Only call it after all RAM has been loaded from the save state.
+	  }
    }
 
    // Success!
@@ -1572,7 +1607,7 @@ static MDFNSetting SSSettings[] =
  { "ss.slstartp", MDFNSF_NOFLAGS, "First displayed scanline in PAL mode.", NULL, MDFNST_INT, "0", "-16", "271" },
  { "ss.slendp", MDFNSF_NOFLAGS, "Last displayed scanline in PAL mode.", NULL, MDFNST_INT, "255", "-16", "271" },
 
-#ifdef MDFN_SS_DEV_BUILD
+#ifdef MDFN_ENABLE_DEV_BUILD
  { "ss.dbg_mask", MDFNSF_NOFLAGS, "Debug printf mask.", NULL, MDFNST_UINT, "0x00001", "0x00000", "0xFFFFF" },
  { "ss.dbg_exe_cdpath", MDFNSF_SUPPRESS_DOC, "CD image to use with homebrew executable loading.", NULL, MDFNST_STRING, "" },
 #endif
@@ -1860,16 +1895,6 @@ static void check_variables(bool startup)
       }
    }
 
-   var.key = "beetle_saturn_midsync";
-
-   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
-   {
-      if (!strcmp(var.value, "enabled"))
-         setting_midsync = true;
-      else if (!strcmp(var.value, "disabled"))
-         setting_midsync = false;
-   }
-
    var.key = "beetle_saturn_autortc";
 
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
@@ -1977,6 +2002,7 @@ static void check_variables(bool startup)
 static bool MDFNI_LoadGame( const char *name )
 {
    unsigned cpucache_emumode;
+   unsigned horrible_hacks = 0;
    int cart_type;
    unsigned region;
 
@@ -2022,6 +2048,7 @@ static bool MDFNI_LoadGame( const char *name )
                disc_detect_region( &region );
 
                DB_Lookup(nullptr, sgid, fd_id, &region, &cart_type, &cpucache_emumode );
+               horrible_hacks = DB_LookupHH(sgid, fd_id);
 
                // forced region setting?
                if ( setting_region != 0 ) {
@@ -2034,7 +2061,7 @@ static bool MDFNI_LoadGame( const char *name )
                }
 
                // GO!
-               if ( InitCommon( cpucache_emumode, cart_type, region ) )
+               if ( InitCommon( cpucache_emumode, horrible_hacks, cart_type, region ) )
                {
                   MDFN_LoadGameCheats(NULL);
                   MDFNMP_InstallReadPatches();
@@ -2076,7 +2103,7 @@ static bool MDFNI_LoadGame( const char *name )
    }
 
    // Initialise with safe parameters
-   InitCommon( cpucache_emumode, cart_type, region );
+   InitCommon( cpucache_emumode, horrible_hacks, cart_type, region );
 
    MDFN_LoadGameCheats(NULL);
    MDFNMP_InstallReadPatches();
@@ -2195,7 +2222,7 @@ void retro_run(void)
    rects[0] = ~0;
 
    static int16_t sound_buf[0x10000];
-   EmulateSpecStruct spec = {0};
+   EmulateSpecStruct spec;
    spec.surface = surf;
    spec.SoundRate = 44100;
    spec.SoundBuf = sound_buf;
@@ -2346,7 +2373,6 @@ void retro_set_environment( retro_environment_t cb )
       { "beetle_saturn_mouse_sensitivity", "Mouse Sensitivity; 100%|105%|110%|115%|120%|125%|130%|135%|140%|145%|150%|155%|160%|165%|170%|175%|180%|185%|190%|195%|200%|5%|10%|15%|20%|25%|30%|35%|40%|45%|50%|55%|60%|65%|70%|75%|80%|85%|90%|95%" },
       { "beetle_saturn_virtuagun_crosshair", "Gun Crosshair; Cross|Dot|Off" },
       { "beetle_saturn_cdimagecache", "CD Image Cache (restart); disabled|enabled" },
-      { "beetle_saturn_midsync", "Mid-frame Input Synchronization; disabled|enabled" },
       { "beetle_saturn_autortc", "Automatically set RTC on game load; enabled|disabled" },
       { "beetle_saturn_autortc_lang", "BIOS language; english|german|french|spanish|italian|japanese" },
       { "beetle_saturn_horizontal_overscan", "Horizontal Overscan Mask; 0|2|4|6|8|10|12|14|16|18|20|22|24|26|28|30|32|34|36|38|40|42|44|46|48|50|52|54|56|58|60" },

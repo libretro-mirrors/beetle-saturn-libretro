@@ -60,42 +60,47 @@ struct CartInfo
  void CS2M_SetRW8W16(uint8 Ostart, uint8 Oend, void (*r16)(uint32 A, uint16* DB), void (*w8)(uint32 A, uint16* DB) = nullptr, void (*w16)(uint32 A, uint16* DB) = nullptr);
 };
 
-static INLINE void CART_CS01_Read16_DB(uint32 A, uint16* DB)  { extern CartInfo Cart; Cart.CS01_RW[(size_t)(A >> 20) - (0x02000000 >> 20)].Read16 (A, DB); }
-static INLINE void CART_CS01_Write8_DB(uint32 A, uint16* DB)  { extern CartInfo Cart; Cart.CS01_RW[(size_t)(A >> 20) - (0x02000000 >> 20)].Write8 (A, DB); }
-static INLINE void CART_CS01_Write16_DB(uint32 A, uint16* DB) { extern CartInfo Cart; Cart.CS01_RW[(size_t)(A >> 20) - (0x02000000 >> 20)].Write16(A, DB); }
+static INLINE void CART_CS01_Read16_DB(uint32 A, uint16* DB)  { MDFN_HIDE extern CartInfo Cart; Cart.CS01_RW[(size_t)(A >> 20) - (0x02000000 >> 20)].Read16 (A, DB); }
+static INLINE void CART_CS01_Write8_DB(uint32 A, uint16* DB)  { MDFN_HIDE extern CartInfo Cart; Cart.CS01_RW[(size_t)(A >> 20) - (0x02000000 >> 20)].Write8 (A, DB); }
+static INLINE void CART_CS01_Write16_DB(uint32 A, uint16* DB) { MDFN_HIDE extern CartInfo Cart; Cart.CS01_RW[(size_t)(A >> 20) - (0x02000000 >> 20)].Write16(A, DB); }
 
-static INLINE void CART_CS2_Read16_DB(uint32 A, uint16* DB)  { extern CartInfo Cart; Cart.CS2M_RW[(A >> 1) & 0x1F].Read16 (A, DB); }
-static INLINE void CART_CS2_Write8_DB(uint32 A, uint16* DB)  { extern CartInfo Cart; Cart.CS2M_RW[(A >> 1) & 0x1F].Write8 (A, DB); }
-static INLINE void CART_CS2_Write16_DB(uint32 A, uint16* DB) { extern CartInfo Cart; Cart.CS2M_RW[(A >> 1) & 0x1F].Write16(A, DB); }
+static INLINE void CART_CS2_Read16_DB(uint32 A, uint16* DB)  { MDFN_HIDE extern CartInfo Cart; Cart.CS2M_RW[(A >> 1) & 0x1F].Read16 (A, DB); }
+static INLINE void CART_CS2_Write8_DB(uint32 A, uint16* DB)  { MDFN_HIDE extern CartInfo Cart; Cart.CS2M_RW[(A >> 1) & 0x1F].Write8 (A, DB); }
+static INLINE void CART_CS2_Write16_DB(uint32 A, uint16* DB) { MDFN_HIDE extern CartInfo Cart; Cart.CS2M_RW[(A >> 1) & 0x1F].Write16(A, DB); }
 
+//
+// Don't change the values for existing cart types, or a save state sanity check will break.
+//
 enum
 {
- CART__RESERVED = -1,
- CART_NONE = 0,
- CART_BACKUP_MEM,
- CART_EXTRAM_1M,
- CART_EXTRAM_4M,
+ CART__RESERVED  = -1,
+ CART_NONE	 = 0x000,
 
- CART_KOF95,
- CART_ULTRAMAN,
+ CART_BACKUP_MEM = 0x100,
 
- CART_AR4MP,
+ CART_EXTRAM_1M	 = 0x200,
+ CART_EXTRAM_4M	 = 0x201,
 
- CART_CS1RAM_16M,
+ CART_KOF95	 = 0x300,
+ CART_ULTRAMAN	 = 0x301,
 
- CART_NLMODEM,
+ CART_AR4MP	 = 0x400,
 
- CART_MDFN_DEBUG
+ CART_CS1RAM_16M = 0x500,
+
+ CART_NLMODEM	 = 0x600,
+
+ CART_MDFN_DEBUG = 0xF00
 };
 
 void CART_Init(const int cart_type) MDFN_COLD;
-static INLINE ss_event_handler CART_GetEventHandler(void) { extern CartInfo Cart; return Cart.EventHandler; }
-static INLINE void CART_AdjustTS(const int32 delta) { extern CartInfo Cart; Cart.AdjustTS(delta); }
-static INLINE void CART_SetCPUClock(const int32 master_clock, const int32 cpu_divider) { extern CartInfo Cart; Cart.SetCPUClock(master_clock, cpu_divider); }
-static INLINE void CART_Kill(void) { extern CartInfo Cart; if(Cart.Kill) { Cart.Kill(); Cart.Kill = nullptr; } }
-static INLINE void CART_StateAction(StateMem* sm, const unsigned load, const bool data_only) { extern CartInfo Cart; Cart.StateAction(sm, load, data_only); }
-static INLINE void CART_GetNVInfo(const char** ext, void** nv_ptr, bool* nv16, uint64* nv_size) { extern CartInfo Cart; Cart.GetNVInfo(ext, nv_ptr, nv16, nv_size); }
-static INLINE bool CART_GetClearNVDirty(void) { extern CartInfo Cart; return Cart.GetClearNVDirty(); }
-static INLINE void CART_Reset(bool powering_up) { extern CartInfo Cart; Cart.Reset(powering_up); }
+static INLINE ss_event_handler CART_GetEventHandler(void) { MDFN_HIDE extern CartInfo Cart; return Cart.EventHandler; }
+static INLINE void CART_AdjustTS(const int32 delta) { MDFN_HIDE extern CartInfo Cart; Cart.AdjustTS(delta); }
+static INLINE void CART_SetCPUClock(const int32 master_clock, const int32 cpu_divider) { MDFN_HIDE extern CartInfo Cart; Cart.SetCPUClock(master_clock, cpu_divider); }
+static INLINE void CART_Kill(void) { MDFN_HIDE extern CartInfo Cart; if(Cart.Kill) { Cart.Kill(); Cart.Kill = nullptr; } }
+static INLINE void CART_StateAction(StateMem* sm, const unsigned load, const bool data_only) { MDFN_HIDE extern CartInfo Cart; Cart.StateAction(sm, load, data_only); }
+static INLINE void CART_GetNVInfo(const char** ext, void** nv_ptr, bool* nv16, uint64* nv_size) { MDFN_HIDE extern CartInfo Cart; Cart.GetNVInfo(ext, nv_ptr, nv16, nv_size); }
+static INLINE bool CART_GetClearNVDirty(void) { MDFN_HIDE extern CartInfo Cart; return Cart.GetClearNVDirty(); }
+static INLINE void CART_Reset(bool powering_up) { MDFN_HIDE extern CartInfo Cart; Cart.Reset(powering_up); }
 
 #endif

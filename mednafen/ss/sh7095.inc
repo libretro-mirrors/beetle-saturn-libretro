@@ -23,6 +23,8 @@
    Instruction cache emulation shouldn't be enabled globally for all games until we resolve timestamp vs mem_timestamp issues
    in regards to bus contention and time sharing, or else emulated dual-CPU programs may run slower
    than they should and probably glitch out(and also until 5GHz desktop CPUs are the norm ;)).
+
+   Also...the emulated overhead is a little too high when executing a branch with no delay slot from non-cacheable memory.
 */
 
 /*
@@ -87,7 +89,7 @@
  #define NE32ASU8_IDX_ADJ(T, idx) ( ((idx) & ~(sizeof(T) - 1)) ^ (4 - (sizeof(T))) )
 #endif
 
-SH7095::SH7095(const char* const name_arg, const unsigned event_id_dma_arg, uint8 (*exivecfn_arg)(void)) : event_id_dma(event_id_dma_arg), cpu_name(name_arg), ExIVecFetch(exivecfn_arg)
+SH7095::SH7095(const char* const name_arg, const unsigned event_id_dma_arg, uint8 (*exivecfn_arg)(void)) : event_id_dma(event_id_dma_arg), ExIVecFetch(exivecfn_arg), cpu_name(name_arg)
 {
  Init(false);
 }
@@ -148,6 +150,7 @@ void SH7095::Init(const bool cbh)
  NMILevel = false;
  BSC.BCR1 &= 0x7FFF; //MD5Level = false;
  ExtHalt = false;
+ ExtHaltDMA = false;
 
  TruePowerOn();
 }
@@ -166,10 +169,8 @@ void SH7095::AdjustTS(int32 delta, bool force_set)
   MA_until = delta;
   MM_until = delta;
 
-#if 0
   for(unsigned i = 0; i < 16; i++)
    WB_until[i] = delta;
-#endif
 
   write_finish_timestamp = delta;
   divide_finish_timestamp = delta;
@@ -188,13 +189,11 @@ void SH7095::AdjustTS(int32 delta, bool force_set)
   if(!(MM_until & 0x40000000))
    MM_until += delta;
 
-#if 0
   for(unsigned i = 0; i < 16; i++)
   {
    if(!(WB_until[i] & 0x40000000))
     WB_until[i] += delta;
   }
-#endif
 
   if(!(write_finish_timestamp & 0x40000000))
    write_finish_timestamp += delta;
@@ -218,10 +217,8 @@ void SH7095::TruePowerOn(void)
  for(unsigned i = 0; i < 16; i++)
   R[i] = 0;
 
-#if 0
  for(unsigned i = 0; i < 16; i++)
   WB_until[i] = 0;
-#endif
 
  PC = 0;
 
@@ -236,6 +233,7 @@ void SH7095::TruePowerOn(void)
  EPending = 0;
  Pipe_ID = 0;
  Pipe_IF = 0;
+ IBuffer = 0;
 
  PC_IF = PC_ID = 0;
 
@@ -466,8 +464,9 @@ sscpu_timestamp_t SH7095::DMA_Update(sscpu_timestamp_t et)
   if(et < dma_lastts)
    SS_DBG(SS_DBG_WARNING | SS_DBG_SH2, "[%s] DMA_Update called with et(%u) < dma_lastts(%u).\n", cpu_name, et, dma_lastts);
  }
- else if(MDFN_UNLIKELY(ExtHalt))
+ else if(MDFN_UNLIKELY(ExtHaltDMA))
  {
+  //printf("%s ExtHaltDMA 0x%02x!\n", cpu_name, ExtHaltDMA);
   dma_lastts = et;
   return dma_lastts + 128;
  }
@@ -542,12 +541,37 @@ void SH7095::DMA_StartSG(void)
 }
 
 // Must be called after DMACH[0].CHCR or DMACH[1].CHCR or DMAOR changes.
-INLINE void SH7095::DMA_RecalcRunning(void)
+NO_INLINE void SH7095::DMA_RecalcRunning(void)
 {
  DMA_PenaltyKludgeAmount = 0;
 
- if(DMA_RunCond(0) || DMA_RunCond(1))
-  DMA_PenaltyKludgeAmount = 18;
+ for(unsigned ch = 0; ch < 2; ch++)
+ {
+  if(DMA_RunCond(ch))
+  {
+   const int32 npka = (((DMACH[ch].CHCR >> 10) & 3) == 3 && (DMACH[ch].SAR & DMACH[ch].DAR & 0x06000000) != 0x06000000) ? 23 : 18;
+
+   DMA_PenaltyKludgeAmount = std::max<int32>(DMA_PenaltyKludgeAmount, npka);
+  }
+ }
+
+#if 1
+ if(MDFN_UNLIKELY(ss_horrible_hacks & HORRIBLEHACK_NOSH2DMAPENALTY))
+  DMA_PenaltyKludgeAmount = 0;
+#endif
+ //
+ //
+ //
+ if(ss_dbg_mask & (SS_DBG_WARNING | SS_DBG_SH2))
+ {
+  for(unsigned ch = 0; ch < 2; ch++)
+  {
+   if(DMA_RunCond(ch) && ((DMACH[ch].CHCR >> 10) & 3) == 3 && ((DMACH[ch].SAR | DMACH[ch].DAR) & 0xF))
+   {
+    SS_DBG(SS_DBG_WARNING | SS_DBG_SH2, "[%s] DMA channel %u, 16-byte transfer size address misalignment, SAR=0x%08x DAR=0x%08x", cpu_name, ch, DMACH[ch].SAR, DMACH[ch].DAR);
+   }
+  }
+ }
 }
 
 INLINE void SH7095::DMA_BusTimingKludge(void)
@@ -1961,7 +1985,7 @@ INLINE T SH7095::MemReadRT(uint32 A)
  else
   timestamp = std::max<sscpu_timestamp_t>(MA_until, timestamp);
 
-#ifdef MDFN_SS_DEV_BUILD
+#ifdef MDFN_ENABLE_DEV_BUILD
   if((A & 0xC7FFFFFF) >= 0x06000200 && (A & 0xC7FFFFFF) <= 0x060003FF)
   {
    const uint32 pcm = PC & 0x07FFFFFF;
@@ -2153,7 +2177,7 @@ INLINE void SH7095::MemWriteRT(uint32 A, T V)
 
  MA_until = std::max<sscpu_timestamp_t>(MA_until, timestamp + 1);
 
-#ifdef MDFN_SS_DEV_BUILD
+#ifdef MDFN_ENABLE_DEV_BUILD
   if((A & 0xC7FFFFFF) >= 0x06000200 && (A & 0xC7FFFFFF) <= 0x060003FF)
   {
    const uint32 pcm = PC & 0x07FFFFFF;
@@ -2758,6 +2782,7 @@ uint32 NO_INLINE SH7095::Exception(const unsigned exnum, const unsigned vecnum)
  uint32 new_PC;
 
  timestamp += 2;
+ timestamp = std::max<sscpu_timestamp_t>(MA_until, timestamp);
 
  if(exnum == EXCEPTION_RESET || exnum == EXCEPTION_POWERON)
  {
@@ -2845,14 +2870,8 @@ INLINE void SH7095::Step(void)
 
  #define END_OP } break;
 
-#if 0
- #define WB_EX_CHECK(r) { if(timestamp < WB_until[(r)]) timestamp = WB_until[(r)]; }
-
- #define WB_WRITE(r, v) { R[(r)] = (v); WB_until[(r)] = MA_until + 1; }
-#else
- #define WB_EX_CHECK(r) { }
- #define WB_WRITE(r, v) { R[(r)] = (v); }
-#endif
+ #define WB_EX_CHECK(r) { if(EmulateICache) { if(timestamp < WB_until[(r)]) timestamp = WB_until[(r)]; } }
+ #define WB_WRITE(r, v) { R[(r)] = (v); if(EmulateICache) { WB_until[(r)] = MA_until + 1; } }
  //
  //
  //
@@ -4844,9 +4863,7 @@ void SH7095::StateAction(StateMem* sm, const unsigned load, const bool data_only
   SFVAR(MA_until),
   SFVAR(MM_until),
   SFVAR(write_finish_timestamp),
-#if 0
- sscpu_timestamp_t WB_until[16];
-#endif
+  SFVAR(WB_until),
   SFVAR(SysRegs),
 
   SFVAR(EPending),
@@ -4953,6 +4970,7 @@ void SH7095::StateAction(StateMem* sm, const unsigned load, const bool data_only
   SFVAR(SCI.TSR),
 
   SFVAR(ExtHalt),
+  SFVAR(ExtHaltDMA),
 
   SFVAR(PC_IF),
   SFVAR(PC_ID),
@@ -4965,7 +4983,33 @@ void SH7095::StateAction(StateMem* sm, const unsigned load, const bool data_only
  if(load)
  {
   SetCCR(CCR);
+
+  if(load < 0x00102300)
+  {
+   ExtHaltDMA = ExtHalt;
+  }
  }
+}
+
+//
+// Called after loading a state where instruction cache emulation was not previously enabled in the emulator, but is enabled now(e.g. via database).
+//
+// May not cover all cases, needs more testing.
+//
+void SH7095::FixupICacheModeState(void)
+{
+ for(unsigned i = 0; i < 16; i++)
+  WB_until[i] = 0;
+ //
+ //const uint32 old_IBuffer = IBuffer;
+ const uint32 A = (PC - 2) & ~3;
+
+ if((int32)A < 0)
+  IBuffer = MDFN_densb<uint32, true>(&Cache[(A >> 4) & 0x3F].Data[(A >> 10) & 0x3][NE32ASU8_IDX_ADJ(uint32, A & 0x0F)]);
+ else
+  IBuffer = ne16_rbo_be<uint32>(SH7095_FastMap[A >> SH7095_EXT_MAP_GRAN_BITS], A);
+
+ //printf("[%s] PC=0x%08x, IBuffer=0x%08x old_IBuffer=0x%08x --- 0x%08x\n", cpu_name, PC, IBuffer, old_IBuffer, ne16_rbo_be<uint32>(SH7095_FastMap[A >> SH7095_EXT_MAP_GRAN_BITS], A));
 }
 
 //

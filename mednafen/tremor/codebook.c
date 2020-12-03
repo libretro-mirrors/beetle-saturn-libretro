@@ -27,7 +27,7 @@
    readies the codebook auxiliary structures for decode *************/
 static_codebook *vorbis_staticbook_unpack(oggpack_buffer *opb){
   long i,j;
-  static_codebook *s=calloc(1,sizeof(*s));
+  static_codebook *s=_ogg_calloc(1,sizeof(*s));
 
   /* make sure alignment is correct */
   if(oggpack_read(opb,24)!=0x564342)goto _eofout;
@@ -48,7 +48,7 @@ static_codebook *vorbis_staticbook_unpack(oggpack_buffer *opb){
     if((s->entries*(unused?1:5)+7)>>3>opb->storage-oggpack_bytes(opb))
       goto _eofout;
     /* unordered */
-    s->lengthlist=(long *)malloc(sizeof(*s->lengthlist)*s->entries);
+    s->lengthlist=(long *)_ogg_malloc(sizeof(*s->lengthlist)*s->entries);
 
     /* allocated but unused entries? */
     if(unused){
@@ -78,7 +78,7 @@ static_codebook *vorbis_staticbook_unpack(oggpack_buffer *opb){
     {
       long length=oggpack_read(opb,5)+1;
       if(length==0)goto _eofout;
-      s->lengthlist=(long *)malloc(sizeof(*s->lengthlist)*s->entries);
+      s->lengthlist=(long *)_ogg_malloc(sizeof(*s->lengthlist)*s->entries);
 
       for(i=0;i<s->entries;){
 	long num=oggpack_read(opb,_ilog(s->entries-i));
@@ -127,7 +127,7 @@ static_codebook *vorbis_staticbook_unpack(oggpack_buffer *opb){
       /* quantized values */
       if((quantvals*s->q_quant+7)>>3>opb->storage-oggpack_bytes(opb))
         goto _eofout;
-      s->quantlist=(long *)malloc(sizeof(*s->quantlist)*quantvals);
+      s->quantlist=(long *)_ogg_malloc(sizeof(*s->quantlist)*quantvals);
       for(i=0;i<quantvals;i++)
 	s->quantlist[i]=oggpack_read(opb,s->q_quant);
       
@@ -155,7 +155,7 @@ static_codebook *vorbis_staticbook_unpack(oggpack_buffer *opb){
    be.  The first-stage decode table catches most words so that
    bitreverse is not in the main execution path. */
 
-static uint32_t bitreverse(uint32_t x){
+static ogg_uint32_t bitreverse(ogg_uint32_t x){
   x=    ((x>>16)&0x0000ffff) | ((x<<16)&0xffff0000);
   x=    ((x>> 8)&0x00ff00ff) | ((x<< 8)&0xff00ff00);
   x=    ((x>> 4)&0x0f0f0f0f) | ((x<< 4)&0xf0f0f0f0);
@@ -163,7 +163,7 @@ static uint32_t bitreverse(uint32_t x){
   return((x>> 1)&0x55555555) | ((x<< 1)&0xaaaaaaaa);
 }
 
-static INLINE long decode_packed_entry_number(codebook *book, 
+STIN long decode_packed_entry_number(codebook *book, 
 					      oggpack_buffer *b){
   int  read=book->dec_maxlength;
   long lo,hi;
@@ -195,7 +195,7 @@ static INLINE long decode_packed_entry_number(codebook *book,
 
   /* bisect search for the codeword in the ordered list */
   {
-    uint32_t testword=bitreverse((uint32_t)lok);
+    ogg_uint32_t testword=bitreverse((ogg_uint32_t)lok);
 
     while(hi-lo>1){
       long p=(hi-lo)>>1;
@@ -242,12 +242,12 @@ long vorbis_book_decode(codebook *book, oggpack_buffer *b){
 
 /* returns 0 on OK or -1 on eof *************************************/
 /* decode vector / dim granularity gaurding is done in the upper layer */
-long vorbis_book_decodevs_add(codebook *book,int32_t *a,
+long vorbis_book_decodevs_add(codebook *book,ogg_int32_t *a,
 			      oggpack_buffer *b,int n,int point){
   if(book->used_entries>0){  
     int step=n/book->dim;
     long *entry = (long *)alloca(sizeof(*entry)*step);
-    int32_t **t = (int32_t **)alloca(sizeof(*t)*step);
+    ogg_int32_t **t = (ogg_int32_t **)alloca(sizeof(*t)*step);
     int i,j,o;
     int shift=point-book->binarypoint;
     
@@ -258,7 +258,7 @@ long vorbis_book_decodevs_add(codebook *book,int32_t *a,
 	t[i] = book->valuelist+entry[i]*book->dim;
       }
       for(i=0,o=0;i<book->dim;i++,o+=step)
-	for (j=0;j<step;j++)
+	for (j=0;o+j<n && j<step;j++)
 	  a[o+j]+=t[j][i]>>shift;
     }else{
       for (i = 0; i < step; i++) {
@@ -267,7 +267,7 @@ long vorbis_book_decodevs_add(codebook *book,int32_t *a,
 	t[i] = book->valuelist+entry[i]*book->dim;
       }
       for(i=0,o=0;i<book->dim;i++,o+=step)
-	for (j=0;j<step;j++)
+	for (j=0;o+j<n && j<step;j++)
 	  a[o+j]+=t[j][i]<<-shift;
     }
   }
@@ -275,11 +275,11 @@ long vorbis_book_decodevs_add(codebook *book,int32_t *a,
 }
 
 /* decode vector / dim granularity gaurding is done in the upper layer */
-long vorbis_book_decodev_add(codebook *book,int32_t *a,
+long vorbis_book_decodev_add(codebook *book,ogg_int32_t *a,
 			     oggpack_buffer *b,int n,int point){
   if(book->used_entries>0){
     int i,j,entry;
-    int32_t *t;
+    ogg_int32_t *t;
     int shift=point-book->binarypoint;
     
     if(shift>=0){
@@ -287,7 +287,7 @@ long vorbis_book_decodev_add(codebook *book,int32_t *a,
 	entry = decode_packed_entry_number(book,b);
 	if(entry==-1)return(-1);
 	t     = book->valuelist+entry*book->dim;
-	for (j=0;j<book->dim;)
+	for (j=0;i<n && j<book->dim;)
 	  a[i++]+=t[j++]>>shift;
       }
     }else{
@@ -295,7 +295,7 @@ long vorbis_book_decodev_add(codebook *book,int32_t *a,
 	entry = decode_packed_entry_number(book,b);
 	if(entry==-1)return(-1);
 	t     = book->valuelist+entry*book->dim;
-	for (j=0;j<book->dim;)
+	for (j=0;i<n && j<book->dim;)
 	  a[i++]+=t[j++]<<-shift;
       }
     }
@@ -306,11 +306,11 @@ long vorbis_book_decodev_add(codebook *book,int32_t *a,
 /* unlike the others, we guard against n not being an integer number
    of <dim> internally rather than in the upper layer (called only by
    floor0) */
-long vorbis_book_decodev_set(codebook *book,int32_t *a,
+long vorbis_book_decodev_set(codebook *book,ogg_int32_t *a,
 			     oggpack_buffer *b,int n,int point){
   if(book->used_entries>0){
     int i,j,entry;
-    int32_t *t;
+    ogg_int32_t *t;
     int shift=point-book->binarypoint;
     
     if(shift>=0){
@@ -345,22 +345,22 @@ long vorbis_book_decodev_set(codebook *book,int32_t *a,
 }
 
 /* decode vector / dim granularity gaurding is done in the upper layer */
-long vorbis_book_decodevv_add(codebook *book,int32_t **a,\
+long vorbis_book_decodevv_add(codebook *book,ogg_int32_t **a,\
 			      long offset,int ch,
 			      oggpack_buffer *b,int n,int point){
   if(book->used_entries>0){
     long i,j,entry;
     int chptr=0;
     int shift=point-book->binarypoint;
-    
+    int m=offset+n;
     if(shift>=0){
       
-      for(i=offset;i<offset+n;){
+      for(i=offset;i<m;){
 	entry = decode_packed_entry_number(book,b);
 	if(entry==-1)return(-1);
 	{
-	  const int32_t *t = book->valuelist+entry*book->dim;
-	  for (j=0;j<book->dim;j++){
+	  const ogg_int32_t *t = book->valuelist+entry*book->dim;
+	  for (j=0;i<m && j<book->dim;j++){
 	    a[chptr++][i]+=t[j]>>shift;
 	    if(chptr==ch){
 	      chptr=0;
@@ -371,12 +371,12 @@ long vorbis_book_decodevv_add(codebook *book,int32_t **a,\
       }
     }else{
       
-      for(i=offset;i<offset+n;){
+      for(i=offset;i<m;){
 	entry = decode_packed_entry_number(book,b);
 	if(entry==-1)return(-1);
 	{
-	  const int32_t *t = book->valuelist+entry*book->dim;
-	  for (j=0;j<book->dim;j++){
+	  const ogg_int32_t *t = book->valuelist+entry*book->dim;
+	  for (j=0;i<m && j<book->dim;j++){
 	    a[chptr++][i]+=t[j]<<-shift;
 	    if(chptr==ch){
 	      chptr=0;

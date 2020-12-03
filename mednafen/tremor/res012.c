@@ -46,7 +46,7 @@ void res0_free_info(vorbis_info_residue *i){
   vorbis_info_residue0 *info=(vorbis_info_residue0 *)i;
   if(info){
     memset(info,0,sizeof(*info));
-    free(info);
+    _ogg_free(info);
   }
 }
 
@@ -57,15 +57,14 @@ void res0_free_look(vorbis_look_residue *i){
     vorbis_look_residue0 *look=(vorbis_look_residue0 *)i;
 
     for(j=0;j<look->parts;j++)
-      if(look->partbooks[j])
-         free(look->partbooks[j]);
-    free(look->partbooks);
+      if(look->partbooks[j])_ogg_free(look->partbooks[j]);
+    _ogg_free(look->partbooks);
     for(j=0;j<look->partvals;j++)
-      free(look->decodemap[j]);
-    free(look->decodemap);
+      _ogg_free(look->decodemap[j]);
+    _ogg_free(look->decodemap);
 
     memset(look,0,sizeof(*look));
-    free(look);
+    _ogg_free(look);
   }
 }
 
@@ -90,7 +89,7 @@ static int icount(unsigned int v){
 /* vorbis_info is for range checking */
 vorbis_info_residue *res0_unpack(vorbis_info *vi,oggpack_buffer *opb){
   int j,acc=0;
-  vorbis_info_residue0 *info=(vorbis_info_residue0 *)calloc(1,sizeof(*info));
+  vorbis_info_residue0 *info=(vorbis_info_residue0 *)_ogg_calloc(1,sizeof(*info));
   codec_setup_info     *ci=(codec_setup_info *)vi->codec_setup;
 
   info->begin=oggpack_read(opb,24);
@@ -155,7 +154,7 @@ vorbis_info_residue *res0_unpack(vorbis_info *vi,oggpack_buffer *opb){
 vorbis_look_residue *res0_look(vorbis_dsp_state *vd,vorbis_info_mode *vm,
 			  vorbis_info_residue *vr){
   vorbis_info_residue0 *info=(vorbis_info_residue0 *)vr;
-  vorbis_look_residue0 *look=(vorbis_look_residue0 *)calloc(1,sizeof(*look));
+  vorbis_look_residue0 *look=(vorbis_look_residue0 *)_ogg_calloc(1,sizeof(*look));
   codec_setup_info     *ci=(codec_setup_info *)vd->vi->codec_setup;
 
   int j,k,acc=0;
@@ -169,13 +168,13 @@ vorbis_look_residue *res0_look(vorbis_dsp_state *vd,vorbis_info_mode *vm,
   look->phrasebook=ci->fullbooks+info->groupbook;
   dim=look->phrasebook->dim;
 
-  look->partbooks=(codebook ***)calloc(look->parts,sizeof(*look->partbooks));
+  look->partbooks=(codebook ***)_ogg_calloc(look->parts,sizeof(*look->partbooks));
 
   for(j=0;j<look->parts;j++){
     int stages=ilog(info->secondstages[j]);
     if(stages){
       if(stages>maxstage)maxstage=stages;
-      look->partbooks[j]=(codebook **)calloc(stages,sizeof(*look->partbooks[j]));
+      look->partbooks[j]=(codebook **)_ogg_calloc(stages,sizeof(*look->partbooks[j]));
       for(k=0;k<stages;k++)
 	if(info->secondstages[j]&(1<<k)){
 	  look->partbooks[j][k]=ci->fullbooks+info->booklist[acc++];
@@ -190,11 +189,11 @@ vorbis_look_residue *res0_look(vorbis_dsp_state *vd,vorbis_info_mode *vm,
   look->partvals=look->parts;
   for(j=1;j<dim;j++)look->partvals*=look->parts;
   look->stages=maxstage;
-  look->decodemap=(int **)malloc(look->partvals*sizeof(*look->decodemap));
+  look->decodemap=(int **)_ogg_malloc(look->partvals*sizeof(*look->decodemap));
   for(j=0;j<look->partvals;j++){
     long val=j;
     long mult=look->partvals/look->parts;
-    look->decodemap[j]=(int *)malloc(dim*sizeof(*look->decodemap[j]));
+    look->decodemap[j]=(int *)_ogg_malloc(dim*sizeof(*look->decodemap[j]));
     for(k=0;k<dim;k++){
       long deco=val/mult;
       val-=deco*mult;
@@ -209,8 +208,8 @@ vorbis_look_residue *res0_look(vorbis_dsp_state *vd,vorbis_info_mode *vm,
 
 /* a truncated packet here just means 'stop working'; it's not an error */
 static int _01inverse(vorbis_block *vb,vorbis_look_residue *vl,
-		      int32_t **in,int ch,
-		      long (*decodepart)(codebook *, int32_t *, 
+		      ogg_int32_t **in,int ch,
+		      long (*decodepart)(codebook *, ogg_int32_t *, 
 					 oggpack_buffer *,int,int)){
 
   long i,j,k,l,s;
@@ -268,7 +267,7 @@ static int _01inverse(vorbis_block *vb,vorbis_look_residue *vl,
 }
 
 int res0_inverse(vorbis_block *vb,vorbis_look_residue *vl,
-		 int32_t **in,int *nonzero,int ch){
+		 ogg_int32_t **in,int *nonzero,int ch){
   int i,used=0;
   for(i=0;i<ch;i++)
     if(nonzero[i])
@@ -280,7 +279,7 @@ int res0_inverse(vorbis_block *vb,vorbis_look_residue *vl,
 }
 
 int res1_inverse(vorbis_block *vb,vorbis_look_residue *vl,
-		 int32_t **in,int *nonzero,int ch){
+		 ogg_int32_t **in,int *nonzero,int ch){
   int i,used=0;
   for(i=0;i<ch;i++)
     if(nonzero[i])
@@ -293,7 +292,7 @@ int res1_inverse(vorbis_block *vb,vorbis_look_residue *vl,
 
 /* duplicate code here as speed is somewhat more important */
 int res2_inverse(vorbis_block *vb,vorbis_look_residue *vl,
-		 int32_t **in,int *nonzero,int ch){
+		 ogg_int32_t **in,int *nonzero,int ch){
   long i,k,l,s;
   vorbis_look_residue0 *look=(vorbis_look_residue0 *)vl;
   vorbis_info_residue0 *info=look->info;
