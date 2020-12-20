@@ -46,7 +46,7 @@
 # include <unistd.h>
 #endif
 
-#if defined(__CELLOS_LV2__)
+#if defined(__PSL1GHT__)
 #define fseek_wrap fseek
 #define ftell_wrap ftell
 #elif defined _MSC_VER || defined __BORLANDC__ || defined __MINGW32__

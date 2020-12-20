@@ -77,7 +77,7 @@ ifneq (,$(findstring unix,$(platform)))
    PTHREAD_FLAGS = -lpthread
    endif
    LDFLAGS += $(PTHREAD_FLAGS)
-   FLAGS += $(PTHREAD_FLAGS) -DHAVE_MKDIR
+   FLAGS += $(PTHREAD_FLAGS)
    ifeq ($(HAVE_OPENGL),1)
       ifneq (,$(findstring gles,$(platform)))
          GLES = 1
@@ -96,7 +96,7 @@ else ifeq ($(platform), osx)
    fpic := -fPIC
    SHARED := -dynamiclib
    LDFLAGS += $(PTHREAD_FLAGS)
-   FLAGS += $(PTHREAD_FLAGS) -DHAVE_MKDIR
+   FLAGS += $(PTHREAD_FLAGS)
    ifeq ($(arch),ppc)
       ENDIANNESS_DEFINES := -DMSB_FIRST
       OLD_GCC := 1
@@ -158,8 +158,7 @@ else ifeq ($(platform), qnx)
    fpic := -fPIC
    SHARED := -lcpp -lm -shared -Wl,--no-undefined -Wl,--version-script=link.T
    #LDFLAGS += $(PTHREAD_FLAGS)
-   #FLAGS += $(PTHREAD_FLAGS) -DHAVE_MKDIR
-   FLAGS += -DHAVE_MKDIR
+   #FLAGS += $(PTHREAD_FLAGS)
    CC = qcc -Vgcc_ntoarmv7le
    CXX = QCC -Vgcc_ntoarmv7le_cpp
    AR = QCC -Vgcc_ntoarmv7le
@@ -168,30 +167,6 @@ else ifeq ($(platform), qnx)
       GL_LIB := -lGLESv2
    endif
 
-# PS3
-else ifeq ($(platform), ps3)
-   TARGET := $(TARGET_NAME)_libretro_$(platform).a
-   CC = $(CELL_SDK)/host-win32/ppu/bin/ppu-lv2-gcc.exe
-   CXX = $(CELL_SDK)/host-win32/ppu/bin/ppu-lv2-g++.exe
-   AR = $(CELL_SDK)/host-win32/ppu/bin/ppu-lv2-ar.exe
-   ENDIANNESS_DEFINES := -DMSB_FIRST
-   OLD_GCC := 1
-   FLAGS += -DHAVE_MKDIR -DARCH_POWERPC_ALTIVEC
-   STATIC_LINKING = 1
-
-# sncps3
-else ifeq ($(platform), sncps3)
-   TARGET := $(TARGET_NAME)_libretro_ps3.a
-   CC = $(CELL_SDK)/host-win32/sn/bin/ps3ppusnc.exe
-   CXX = $(CELL_SDK)/host-win32/sn/bin/ps3ppusnc.exe
-   AR = $(CELL_SDK)/host-win32/sn/bin/ps3snarl.exe
-   ENDIANNESS_DEFINES := -DMSB_FIRST
-   CXXFLAGS += -Xc+=exceptions
-   OLD_GCC := 1
-   NO_GCC := 1
-   FLAGS += -DHAVE_MKDIR -DARCH_POWERPC_ALTIVEC
-   STATIC_LINKING = 1
-
 # Lightweight PS3 Homebrew SDK
 else ifeq ($(platform), psl1ght)
    TARGET := $(TARGET_NAME)_libretro_$(platform).a
@@ -199,7 +174,6 @@ else ifeq ($(platform), psl1ght)
    CXX = $(PS3DEV)/ppu/bin/ppu-g++$(EXE_EXT)
    AR = $(PS3DEV)/ppu/bin/ppu-ar$(EXE_EXT)
    ENDIANNESS_DEFINES := -DMSB_FIRST
-   FLAGS += -DHAVE_MKDIR 
    STATIC_LINKING = 1
 
 # PSP
@@ -209,7 +183,6 @@ else ifeq ($(platform), psp1)
    CXX = psp-g++$(EXE_EXT)
    AR = psp-ar$(EXE_EXT)
    FLAGS += -DPSP -G0
-   FLAGS += -DHAVE_MKDIR
    STATIC_LINKING = 1
    EXTRA_INCLUDES := -I$(shell psp-config --pspsdk-path)/include
 
@@ -220,7 +193,6 @@ else ifeq ($(platform), vita)
    CXX = arm-vita-eabi-g++$(EXE_EXT)
    AR = arm-vita-eabi-ar$(EXE_EXT)
    FLAGS += -DVITA
-   FLAGS += -DHAVE_MKDIR
    STATIC_LINKING = 1
 
 # Xbox 360
@@ -231,7 +203,6 @@ else ifeq ($(platform), xenon)
    AR = xenon-ar$(EXE_EXT)
    ENDIANNESS_DEFINES += -D__LIBXENON__ -m32 -D__ppc__ -DMSB_FIRST 
    LIBS := $(PTHREAD_FLAGS)
-   FLAGS += -DHAVE_MKDIR
    STATIC_LINKING = 1
 
 # Nintendo Game Cube / Nintendo Wii
@@ -248,7 +219,6 @@ else ifneq (,$(filter $(platform),ngc wii))
    CXX = $(DEVKITPPC)/bin/powerpc-eabi-g++$(EXE_EXT)
    AR = $(DEVKITPPC)/bin/powerpc-eabi-ar$(EXE_EXT)
    EXTRA_INCLUDES := -I$(DEVKITPRO)/libogc/include
-   FLAGS += -DHAVE_MKDIR
    STATIC_LINKING = 1
 
 # GCW0
@@ -260,7 +230,7 @@ else ifeq ($(platform), gcw0)
    fpic := -fPIC
    SHARED := -shared -Wl,--no-undefined -Wl,--version-script=link.T
    LDFLAGS += $(PTHREAD_FLAGS)
-   FLAGS += $(PTHREAD_FLAGS) -DHAVE_MKDIR
+   FLAGS += $(PTHREAD_FLAGS)
    FLAGS += -ffast-math -march=mips32 -mtune=mips32r2 -mhard-float
    GLES = 1
    GL_LIB := -lGLESv2
@@ -269,7 +239,7 @@ else ifeq ($(platform), gcw0)
 else ifeq ($(platform), emscripten)
    TARGET := $(TARGET_NAME)_libretro_$(platform).bc
    STATIC_LINKING = 1
-   FLAGS += $(PTHREAD_FLAGS) -DHAVE_MKDIR -Dretro_fopen=gg_retro_fopen\
+   FLAGS += $(PTHREAD_FLAGS) -Dretro_fopen=gg_retro_fopen\
                  -Dmain=gg_main\
                  -Dretro_fclose=gg_retro_fclose\
                  -Dretro_fseek=gg_retro_fseek\
