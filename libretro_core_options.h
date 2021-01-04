@@ -198,6 +198,19 @@ struct retro_core_option_definition option_defs_us[] = {
       },
       "disabled"
    },
+   
+   {
+      "beetle_saturn_sharedmem",
+      "Shared memory card",
+      "Enable shared memory card.",
+      {
+         { "shared", NULL },
+         { "per game", NULL },
+         { NULL, NULL },
+      },
+      "disabled"
+   },
+   
    {
       "beetle_saturn_midsync",
       "Mid-frame Input Synchronization",
@@ -512,6 +525,7 @@ struct retro_core_option_definition option_defs_us[] = {
       },
       "disabled"
    },
+
    { NULL, NULL, NULL, {{0}}, NULL },
 };
 

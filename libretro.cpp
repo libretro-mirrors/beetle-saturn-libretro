@@ -1693,8 +1693,8 @@ static bool old_cdimagecache = false;
 static bool boot = true;
 
 // shared memory cards support
-static bool shared_memorycards = false;
-static bool shared_memorycards_toggle = false;
+bool shared_memorycards = false;
+bool shared_memorycards_toggle = true;
 
 static void check_variables(bool startup)
 {
@@ -1761,6 +1761,7 @@ static void check_variables(bool startup)
       input_multitap( 1, connected );
    }
 
+
    var.key = "beetle_saturn_multitap_port2";
 
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
@@ -1789,6 +1790,19 @@ static void check_variables(bool startup)
       }
    }
 
+   var.key = "beetle_saturn_sharedmem";
+
+   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+   {
+    // static bool shared_memorycards = true;
+      if (!strcmp(var.value, "shared"))
+         shared_memorycards = true;
+      else if (!strcmp(var.value, "per game"))
+         shared_memorycards = false;
+
+     // input_multitap( 1, connected );
+   }
+   
    var.key = "beetle_saturn_midsync";
 
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
@@ -2422,7 +2436,7 @@ const char *MDFN_MakeFName(MakeFName_Type type, int id1, const char *cd1)
          snprintf(fullpath, sizeof(fullpath), "%s%c%s.%s",
                retro_save_directory,
                retro_slash,
-               (!shared_memorycards) ? retro_cd_base_name : "mednafen_saturn_libretro_shared",
+               (!shared_memorycards) ? retro_cd_base_name : "beetle_saturn",
                cd1);
          break;
       case MDFNMKF_FIRMWARE:
