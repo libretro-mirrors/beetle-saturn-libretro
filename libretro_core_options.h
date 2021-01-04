@@ -201,14 +201,14 @@ struct retro_core_option_definition option_defs_us[] = {
    
    {
       "beetle_saturn_sharedmem",
-      "Shared memory card",
-      "Enable shared memory card.",
+      "Save file mode",
+      "Switches between shared or per game savefiles.",
       {
          { "shared", NULL },
          { "per game", NULL },
          { NULL, NULL },
       },
-      "disabled"
+      "shared"
    },
    
    {

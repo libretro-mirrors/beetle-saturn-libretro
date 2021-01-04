@@ -1794,13 +1794,11 @@ static void check_variables(bool startup)
 
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-    // static bool shared_memorycards = true;
       if (!strcmp(var.value, "shared"))
          shared_memorycards = true;
       else if (!strcmp(var.value, "per game"))
          shared_memorycards = false;
 
-     // input_multitap( 1, connected );
    }
    
    var.key = "beetle_saturn_midsync";
