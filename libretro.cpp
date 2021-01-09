@@ -1794,10 +1794,10 @@ static void check_variables(bool startup)
 
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-      if (!strcmp(var.value, "shared"))
-         shared_memorycards = true;
-      else if (!strcmp(var.value, "per game"))
-         shared_memorycards = false;
+      if (!strcmp(var.value, "enabled"))
+         shared_memorycards_toggle = true;
+      else if (!strcmp(var.value, "disabled"))
+         shared_memorycards_toggle = false;
 
    }
    

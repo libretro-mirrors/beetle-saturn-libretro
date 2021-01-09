@@ -201,14 +201,14 @@ struct retro_core_option_definition option_defs_us[] = {
    
    {
       "beetle_saturn_sharedmem",
-      "Save file mode",
-      "Switches between shared or per game savefiles.",
+      "Shared Save Files (Restart)",
+      "Enables shared save files.",
       {
-         { "shared", NULL },
-         { "per game", NULL },
+         { "enabled", NULL },
+         { "disabled", NULL },
          { NULL, NULL },
       },
-      "shared"
+      "disabled"
    },
    
    {
