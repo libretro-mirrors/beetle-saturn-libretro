@@ -1307,7 +1307,7 @@ static MDFN_COLD void LoadCartNV(void)
       return;
 
    nvs = filestream_open(
-         MDFN_MakeFName(MDFNMKF_SAV, 0, ext),
+         MDFN_MakeFName(MDFNMKF_CART, 0, ext),
          RETRO_VFS_FILE_ACCESS_READ,
          RETRO_VFS_FILE_ACCESS_HINT_NONE);
 
@@ -1339,7 +1339,7 @@ static MDFN_COLD void SaveCartNV(void)
 
    if(ext)
    {
-      FileStream nvs(MDFN_MakeFName(MDFNMKF_SAV, 0, ext), MODE_WRITE_INPLACE);
+      FileStream nvs(MDFN_MakeFName(MDFNMKF_CART, 0, ext), MODE_WRITE_INPLACE);
 
       if(nv16)
       {
@@ -1692,9 +1692,16 @@ static bool old_cdimagecache = false;
 
 static bool boot = true;
 
-// shared memory cards support
-bool shared_memorycards = false;
-bool shared_memorycards_toggle = true;
+// shared internal memory support
+bool shared_intmemory = false;
+bool shared_intmemory_toggle = false;
+
+
+// shared backup memory support
+bool shared_backup = false;
+bool shared_backup_toggle = false;
+
+
 
 static void check_variables(bool startup)
 {
@@ -1790,14 +1797,25 @@ static void check_variables(bool startup)
       }
    }
 
-   var.key = "beetle_saturn_sharedmem";
+   var.key = "beetle_saturn_shared_int";
 
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
       if (!strcmp(var.value, "enabled"))
-         shared_memorycards_toggle = true;
+         shared_intmemory_toggle = true;
       else if (!strcmp(var.value, "disabled"))
-         shared_memorycards_toggle = false;
+         shared_intmemory_toggle = false;
+
+   }
+
+   var.key = "beetle_saturn_shared_ext";
+   
+   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+   {
+      if (!strcmp(var.value, "enabled"))
+         shared_backup_toggle = true;
+      else if (!strcmp(var.value, "disabled"))
+         shared_backup_toggle = false;
 
    }
    
@@ -2064,8 +2082,9 @@ bool retro_load_game(const struct retro_game_info *info)
 
    check_variables(true);
    //make sure shared memory cards and save states are enabled only at startup
-   shared_memorycards = shared_memorycards_toggle;
-
+   shared_intmemory = shared_intmemory_toggle;
+   shared_backup = shared_backup_toggle;
+   
    // Let's try to load the game. If this fails then things are very wrong.
    if (MDFNI_LoadGame(retro_cd_path) == false)
       return false;
@@ -2434,14 +2453,21 @@ const char *MDFN_MakeFName(MakeFName_Type type, int id1, const char *cd1)
          snprintf(fullpath, sizeof(fullpath), "%s%c%s.%s",
                retro_save_directory,
                retro_slash,
-               (!shared_memorycards) ? retro_cd_base_name : "mednafen_saturn_libretro_shared",
+               (!shared_intmemory) ? retro_cd_base_name : "mednafen_saturn_libretro_shared",
                cd1);
+         break;
+      case MDFNMKF_CART:
+         snprintf(fullpath, sizeof(fullpath), "%s%c%s.%s",
+               retro_save_directory,
+               retro_slash,
+               (!shared_backup) ? retro_cd_base_name : "mednafen_saturn_libretro_shared",
+               cd1);
+         break;
+      default:
          break;
       case MDFNMKF_FIRMWARE:
          snprintf(fullpath, sizeof(fullpath), "%s%c%s", retro_base_directory,
                retro_slash, cd1);
-         break;
-      default:
          break;
    }
 
