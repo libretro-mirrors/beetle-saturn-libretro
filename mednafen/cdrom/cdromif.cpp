@@ -390,6 +390,9 @@ CDIF_MT::~CDIF_MT()
       scond_free(SBCond);
       SBCond = NULL;
    }
+
+   if (disc_cdaccess)
+      delete disc_cdaccess;
 }
 
 bool CDIF::ValidateRawSector(uint8_t *buf)
@@ -567,7 +570,8 @@ CDIF_ST::CDIF_ST(CDAccess *cda) : disc_cdaccess(cda)
 
 CDIF_ST::~CDIF_ST()
 {
-
+   if (disc_cdaccess)
+      delete disc_cdaccess;
 }
 
 void CDIF_ST::HintReadSector(int32_t lba)
