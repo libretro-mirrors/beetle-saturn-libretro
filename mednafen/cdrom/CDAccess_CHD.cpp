@@ -62,7 +62,21 @@ bool CDAccess_CHD::Load(const std::string &path, bool image_memcache)
 {
   chd_error err = chd_open(path.c_str(), CHD_OPEN_READ, NULL, &chd);
   if (err != CHDERR_NONE)
-    exit(-1);
+  {
+    log_cb(RETRO_LOG_ERROR, "Failed to load CHD image: %s", path.c_str());
+    return false;
+  }
+
+  if (image_memcache)
+  {
+    err = chd_precache(chd);
+
+    if (err != CHDERR_NONE)
+    {
+      log_cb(RETRO_LOG_ERROR, "Failed to pre-cache CHD image: %s", path.c_str());
+      return false;
+    }
+  }
 
   /* allocate storage for sector reads */
   const chd_header *head = chd_get_header(chd);
@@ -194,6 +208,9 @@ CDAccess_CHD::~CDAccess_CHD()
 {
   if (chd != NULL)
     chd_close(chd);
+
+  if (hunkmem)
+    free(hunkmem);
 }
 
 bool CDAccess_CHD::Read_CHD_Hunk_RAW(uint8_t *buf, int32_t lba)

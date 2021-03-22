@@ -21,6 +21,6 @@ extern bool disc_test();
 
 extern void disc_select( unsigned disc_num );
 
-extern bool disc_load_content( MDFNGI* game_inteface, const char *name, uint8* fd_id, char* sgid );
+extern bool disc_load_content( MDFNGI* game_inteface, const char *name, uint8* fd_id, char* sgid, bool image_memcache );
 
 #endif
