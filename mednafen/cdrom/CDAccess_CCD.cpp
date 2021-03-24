@@ -402,7 +402,7 @@ bool CDAccess_CCD::CheckSubQSanity(void)
 CDAccess_CCD::~CDAccess_CCD()
 {
    if (img_stream)
-      delete[] img_stream;
+      delete img_stream;
    if (sub_data)
       delete[] sub_data;
 }
