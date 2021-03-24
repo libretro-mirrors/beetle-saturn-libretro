@@ -693,6 +693,7 @@ bool disc_load_content( MDFNGI* game_interface, const char* content_name, uint8*
 		return false;
 	}
 
+#ifdef DEBUG
 	// Print out a track list for all discs.
 	for(unsigned i = 0; i < CDInterfaces.size(); i++)
 	{
@@ -704,6 +705,7 @@ bool disc_load_content( MDFNGI* game_interface, const char* content_name, uint8*
 		}
 		log_cb(RETRO_LOG_DEBUG, "Leadout: %6d\n", toc.tracks[100].lba);
 	}
+#endif
 
 	log_cb(RETRO_LOG_DEBUG, "Calculating layout MD5.\n");
 	// Calculate layout MD5.  The system emulation LoadCD() code is free to ignore this value and calculate
