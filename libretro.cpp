@@ -1688,7 +1688,7 @@ bool retro_load_game_special(unsigned, const struct retro_game_info *, size_t)
    return false;
 }
 
-static bool cdimagecache = false;
+static bool image_memcache = false;
 
 static bool boot = true;
 
@@ -1710,11 +1710,11 @@ static void check_variables(bool startup)
    if (startup)
    {
       var.key = "beetle_saturn_cdimagecache";
-      cdimagecache = false;
+      image_memcache = false;
 
       if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
          if (!strcmp(var.value, "enabled"))
-            cdimagecache = true;
+            image_memcache = true;
 
       var.key = "beetle_saturn_shared_int";
 
@@ -1970,7 +1970,7 @@ static bool MDFNI_LoadGame( const char *name )
          uint8 fd_id[16];
          char sgid[16 + 1] = { 0 };
 
-         if ( disc_load_content( MDFNGameInfo, name, fd_id, sgid, cdimagecache ) )
+         if ( disc_load_content( MDFNGameInfo, name, fd_id, sgid, image_memcache ) )
          {
             log_cb(RETRO_LOG_INFO, "Game ID is: %s\n", sgid );
 
