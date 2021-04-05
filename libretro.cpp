@@ -1189,9 +1189,9 @@ static bool InitCommon(const unsigned cpucache_emumode, const unsigned cart_type
    //
    //
 
-   try { LoadRTC();       } catch(MDFN_Error& e) { if(e.GetErrno() != ENOENT) throw; }
-   try { LoadBackupRAM(); } catch(MDFN_Error& e) { if(e.GetErrno() != ENOENT) throw; }
-   try { LoadCartNV();    } catch(MDFN_Error& e) { if(e.GetErrno() != ENOENT) throw; }
+   LoadRTC();
+   LoadBackupRAM();
+   LoadCartNV();
 
    BackupBackupRAM();
    BackupCartNV();

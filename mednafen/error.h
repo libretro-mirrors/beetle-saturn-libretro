@@ -15,11 +15,7 @@ class MDFN_Error
 
  ~MDFN_Error();
 
- int GetErrno(void);
-
  private:
-
- int errno_code;
  char *error_message;
 };
 
