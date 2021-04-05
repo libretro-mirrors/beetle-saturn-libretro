@@ -319,7 +319,7 @@ endif
 else ifneq (,$(findstring windows_msvc2017,$(platform)))
 
     NO_GCC := 1
-    FLAGS += -DHAVE__MKDIR -DNOMINMAX -D__PIC__
+    FLAGS += -DNOMINMAX -D__PIC__
 
 	PlatformSuffix = $(subst windows_msvc2017_,,$(platform))
 	ifneq (,$(findstring desktop,$(PlatformSuffix)))
@@ -423,7 +423,6 @@ else
    IS_X86 = 1
    SHARED := -shared -Wl,--no-undefined -Wl,--version-script=link.T
    LDFLAGS += -static-libgcc -static-libstdc++ -lwinmm
-   FLAGS += -DHAVE__MKDIR
    ifeq ($(HAVE_OPENGL),1)
       GL_LIB := -lopengl32
    endif
