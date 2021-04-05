@@ -31,6 +31,7 @@
 
 #include <retro_timers.h>
 #include <rthreads/rthreads.h>
+#include <rthreads/rsemaphore.h>
 #include <array>
 #include <atomic>
 #include <algorithm>
@@ -3129,6 +3130,9 @@ enum
  COMMAND_DRAW_LINE,
 
  COMMAND_SET_LEM,
+
+ COMMAND_SET_BUSYWAIT,
+
  COMMAND_RESET,
  COMMAND_EXIT
 };
@@ -3144,7 +3148,9 @@ static std::array<WQ_Entry, 0x80000> WQ;
 static size_t WQ_ReadPos, WQ_WritePos;
 static std::atomic_int_least32_t WQ_InCount;
 static std::atomic_int_least32_t DrawCounter;
-static int32 LastDrawnLine;
+static bool DoBusyWait;
+ssem_t* WakeupSem;
+static bool DoWakeupIfNecessary;
 
 static INLINE void WWQ(uint16 command, uint32 arg32 = 0, uint16 arg16 = 0)
 {
@@ -3169,10 +3175,13 @@ static void RThreadEntry(void* data)
  {
   while(MDFN_UNLIKELY(WQ_InCount.load(std::memory_order_acquire) == 0))
   {
-   if(LastDrawnLine < 192)
-    retro_sleep(1);
+   if(!DoBusyWait)
+    ssem_wait(WakeupSem);
    else
    {
+#ifdef MDFN_SS_BUSYWAIT_PAUSE
+    asm volatile("pause\n\tpause\n\tpause\n\tpause\n\tpause\n\tpause\n\tpause\n\t");
+#else
     for(int i = 1000; i; i--)
     {
      #ifdef _MSC_VER
@@ -3181,6 +3190,7 @@ static void RThreadEntry(void* data)
      asm volatile("nop\n\t");
      #endif
     }
+#endif
    }
   }
   //
@@ -3202,7 +3212,6 @@ static void RThreadEntry(void* data)
 	//for(unsigned i = 0; i < 2; i++)
 	DrawLine((uint16)wqe->Arg32, wqe->Arg32 >> 16, wqe->Arg16);
 	//
-	LastDrawnLine = (uint16)wqe->Arg32;
 	DrawCounter.fetch_sub(1, std::memory_order_release);
 	break;
 
@@ -3212,6 +3221,10 @@ static void RThreadEntry(void* data)
 
    case COMMAND_SET_LEM:
 	UserLayerEnableMask = wqe->Arg32;
+	break;
+
+   case COMMAND_SET_BUSYWAIT:
+	DoBusyWait = wqe->Arg32;
 	break;
 
    case COMMAND_EXIT:
@@ -3225,7 +3238,6 @@ static void RThreadEntry(void* data)
   WQ_InCount.fetch_sub(1, std::memory_order_release);
  }
 }
-
 
 //
 //
@@ -3244,6 +3256,7 @@ void VDP2REND_Init(const bool IsPAL)
  WQ_WritePos = 0;
  WQ_InCount.store(0, std::memory_order_release); 
  DrawCounter.store(0, std::memory_order_release);
+ WakeupSem = ssem_new(0);
  RThread = sthread_create(RThreadEntry, NULL);
 }
 
@@ -3306,10 +3319,22 @@ void VDP2REND_SetGetVideoParams(MDFNGI* gi, const bool caspect, const int sls, c
 
 void VDP2REND_Kill(void)
 {
+ if(WakeupSem != NULL)
+ {
+  WWQ(COMMAND_SET_BUSYWAIT, true);
+  ssem_signal(WakeupSem);
+ }
+
  if(RThread != NULL)
  {
   WWQ(COMMAND_EXIT);
   sthread_join(RThread);
+ }
+
+ if(WakeupSem != NULL)
+ {
+  ssem_free(WakeupSem);
+  WakeupSem = NULL;
  }
 }
 
@@ -3346,6 +3371,8 @@ void VDP2REND_EndFrame(void)
 #else
  ;
 #endif
+
+ WWQ(COMMAND_SET_BUSYWAIT, false);
 
  if(NextOutLine < VisibleLines)
  {
@@ -3385,8 +3412,26 @@ void VDP2REND_DrawLine(const int vdp2_line, const uint32 crt_line, const bool fi
   if(espec->InterlaceOn)
    out_line = (out_line << 1) | espec->InterlaceField;
 
-      DrawCounter.fetch_add(1, std::memory_order_release);
-      WWQ(COMMAND_DRAW_LINE, ((uint16)vdp2_line << 16) | out_line, field);
+  auto wdcq = DrawCounter.fetch_add(1, std::memory_order_release);
+  WWQ(COMMAND_DRAW_LINE, ((uint16)vdp2_line << 16) | out_line, field);
+  //
+  //
+  if(crt_line == bwthresh)
+  {
+   WWQ(COMMAND_SET_BUSYWAIT, true);
+   ssem_signal(WakeupSem);
+  }
+  else if(crt_line < bwthresh)
+  {
+   if(wdcq == 0)
+    DoWakeupIfNecessary = true;
+   else if((wdcq + 1) >= 64 && DoWakeupIfNecessary)
+   {
+    //printf("Post Wakeup: %3d --- crt_line=%3d\n", wdcq + 1, crt_line);
+    ssem_signal(WakeupSem);
+    DoWakeupIfNecessary = false;
+   }
+  }
 
   NextOutLine = crt_line + 1;
  }
