@@ -5,7 +5,6 @@
 
 // TODO?: BufferedStream, no virtual functions, yes inline functions, constructor takes a Stream* argument.
 
-#include <errno.h>
 #include <stdio.h>	// For SEEK_* defines, which we will use in Stream out of FORCE OF HABIT.
 
 #include <retro_inline.h>
