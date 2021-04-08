@@ -419,7 +419,7 @@ bool CDAccess_Image::ImageOpen(const std::string& path, bool image_memcache)
    {
       uint8_t bom_tmp[3];
 
-      if(fp.read(bom_tmp, 3, false) == 3 && bom_tmp[0] == 0xEF && bom_tmp[1] == 0xBB && bom_tmp[2] == 0xBF)
+      if(fp.read(bom_tmp, 3) == 3 && bom_tmp[0] == 0xEF && bom_tmp[1] == 0xBB && bom_tmp[2] == 0xBF)
       {
          // Print an annoying error message, but don't actually error out.
          log_cb(RETRO_LOG_WARN, "UTF-8 BOM detected at start of CUE sheet.\n");

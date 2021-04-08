@@ -103,17 +103,13 @@ INLINE void MemoryStream::grow_if_necessary(uint64 new_required_size)
  }
 }
 
-uint64 MemoryStream::read(void *data, uint64 count, bool error_on_eos)
+uint64 MemoryStream::read(void *data, uint64 count)
 {
  if(count > data_buffer_size)
- {
   count = data_buffer_size;
- }
 
  if((uint64)position > (data_buffer_size - count))
- {
   count = data_buffer_size - position;
- }
 
  memmove(data, &data_buffer[position], (size_t)count);
  position += count;
