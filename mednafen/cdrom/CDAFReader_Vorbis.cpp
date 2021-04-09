@@ -82,8 +82,7 @@ CDAFReader_Vorbis::CDAFReader_Vorbis(Stream *fp) : fw(fp)
    cb.close_func = iov_close_func;
    cb.tell_func = iov_tell_func;
 
-   if(ov_open_callbacks(fp, &ovfile, NULL, 0, cb))
-      throw(0);
+   ov_open_callbacks(fp, &ovfile, NULL, 0, cb);
 }
 
 CDAFReader_Vorbis::~CDAFReader_Vorbis()

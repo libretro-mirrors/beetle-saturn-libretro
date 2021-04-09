@@ -28,126 +28,110 @@
 #include "settings.h"
 #include "state.h"
 
-#include "hash/md5.h"
-
-using namespace std;
-
 bool MDFN_IsFIROPSafe(const std::string &path)
 {
- // We could make this more OS-specific, but it shouldn't hurt to try to weed out usage of characters that are path
- // separators in one OS but not in another, and we'd also run more of a risk of missing a special path separator case
- // in some OS.
+   /* We could make this more OS-specific, but it shouldn't hurt to try to weed out usage of characters that are path
+    * separators in one OS but not in another, and we'd also run more of a risk of missing a special path separator case
+    * in some OS.
+    */
 
- if(!MDFN_GetSettingB("filesys.untrusted_fip_check"))
-  return(true);
+   if(!MDFN_GetSettingB("filesys.untrusted_fip_check"))
+      return(true);
 
- if(path.find('\0') != string::npos)
-  return(false);
+   if(path.find('\0') != std::string::npos)
+      return(false);
 
- if(path.find(':') != string::npos)
-  return(false);
+   if(path.find(':') != std::string::npos)
+      return(false);
 
- if(path.find('\\') != string::npos)
-  return(false);
+   if(path.find('\\') != std::string::npos)
+      return(false);
 
- if(path.find('/') != string::npos)
-  return(false);
+   if(path.find('/') != std::string::npos)
+      return(false);
 
- return(true);
+   return(true);
 }
 
 void MDFN_GetFilePathComponents(const std::string &file_path, 
       std::string *dir_path_out, std::string *file_base_out, 
       std::string *file_ext_out)
 {
- size_t final_ds;		                  // in file_path
- string file_name;
- size_t fn_final_dot;		            // in local var file_name
- string dir_path, file_base, file_ext; // Temporary output
-
+   std::string file_name;
+   size_t fn_final_dot;		              /* in local var file_name */
+   std::string dir_path, file_base, file_ext; /* Temporary output */
 #ifdef _WIN32
- final_ds = file_path.find_last_of('\\');
+   size_t final_ds     = file_path.find_last_of('\\'); /* in file_path */
 
- size_t alt_final_ds = file_path.find_last_of('/');
-
- if(final_ds == string::npos || (alt_final_ds != string::npos && alt_final_ds > final_ds))
-    final_ds = alt_final_ds;
+   size_t alt_final_ds = file_path.find_last_of('/');
+   if(final_ds == std::string::npos || (alt_final_ds != std::string::npos && alt_final_ds > final_ds))
+      final_ds = alt_final_ds;
 #else
- final_ds = file_path.find_last_of('/');
+   size_t final_ds = file_path.find_last_of('/'); /* in file_path */
 #endif
 
- if(final_ds == string::npos)
- {
-  dir_path = string(".");
-  file_name = file_path;
- }
- else
- {
-  dir_path = file_path.substr(0, final_ds);
-  file_name = file_path.substr(final_ds + 1);
- }
+   if (final_ds == std::string::npos)
+   {
+      dir_path  = std::string(".");
+      file_name = file_path;
+   }
+   else
+   {
+      dir_path  = file_path.substr(0, final_ds);
+      file_name = file_path.substr(final_ds + 1);
+   }
 
- fn_final_dot = file_name.find_last_of('.');
+   fn_final_dot = file_name.find_last_of('.');
 
- if(fn_final_dot != string::npos)
- {
-  file_base = file_name.substr(0, fn_final_dot);
-  file_ext = file_name.substr(fn_final_dot);
- }
- else
- {
-  file_base = file_name;
-  file_ext = string("");
- }
+   if (fn_final_dot != std::string::npos)
+   {
+      file_base = file_name.substr(0, fn_final_dot);
+      file_ext  = file_name.substr(fn_final_dot);
+   }
+   else
+   {
+      file_base = file_name;
+      file_ext  = std::string("");
+   }
 
- if(dir_path_out)
-  *dir_path_out = dir_path;
+   if (dir_path_out)
+      *dir_path_out = dir_path;
 
- if(file_base_out)
-  *file_base_out = file_base;
+   if (file_base_out)
+      *file_base_out = file_base;
 
- if(file_ext_out)
-  *file_ext_out = file_ext;
+   if (file_ext_out)
+      *file_ext_out = file_ext;
 }
 
 std::string MDFN_EvalFIP(const std::string &dir_path, const std::string &rel_path, bool skip_safety_check)
 {
-#ifdef _WIN32
-   char slash = '\\';
-#else
-   char slash = '/';
-#endif
-
-   if(!skip_safety_check && !MDFN_IsFIROPSafe(rel_path))
-      throw MDFN_Error(0, "Referenced path \"%s\" is potentially unsafe.  See \"filesys.untrusted_fip_check\" setting.\n", rel_path.c_str());
-
    if (path_is_absolute(rel_path.c_str()))
-      return(rel_path);
-   return(dir_path + slash + rel_path);
+      return rel_path;
+#ifdef _WIN32
+   return dir_path + '\\' + rel_path;
+#else
+   return dir_path + '/' + rel_path;
+#endif
 }
 
 // Remove whitespace from beginning of string
 void MDFN_ltrim(std::string &string)
 {
- size_t len = string.length();
- size_t di, si;
+ size_t len        = string.length();
  bool InWhitespace = true;
-
- di = si = 0;
+ size_t di, si     = 0;
 
  while(si < len)
  {
-  if(InWhitespace && (string[si] == ' ' || string[si] == '\r' || string[si] == '\n' || string[si] == '\t' || string[si] == 0x0b))
-  {
-
-  }
-  else
-  {
-   InWhitespace = false;
-   string[di] = string[si];
-   di++;
-  }
-  si++;
+    if(InWhitespace && (string[si] == ' ' || string[si] == '\r' || string[si] == '\n' || string[si] == '\t' || string[si] == 0x0b)) { }
+    else
+    {
+       InWhitespace = false;
+       string[di] = string[si];
+       di++;
+    }
+    si++;
  }
 
  string.resize(di);
@@ -156,30 +140,30 @@ void MDFN_ltrim(std::string &string)
 // Remove whitespace from end of string
 void MDFN_rtrim(std::string &string)
 {
- size_t len = string.length();
+   size_t len = string.length();
 
- if(len)
- {
-  size_t x = len;
-  size_t new_len = len;
+   if(len)
+   {
+      size_t x = len;
+      size_t new_len = len;
 
-  do
-  {
-   x--;
+      do
+      {
+         x--;
 
-   if(!(string[x] == ' ' || string[x] == '\r' || string[x] == '\n' || string[x] == '\t' || string[x] == 0x0b))
-    break;
- 
-   new_len--;
-  } while(x);
+         if(!(string[x] == ' ' || string[x] == '\r' || string[x] == '\n' || string[x] == '\t' || string[x] == 0x0b))
+            break;
 
-  string.resize(new_len);
- }
+         new_len--;
+      } while(x);
+
+      string.resize(new_len);
+   }
 }
 
 
 void MDFN_trim(std::string &string)
 {
- MDFN_rtrim(string);
- MDFN_ltrim(string);
+   MDFN_rtrim(string);
+   MDFN_ltrim(string);
 }

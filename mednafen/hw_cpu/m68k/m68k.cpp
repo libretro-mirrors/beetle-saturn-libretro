@@ -132,8 +132,10 @@ void M68K::LoadOldState(const uint8* osm)
  old_Status = MDFN_de32lsb(osm); osm += 4;
  old_IRQLine = MDFN_de32lsb(osm); osm += 4;
 
+#if 0
  if(MDFN_de32lsb(osm) != 0xDEADBEEF)
   throw MDFN_Error(0, "Malformed old 68K save state.");
+#endif
  //
  //
  Flag_C = (old_C >> 8) & 1;

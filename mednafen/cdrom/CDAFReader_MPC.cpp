@@ -101,23 +101,23 @@ CDAFReader_MPC::CDAFReader_MPC(Stream *fp) : fw(fp)
    reader.data = (void*)fp;
 
    if(!(demux = mpc_demux_init(&reader)))
-   {
-      throw(0);
-   }
+      return;
    mpc_demux_get_info(demux, &si);
 
    if(si.channels != 2)
    {
       mpc_demux_exit(demux);
       demux = NULL;
-      throw MDFN_Error(0, _("MusePack stream has wrong number of channels(%u); the correct number is 2."), si.channels);
+      log_cb(RETRO_LOG_ERROR, "MusePack stream has wrong number of channels(%u); the correct number is 2.", si.channels);
+      return;
    }
 
    if(si.sample_freq != 44100)
    {
       mpc_demux_exit(demux);
       demux = NULL;
-      throw MDFN_Error(0, _("MusePack stream has wrong samplerate(%u Hz); the correct samplerate is 44100 Hz."), si.sample_freq);
+      log_cb(RETRO_LOG_ERROR, "MusePack stream has wrong samplerate(%u Hz); the correct samplerate is 44100 Hz.", si.sample_freq);
+      return;
    }
 }
 

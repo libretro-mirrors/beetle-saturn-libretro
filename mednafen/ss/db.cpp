@@ -203,26 +203,5 @@ void DB_Lookup(const char* path, const char* sgid, const uint8* fd_id, unsigned*
    break;
   }
  }
-
- //
- //
- //
-#if 0
- try
- {
-  FileStream fp(path, FileStream::MODE_READ);
-  std::string linebuf;
-
-  while(fp.get_line(linebuf) >= 0)
-  {
-   
-  }
- }
- catch(MDFN_Error& e)
- {
-  if(e.errno() != ENOENT)
-   throw;
- }
-#endif
 }
 

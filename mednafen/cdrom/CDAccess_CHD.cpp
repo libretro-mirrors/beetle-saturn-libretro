@@ -436,7 +436,7 @@ int32_t CDAccess_CHD::MakeSubPQ(int32_t lba, uint8_t *SubPWBuf) const
   }
 
   if (!track_found)
-    throw(MDFN_Error(0, "Could not find track for sector %u!", lba));
+    log_cb(RETRO_LOG_ERROR, "Could not find track for sector %u!", lba);
 
   if (lba < Tracks[track].LBA)
     lba_relative = Tracks[track].LBA - 1 - lba;
