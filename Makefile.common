@@ -175,7 +175,6 @@ SOURCES_C += \
 	$(DEPS_DIR)/lzma-19.00/src/Lzma86Dec.c \
 	$(DEPS_DIR)/lzma-19.00/src/LzmaDec.c \
 	$(DEPS_DIR)/lzma-19.00/src/LzmaEnc.c \
-	$(DEPS_DIR)/lzma-19.00/src/Sort.c \
 	$(DEPS_DIR)/libchdr/src/libchdr_bitstream.c \
 	$(DEPS_DIR)/libchdr/src/libchdr_cdrom.c \
 	$(DEPS_DIR)/libchdr/src/libchdr_chd.c \
