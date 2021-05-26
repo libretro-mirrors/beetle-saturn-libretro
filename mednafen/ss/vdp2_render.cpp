@@ -3363,14 +3363,10 @@ void VDP2REND_StartFrame(EmulateSpecStruct* espec_arg, const bool clock28m, cons
 void VDP2REND_EndFrame(void)
 {
  while(MDFN_UNLIKELY(DrawCounter.load(std::memory_order_acquire) != 0))
-#if 0
  {
-  //fprintf(stderr, "SLEEEEP\n");
-  //retro_sleep(1);
+   ssem_signal(WakeupSem);
+   retro_sleep(1);
  }
-#else
- ;
-#endif
 
  WWQ(COMMAND_SET_BUSYWAIT, false);
 
