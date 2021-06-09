@@ -27,6 +27,18 @@
 #include <stdint.h>
 #include <stdarg.h>
 
+#if 1
+ enum
+ {
+  HORRIBLEHACK_NOSH2DMALINE106	 = (1U << 0),
+  HORRIBLEHACK_NOSH2DMAPENALTY   = (1U << 1),
+  HORRIBLEHACK_VDP1VRAM5000FIX	 = (1U << 2),
+  HORRIBLEHACK_VDP1RWDRAWSLOWDOWN= (1U << 3),
+  HORRIBLEHACK_VDP1INSTANT	     = (1U << 4),
+ };
+ extern uint32 ss_horrible_hacks;
+#endif
+
  enum
  {
   SS_DBG_ERROR     = (1U << 0),
