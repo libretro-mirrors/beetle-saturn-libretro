@@ -1011,7 +1011,9 @@ typedef struct
    const char *name;
 } CartName;
 
-static bool InitCommon(const unsigned cpucache_emumode, const unsigned cart_type, const unsigned smpc_area)
+uint32 ss_horrible_hacks;
+
+static bool InitCommon(const unsigned cpucache_emumode, const unsigned cart_type, const unsigned smpc_area, const uint32 horrible_hacks )
 {
 #ifdef MDFN_SS_DEV_BUILD
  ss_dbg_mask = SS_DBG_ERROR;
@@ -1088,6 +1090,8 @@ static bool InitCommon(const unsigned cpucache_emumode, const unsigned cart_type
       CPU[i].Init(cpucache_emumode == CPUCACHE_EMUMODE_DATA_CB);
       CPU[i].SetMD5((bool)i);
    }
+
+   ss_horrible_hacks = horrible_hacks;
 
    //
    // Initialize backup memory.
@@ -1942,6 +1946,7 @@ static bool MDFNI_LoadGame( const char *name )
    unsigned cpucache_emumode;
    int cart_type;
    unsigned region;
+   uint32 horrible_hacks = 0;
 
    // .. safe defaults
    region = SMPC_AREA_NA;
@@ -1984,7 +1989,7 @@ static bool MDFNI_LoadGame( const char *name )
             {
                disc_detect_region( &region );
 
-               DB_Lookup(nullptr, sgid, fd_id, &region, &cart_type, &cpucache_emumode );
+               DB_Lookup(nullptr, sgid, fd_id, &region, &cart_type, &cpucache_emumode, &horrible_hacks );
 
                // forced region setting?
                if ( setting_region != 0 ) {
@@ -1997,7 +2002,7 @@ static bool MDFNI_LoadGame( const char *name )
                }
 
                // GO!
-               if ( InitCommon( cpucache_emumode, cart_type, region ) )
+               if ( InitCommon( cpucache_emumode, cart_type, region, horrible_hacks ) )
                {
                   MDFN_LoadGameCheats(NULL);
                   MDFNMP_InstallReadPatches();
@@ -2039,7 +2044,7 @@ static bool MDFNI_LoadGame( const char *name )
    }
 
    // Initialise with safe parameters
-   InitCommon( cpucache_emumode, cart_type, region );
+   InitCommon( cpucache_emumode, cart_type, region, horrible_hacks );
 
    MDFN_LoadGameCheats(NULL);
    MDFNMP_InstallReadPatches();

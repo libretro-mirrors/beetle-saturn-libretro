@@ -174,8 +174,21 @@ static const struct
  { "T-9515H-50", CPUCACHE_EMUMODE_FULL },	// Whizz (Europe)
 };
 
+static const struct
+{
+ const char* sgid;
+ unsigned horrible_hacks;
+ const char* game_name;
+ const char* purpose;
+ uint8 fd_id[16];
+} hhdb[] =
+{
+ { "T-4507G", HORRIBLEHACK_VDP1VRAM5000FIX } // "Grandia (Japan)", gettext_noop("Fixes hang at end of first disc.") },
+};
 
-void DB_Lookup(const char* path, const char* sgid, const uint8* fd_id, unsigned* const region, int* const cart_type, unsigned* const cpucache_emumode)
+void DB_Lookup(const char* path, const char* sgid, const uint8* fd_id,
+ unsigned* const region, int* const cart_type, unsigned* const cpucache_emumode,
+ unsigned* const hhv)
 {
  for(auto& re : regiondb)
  {
@@ -200,6 +213,15 @@ void DB_Lookup(const char* path, const char* sgid, const uint8* fd_id, unsigned*
   if((c.sgid && !strcmp(c.sgid, sgid)) || (!c.sgid && !memcmp(c.fd_id, fd_id, 16)))
   {
    *cpucache_emumode = c.mode;
+   break;
+  }
+ }
+
+ for(auto& hh : hhdb)
+ {
+  if(hh.sgid && !strcmp(hh.sgid, sgid))
+  {
+   *hhv = hh.horrible_hacks;
    break;
   }
  }

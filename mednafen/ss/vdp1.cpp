@@ -575,6 +575,11 @@ void SetHBVB(const sscpu_timestamp_t event_timestamp, const bool new_hb_status, 
    //
    if(!(FBCR & FBCR_FCM) || (FBManualPending && (FBCR & FBCR_FCT)))	// Swap framebuffers
    {
+#if 1
+    if((ss_horrible_hacks & HORRIBLEHACK_VDP1VRAM5000FIX) && DrawingActive && VRAM[0] == 0x5000 && VRAM[1] == 0x0000)
+     VRAM[0] = 0x8000;
+#endif
+
     if(DrawingActive)
     {
 #ifdef HAVE_DEBUG
