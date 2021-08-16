@@ -105,6 +105,7 @@ static char retro_slash = '\\';
 static char retro_slash = '/';
 #endif
 
+static bool libretro_supports_option_categories = false;
 static bool libretro_supports_bitmasks = false;
 
 extern MDFNGI EmulatedSS;
@@ -2283,6 +2284,7 @@ void retro_deinit(void)
    log_cb(RETRO_LOG_INFO, "[%s]: Estimated FPS: %.5f\n",
          MEDNAFEN_CORE_NAME, (double)video_frames * 44100 / audio_frames);
 
+   libretro_supports_option_categories = false;
    libretro_supports_bitmasks = false;
 }
 
@@ -2303,7 +2305,9 @@ void retro_set_environment( retro_environment_t cb )
    struct retro_vfs_interface_info vfs_iface_info;
    environ_cb = cb;
 
-   libretro_set_core_options(environ_cb);
+   libretro_supports_option_categories = false;
+   libretro_set_core_options(environ_cb,
+           &libretro_supports_option_categories);
 
    vfs_iface_info.required_interface_version = 1;
    vfs_iface_info.iface                      = NULL;
