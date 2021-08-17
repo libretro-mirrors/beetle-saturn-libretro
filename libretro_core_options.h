@@ -111,8 +111,7 @@ struct retro_core_option_v2_definition option_defs_us[] = {
          { "60",       NULL },
          { NULL, NULL },
       },
-      "0",
-      "int"
+      "0"
    },
    {
       "beetle_saturn_initial_scanline",
@@ -165,8 +164,7 @@ struct retro_core_option_v2_definition option_defs_us[] = {
          { "40",       NULL },
          { NULL, NULL },
       },
-      "0",
-      "int"
+      "0"
    },
    {
       "beetle_saturn_last_scanline",
@@ -208,8 +206,7 @@ struct retro_core_option_v2_definition option_defs_us[] = {
          { "239",       NULL },
          { NULL, NULL },
       },
-      "239",
-      "int"
+      "239"
    },
    {
       "beetle_saturn_initial_scanline_pal",
@@ -282,8 +279,7 @@ struct retro_core_option_v2_definition option_defs_us[] = {
          { "60",       NULL },
          { NULL, NULL },
       },
-      "0",
-      "int"
+      "0"
    },
    {
       "beetle_saturn_last_scanline_pal",
@@ -353,8 +349,7 @@ struct retro_core_option_v2_definition option_defs_us[] = {
          { "287",       NULL },
          { NULL, NULL },
       },
-      "271",
-      "int"
+      "271"
    },
    {
       "beetle_saturn_horizontal_blend",
@@ -368,8 +363,7 @@ struct retro_core_option_v2_definition option_defs_us[] = {
          { "enabled", NULL },
          { NULL, NULL },
       },
-      "disabled",
-      "bool"
+      "disabled"
    },
    {
       "beetle_saturn_multitap_port1",
@@ -383,8 +377,7 @@ struct retro_core_option_v2_definition option_defs_us[] = {
          { "enabled",   NULL },
          { NULL, NULL },
       },
-      "disabled",
-      "bool"
+      "disabled"
    },
    {
       "beetle_saturn_multitap_port2",
@@ -398,8 +391,7 @@ struct retro_core_option_v2_definition option_defs_us[] = {
          { "enabled",   NULL },
          { NULL, NULL },
       },
-      "disabled",
-      "bool"
+      "disabled"
    },
    {
       "beetle_saturn_analog_stick_deadzone",
@@ -418,8 +410,7 @@ struct retro_core_option_v2_definition option_defs_us[] = {
          { "30%",   NULL },
          { NULL, NULL },
       },
-      "15%",
-      NULL
+      "15%"
    },
    {
       "beetle_saturn_trigger_deadzone",
@@ -438,8 +429,7 @@ struct retro_core_option_v2_definition option_defs_us[] = {
          { "30%",   NULL },
          { NULL, NULL },
       },
-      "15%",
-      NULL
+      "15%"
    },
    {
       "beetle_saturn_mouse_sensitivity",
@@ -491,8 +481,7 @@ struct retro_core_option_v2_definition option_defs_us[] = {
          { "200%",   NULL },
          { NULL, NULL },
       },
-      "100%",
-      NULL
+      "100%"
    },
    {
       "beetle_saturn_virtuagun_crosshair",
@@ -507,8 +496,7 @@ struct retro_core_option_v2_definition option_defs_us[] = {
          { "Off",   NULL },
          { NULL, NULL },
       },
-      "Cross",
-      NULL
+      "Cross"
    },
    {
       "beetle_saturn_virtuagun_input",
@@ -522,8 +510,7 @@ struct retro_core_option_v2_definition option_defs_us[] = {
          { "Touchscreen",   NULL },
          { NULL, NULL },
       },
-      "Lightgun",
-      NULL
+      "Lightgun"
    },
    {
       "beetle_saturn_cart",
@@ -542,8 +529,7 @@ struct retro_core_option_v2_definition option_defs_us[] = {
          { "Ultraman: Hikari no Kyojin Densetsu",   NULL },
          { NULL, NULL },
       },
-      "Auto Detect",
-      NULL
+      "Auto Detect"
    },
    {
       "beetle_saturn_shared_int",
@@ -557,8 +543,7 @@ struct retro_core_option_v2_definition option_defs_us[] = {
          { "disabled", NULL },
          { NULL, NULL },
       },
-      "disabled",
-      "bool"
+      "disabled"
    },
    {
       "beetle_saturn_shared_ext",
@@ -572,8 +557,7 @@ struct retro_core_option_v2_definition option_defs_us[] = {
          { "disabled", NULL },
          { NULL, NULL },
       },
-      "disabled",
-      "bool"
+      "disabled"
    },
    {
       "beetle_saturn_region",
@@ -594,8 +578,7 @@ struct retro_core_option_v2_definition option_defs_us[] = {
          { "Latin America",   NULL },
          { NULL, NULL },
       },
-      "Auto Detect",
-      NULL
+      "Auto Detect"
    },
    {
       "beetle_saturn_autortc_lang",
@@ -613,8 +596,7 @@ struct retro_core_option_v2_definition option_defs_us[] = {
          { "japanese", "Japanese" },
          { NULL, NULL },
       },
-      "english",
-      NULL
+      "english"
    },
    {
       "beetle_saturn_cdimagecache",
@@ -628,8 +610,7 @@ struct retro_core_option_v2_definition option_defs_us[] = {
          { "enabled",   NULL },
          { NULL, NULL },
       },
-      "disabled",
-      "bool"
+      "disabled"
    },
    
    
@@ -645,8 +626,7 @@ struct retro_core_option_v2_definition option_defs_us[] = {
          { "enabled",   NULL },
          { NULL, NULL },
       },
-      "disabled",
-      "bool"
+      "disabled"
    },
    {
       "beetle_saturn_autortc",
@@ -660,11 +640,10 @@ struct retro_core_option_v2_definition option_defs_us[] = {
          { "disabled",   NULL },
          { NULL, NULL },
       },
-      "enabled",
-      "bool"
+      "enabled"
    },
 
-   { NULL, NULL, NULL, NULL, NULL, NULL, {{0}}, NULL, NULL },
+   { NULL, NULL, NULL, NULL, NULL, NULL, {{0}}, NULL },
 };
 
 /* RETRO_LANGUAGE_JAPANESE */
