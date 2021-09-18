@@ -36,15 +36,6 @@ typedef struct
    uint32_t initial_malloc; // A setting!
 } StateMem;
 
-// Eh, we abuse the smem_* in-memory stream code
-// in a few other places. :)
-int32_t smem_read(StateMem *st, void *buffer, uint32_t len);
-int32_t smem_write(StateMem *st, void *buffer, uint32_t len);
-int32_t smem_putc(StateMem *st, int value);
-int32_t smem_seek(StateMem *st, uint32_t offset, int whence);
-int smem_write32le(StateMem *st, uint32_t b);
-int smem_read32le(StateMem *st, uint32_t *b);
-
 int MDFNSS_SaveSM(void *st, uint32_t ver, const void*, const void*, const void*);
 int MDFNSS_LoadSM(void *st, uint32_t ver);
 
