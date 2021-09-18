@@ -13,4 +13,5 @@ int setting_gun_input = SETTING_GUN_INPUT_LIGHTGUN;
 bool setting_disc_test = false;
 bool setting_multitap_port1;
 bool setting_multitap_port2;
+bool opposite_directions;
 bool setting_midsync;

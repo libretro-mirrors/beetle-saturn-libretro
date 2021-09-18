@@ -394,6 +394,20 @@ struct retro_core_option_v2_definition option_defs_us[] = {
       "disabled"
    },
    {
+      "beetle_saturn_opposite_directions",
+      "Allow Up+Down and Left+Right",
+      NULL,
+      "Enabling this will allow pressing up and down or left and right directions at the same time. This may cause glitches.",
+      NULL,
+      "input",
+      {
+         { "disabled", NULL },
+         { "enabled", NULL },
+         { NULL, NULL},
+      },
+      "disabled"
+   },
+   {
       "beetle_saturn_analog_stick_deadzone",
       "Analog Stick Deadzone",
       NULL,
