@@ -8,10 +8,6 @@
 #include "inflate.h"
 #include "inffast.h"
 
-#ifdef ASMINF
-#  pragma message("Assembler code may have bugs -- use at your own risk")
-#else
-
 /*
    Decode literal, length, and distance codes and write out the resulting
    literal and match bytes until either not enough input or output is
@@ -114,9 +110,6 @@ unsigned start;         /* inflate()'s starting value for strm->avail_out */
         bits -= op;
         op = (unsigned)(here.op);
         if (op == 0) {                          /* literal */
-            Tracevv((stderr, here.val >= 0x20 && here.val < 0x7f ?
-                    "inflate:         literal '%c'\n" :
-                    "inflate:         literal 0x%02x\n", here.val));
             *out++ = (unsigned char)(here.val);
         }
         else if (op & 16) {                     /* length base */
@@ -131,7 +124,6 @@ unsigned start;         /* inflate()'s starting value for strm->avail_out */
                 hold >>= op;
                 bits -= op;
             }
-            Tracevv((stderr, "inflate:         length %u\n", len));
             if (bits < 15) {
                 hold += (unsigned long)(*in++) << bits;
                 bits += 8;
@@ -165,7 +157,6 @@ unsigned start;         /* inflate()'s starting value for strm->avail_out */
 #endif
                 hold >>= op;
                 bits -= op;
-                Tracevv((stderr, "inflate:         distance %u\n", dist));
                 op = (unsigned)(out - beg);     /* max distance in output */
                 if (dist > op) {                /* see if copy from window */
                     op = dist - op;             /* distance back in window */
@@ -278,7 +269,6 @@ unsigned start;         /* inflate()'s starting value for strm->avail_out */
             goto dolen;
         }
         else if (op & 32) {                     /* end-of-block */
-            Tracevv((stderr, "inflate:         end of block\n"));
             state->mode = TYPE;
             break;
         }
@@ -303,21 +293,4 @@ unsigned start;         /* inflate()'s starting value for strm->avail_out */
                                  257 + (end - out) : 257 - (out - end));
     state->hold = hold;
     state->bits = bits;
-    return;
 }
-
-/*
-   inflate_fast() speedups that turned out slower (on a PowerPC G3 750CXe):
-   - Using bit fields for code structure
-   - Different op definition to avoid & for extra bits (do & for table bits)
-   - Three separate decoding do-loops for direct, window, and wnext == 0
-   - Special case for distance > 1 copies to do overlapped load and store copy
-   - Explicit branch predictions (based on measured branch probabilities)
-   - Deferring match copy and interspersed it with decoding subsequent codes
-   - Swapping literal/length else
-   - Swapping window/direct else
-   - Larger unrolled copy loops (three is about right)
-   - Moving len -= 3 statement into middle of loop
- */
-
-#endif /* !ASMINF */
