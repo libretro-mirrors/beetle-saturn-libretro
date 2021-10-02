@@ -585,7 +585,13 @@ void input_update(bool supports_bitmasks,
 				p_input->buttons |=
 					input_state_cb( iplayer, RETRO_DEVICE_JOYPAD, 0, input_map_pad_left_shoulder ) ? ( 1 << 15 ) : 0;
 			}
-			break;
+
+         if (opposite_directions == false)
+         {
+           if ((p_input->buttons & 0x30) == 0x30) p_input->buttons &= ~0x30;
+           if ((p_input->buttons & 0xC0) == 0xC0) p_input->buttons &= ~0xC0;
+         }
+         break;
 
 		case RETRO_DEVICE_SS_TWINSTICK:
 

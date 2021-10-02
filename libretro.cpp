@@ -1811,9 +1811,15 @@ static void check_variables(bool startup)
       input_multitap( 2, connected );
    }
 
+   var.key = "beetle_saturn_opposite_directions";
 
-
-
+   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+   {
+      if (!strcmp(var.value, "enabled"))
+         opposite_directions = true;
+      else if (!strcmp(var.value, "disabled"))
+         opposite_directions = false;
+   }
    
    var.key = "beetle_saturn_midsync";
 
