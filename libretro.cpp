@@ -2105,6 +2105,23 @@ bool retro_load_game(const struct retro_game_info *info)
    frame_count = 0;
    internal_frame_count = 0;
 
+   struct retro_core_option_display option_display;
+   option_display.visible = false;
+   if (is_pal)
+   {
+      option_display.key = "beetle_saturn_initial_scanline";
+      environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
+      option_display.key = "beetle_saturn_last_scanline";
+      environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
+   }
+   else
+   {
+      option_display.key = "beetle_saturn_initial_scanline_pal";
+      environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
+      option_display.key = "beetle_saturn_last_scanline_pal";
+      environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
+   }
+
    return true;
 }
 
