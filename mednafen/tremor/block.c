@@ -15,7 +15,6 @@
 
  ********************************************************************/
 
-#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include "ogg.h"
@@ -500,4 +499,3 @@ int vorbis_synthesis_read(vorbis_dsp_state *v,int bytes){
   v->pcm_returned+=bytes;
   return(0);
 }
-

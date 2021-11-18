@@ -1,6 +1,7 @@
 
-#include "libretro.h"
+#include <libretro.h>
 #include <string/stdstring.h>
+#include <streams/file_stream.h>
 
 #include "mednafen/mednafen-types.h"
 #include "mednafen/git.h"
@@ -11,6 +12,12 @@
 #include "mednafen/ss/ss.h"
 #include "mednafen/ss/cdb.h"
 #include "mednafen/ss/smpc.h"
+
+extern "C"{
+RFILE* rfopen(const char *path, const char *mode);
+char *rfgets(char *buffer, int maxCount, RFILE* stream);
+int rfclose(RFILE* stream);
+}
 
 //------------------------------------------------------------------------------
 // Locals
@@ -67,13 +74,13 @@ static void ReadM3U( std::vector<std::string> &file_list, std::string path, unsi
 {
 	std::string dir_path;
 	char linebuf[ 2048 ];
-	FILE *fp = fopen(path.c_str(), "rb");
-	if (fp == NULL)
+	RFILE *fp = rfopen(path.c_str(), "rb");
+	if (!fp)
 		return;
 
 	MDFN_GetFilePathComponents(path, &dir_path);
 
-	while(fgets(linebuf, sizeof(linebuf), fp) != NULL)
+	while(rfgets(linebuf, sizeof(linebuf), fp) != NULL)
 	{
 		std::string efp;
 
@@ -107,7 +114,7 @@ static void ReadM3U( std::vector<std::string> &file_list, std::string path, unsi
 	}
 
 end:
-	fclose(fp);
+	rfclose(fp);
 }
 
 static bool IsSaturnDisc( const uint8* sa32k )

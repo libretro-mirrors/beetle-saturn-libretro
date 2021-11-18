@@ -23,7 +23,6 @@ extern "C"
 {
 #endif /* __cplusplus */
 
-#include <stdio.h>
 #include "ivorbiscodec.h"
 
 #define CHUNKSIZE 1024
@@ -117,5 +116,3 @@ extern long ov_read(OggVorbis_File *vf,char *buffer,int length,
 #endif /* __cplusplus */
 
 #endif
-
-

@@ -23,8 +23,6 @@
 #include "../general.h"
 #include "../mednafen-endian.h"
 
-#include <stdio.h>
-
 #include "CDAccess_CHD.h"
 
 // Disk-image(rip) track/sector formats

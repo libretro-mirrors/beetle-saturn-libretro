@@ -16,7 +16,6 @@
  ********************************************************************/
 
 #include <stdlib.h>
-#include <stdio.h>
 #include <string.h>
 #include <math.h>
 #include "ogg.h"
@@ -243,10 +242,6 @@ static int mapping0_inverse(vorbis_block *vb,vorbis_look_mapping *l){
 				   pcmbundle,zerobundle,ch_in_bundle);
   }
 
-  //for(j=0;j<vi->channels;j++)
-  //_analysis_output("coupled",seq+j,vb->pcm[j],-8,n/2,0,0);
-
-
   /* channel coupling */
   for(i=info->coupling_steps-1;i>=0;i--){
     int32_t *pcmM=vb->pcm[info->coupling_mag[i]];
@@ -275,9 +270,6 @@ static int mapping0_inverse(vorbis_block *vb,vorbis_look_mapping *l){
     }
   }
 
-  //for(j=0;j<vi->channels;j++)
-  //_analysis_output("residue",seq+j,vb->pcm[j],-8,n/2,0,0);
-
   /* compute and apply spectral envelope */
   for(i=0;i<vi->channels;i++){
     int32_t *pcm=vb->pcm[i];
@@ -286,18 +278,12 @@ static int mapping0_inverse(vorbis_block *vb,vorbis_look_mapping *l){
       inverse2(vb,look->floor_look[submap],floormemo[i],pcm);
   }
 
-  //for(j=0;j<vi->channels;j++)
-  //_analysis_output("mdct",seq+j,vb->pcm[j],-24,n/2,0,1);
-
   /* transform the PCM data; takes PCM vector, vb; modifies PCM vector */
   /* only MDCT right now.... */
   for(i=0;i<vi->channels;i++){
     int32_t *pcm=vb->pcm[i];
     mdct_backward(n,pcm,pcm);
   }
-
-  //for(j=0;j<vi->channels;j++)
-  //_analysis_output("imdct",seq+j,vb->pcm[j],-24,n,0,0);
 
   /* window the data */
   for(i=0;i<vi->channels;i++){
@@ -309,9 +295,6 @@ static int mapping0_inverse(vorbis_block *vb,vorbis_look_mapping *l){
 	pcm[j]=0;
     
   }
-
-  //for(j=0;j<vi->channels;j++)
-  //_analysis_output("window",seq+j,vb->pcm[j],-24,n,0,0);
 
   seq+=vi->channels;
   /* all done! */

@@ -2,7 +2,7 @@ SOURCES_CXX :=
 SOURCES_C   :=
 
 DEPS_DIR     := $(CORE_DIR)/deps
-LIBRETRO_DIR := $(CORE_DIR)/libretro-common
+LIBRETRO_COMMON_DIR := $(CORE_DIR)/libretro-common
 MEDNAFEN_DIR := $(CORE_DIR)/mednafen
 CORE_EMU_DIR := $(MEDNAFEN_DIR)/ss
 CDROM_DIR    := $(MEDNAFEN_DIR)/cdrom
@@ -14,7 +14,7 @@ INCFLAGS := -I$(CORE_DIR) \
 	    -I$(MEDNAFEN_DIR)/hw_sound \
 	    -I$(MEDNAFEN_DIR)/hw_cpu \
 	    -I$(MEDNAFEN_DIR)/hw_misc \
-	    -I$(LIBRETRO_DIR)/include
+	    -I$(LIBRETRO_COMMON_DIR)/include
 
 ZLIB_INCFLAGS = -I$(DEPS_DIR)/zlib-1.2.11
 
@@ -34,8 +34,8 @@ endif
 ifeq ($(HAVE_CDROM), 1)
    FLAGS += -DHAVE_CDROM
 
-   SOURCES_C += $(LIBRETRO_DIR)/cdrom/cdrom.c \
-                $(LIBRETRO_DIR)/vfs/vfs_implementation_cdrom.c
+   SOURCES_C += $(LIBRETRO_COMMON_DIR)/cdrom/cdrom.c \
+                $(LIBRETRO_COMMON_DIR)/vfs/vfs_implementation_cdrom.c
 
    ifeq ($(CDROM_DEBUG), 1)
       FLAGS += -DCDROM_DEBUG
@@ -204,25 +204,25 @@ else
 endif
 
 ifneq ($(STATIC_LINKING), 1)
-SOURCES_C += $(LIBRETRO_DIR)/streams/file_stream.c \
-				 $(LIBRETRO_DIR)/streams/file_stream_transforms.c \
-				 $(LIBRETRO_DIR)/file/file_path.c \
-				 $(LIBRETRO_DIR)/file/retro_dirent.c \
-				 $(LIBRETRO_DIR)/lists/dir_list.c \
-				 $(LIBRETRO_DIR)/lists/string_list.c \
-				 $(LIBRETRO_DIR)/vfs/vfs_implementation.c \
-				 $(LIBRETRO_DIR)/compat/compat_strl.c \
-				 $(LIBRETRO_DIR)/compat/compat_strcasestr.c \
-				 $(LIBRETRO_DIR)/compat/compat_posix_string.c \
-				 $(LIBRETRO_DIR)/compat/fopen_utf8.c \
-				 $(LIBRETRO_DIR)/encodings/encoding_utf.c \
-				 $(LIBRETRO_DIR)/memmap/memalign.c \
-				 $(LIBRETRO_DIR)/string/stdstring.c \
-				 $(LIBRETRO_DIR)/time/rtime.c
+SOURCES_C += $(LIBRETRO_COMMON_DIR)/streams/file_stream.c \
+				 $(LIBRETRO_COMMON_DIR)/streams/file_stream_transforms.c \
+				 $(LIBRETRO_COMMON_DIR)/file/file_path.c \
+				 $(LIBRETRO_COMMON_DIR)/file/retro_dirent.c \
+				 $(LIBRETRO_COMMON_DIR)/lists/dir_list.c \
+				 $(LIBRETRO_COMMON_DIR)/lists/string_list.c \
+				 $(LIBRETRO_COMMON_DIR)/vfs/vfs_implementation.c \
+				 $(LIBRETRO_COMMON_DIR)/compat/compat_strl.c \
+				 $(LIBRETRO_COMMON_DIR)/compat/compat_strcasestr.c \
+				 $(LIBRETRO_COMMON_DIR)/compat/compat_posix_string.c \
+				 $(LIBRETRO_COMMON_DIR)/compat/fopen_utf8.c \
+				 $(LIBRETRO_COMMON_DIR)/encodings/encoding_utf.c \
+				 $(LIBRETRO_COMMON_DIR)/memmap/memalign.c \
+				 $(LIBRETRO_COMMON_DIR)/string/stdstring.c \
+				 $(LIBRETRO_COMMON_DIR)/time/rtime.c
 
 ifeq ($(NEED_THREADING), 1)
-SOURCES_C += $(LIBRETRO_DIR)/rthreads/rthreads.c \
-				 $(LIBRETRO_DIR)/rthreads/rsemaphore.c
+SOURCES_C += $(LIBRETRO_COMMON_DIR)/rthreads/rthreads.c \
+				 $(LIBRETRO_COMMON_DIR)/rthreads/rsemaphore.c
 endif
 
 endif
