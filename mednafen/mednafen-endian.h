@@ -6,18 +6,10 @@
 #include <retro_miscellaneous.h>
 #include "mednafen-types.h"
 
-#if 0
-#if MDFN_GCC_VERSION >= MDFN_MAKE_GCCV(4,7,0)
-#define MDFN_ASSUME_ALIGNED(p, align) ((decltype(p))__builtin_assume_aligned((p), (align)))
-#else
-#define MDFN_ASSUME_ALIGNED(p, align) (p)
-#endif
-#else
 #ifndef _MSC_VER
 #define MDFN_ASSUME_ALIGNED(p, align) ((decltype(p))__builtin_assume_aligned((p), (align)))
 #else
 #define MDFN_ASSUME_ALIGNED(p, align) p
-#endif
 #endif
 
 #ifdef MSB_FIRST

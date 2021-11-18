@@ -138,13 +138,7 @@ static size_t UnQuotify(const std::string &src, size_t source_offset, std::strin
          if(in_quote)
          {
             source_offset++;
-            // Not sure which behavior is most useful(or correct :b).
-#if 0
-            in_quote = false;
-            already_normal = true;
-#else
             break;
-#endif
          }
          else
             in_quote = 1;
@@ -514,25 +508,8 @@ bool CDAccess_Image::ImageOpen(const std::string& path, bool image_memcache)
                TmpTrack.SubchannelMode = CDRF_SUBM_RW_RAW;
 
          } // end to TRACK
-         else if(cmdbuf == "SILENCE")
-         {
-#if 0
-            log_cb(RETRO_LOG_INFO, "Unsupported directive: %s\n", cmdbuf.c_str());
-            return false;
-#endif
-         }
-         else if(cmdbuf == "ZERO")
-         {
-#if 0
-            log_cb(RETRO_LOG_INFO, "Unsupported directive: %s\n", cmdbuf.c_str());
-            return false;
-#endif
-         }
          else if(cmdbuf == "FIFO")
-         {
-            log_cb(RETRO_LOG_INFO, "Unsupported directive: %s\n", cmdbuf.c_str());
             return false;
-         }
          else if(cmdbuf == "FILE" || cmdbuf == "AUDIOFILE")
          {
             const char *binoffset = NULL;
@@ -618,27 +595,16 @@ bool CDAccess_Image::ImageOpen(const std::string& path, bool image_memcache)
             MDFN_strtoupper(args[0]);
 
             if(args[0] == "COPY")
-            {
                TmpTrack.subq_control &= ~SUBQ_CTRLF_DCP; 
-            }
             else if(args[0] == "PRE_EMPHASIS")
-            {
                TmpTrack.subq_control &= ~SUBQ_CTRLF_PRE;
-            }
             else
-            {
-               log_cb(RETRO_LOG_ERROR, "Unsupported argument to \"NO\" directive: %s", args[0].c_str());
                return false;
-            }
          }
          else if(cmdbuf == "COPY")
-         {
             TmpTrack.subq_control |= SUBQ_CTRLF_DCP;
-         } 
          else if(cmdbuf == "PRE_EMPHASIS")
-         {
             TmpTrack.subq_control |= SUBQ_CTRLF_PRE;
-         }
          // TODO: Confirm that these are taken from the TOC of the disc, and not synthesized by cdrdao.
          else if(cmdbuf == "CD_DA")
             disc_type = DISC_TYPE_CDDA_OR_M1;
@@ -646,13 +612,6 @@ bool CDAccess_Image::ImageOpen(const std::string& path, bool image_memcache)
             disc_type = DISC_TYPE_CDDA_OR_M1;
          else if(cmdbuf == "CD_ROM_XA")
             disc_type = DISC_TYPE_CD_XA;
-         else
-         {
-#if 0
-            log_cb(RETRO_LOG_ERROR, "Unsupported directive: %s", cmdbuf.c_str());
-            return false;
-#endif
-         }
          // TODO: CATALOG
 
       } /*********** END TOC HANDLING ************/
@@ -854,9 +813,6 @@ bool CDAccess_Image::ImageOpen(const std::string& path, bool image_memcache)
    NumTracks = 1 + LastTrack - FirstTrack;
 
    int32_t RunningLBA = 0;
-#if 0
-   int32_t LastIndex = 0;
-#endif
    long FileOffset = 0;
 
    RunningLBA -= 150;
@@ -907,12 +863,7 @@ bool CDAccess_Image::ImageOpen(const std::string& path, bool image_memcache)
       else // else handle CUE sheet...
       {
          if(Tracks[x].FirstFileInstance) 
-         {
-#if 0
-            LastIndex = 0;
-#endif
             FileOffset = 0;
-         }
 
          RunningLBA += Tracks[x].pregap;
 

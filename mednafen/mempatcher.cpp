@@ -145,23 +145,10 @@ void MDFNMP_InstallReadPatches(void)
  if(!CheatsActive) return;
 
  std::vector<SUBCHEAT>::iterator chit;
-
-#if 0
- for(unsigned int x = 0; x < 8; x++)
-  for(chit = SubCheats[x].begin(); chit != SubCheats[x].end(); chit++)
-  {
-   if(MDFNGameInfo->InstallReadPatch)
-    MDFNGameInfo->InstallReadPatch(chit->addr);
-  }
-#endif
 }
 
 void MDFNMP_RemoveReadPatches(void)
 {
-#if 0
- if(MDFNGameInfo->RemoveReadPatches)
-  MDFNGameInfo->RemoveReadPatches();
-#endif
 }
 
 /* This function doesn't allocate any memory for "name" */
@@ -283,14 +270,6 @@ static bool TestConditions(const char *string)
  {
   uint64 v_value;
   uint64 value_at_address;
-#if 0
-  uint32 v_address;
-
-  if(address[0] == '0' && address[1] == 'x')
-   v_address = strtoul(address + 2, NULL, 16);
-  else
-   v_address = strtoul(address, NULL, 10);
-#endif
 
   if(value[0] == '0' && value[1] == 'x')
    v_value = strtoull(value + 2, NULL, 16);

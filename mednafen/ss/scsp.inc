@@ -79,17 +79,6 @@ void SS_SCSP::RecalcSoundInt(void)	// Sound CPU interrupts
  }
 
  SCSP_SoundIntChanged(out_level);
-#if 0
- if(mask_test)
- {
-  const unsigned shift = std::min<unsigned>(7, MDFN_tzcount32(mask_test));
-  unsigned level;
-
-  level = (((SCILV[0] >> which) & 0x1) << 0) |
-	  (((SCILV[1] >> which) & 0x1) << 1) |
-	  (((SCILV[2] >> which) & 0x1) << 2);
- }
-#endif
 }
 
 void SS_SCSP::RecalcMainInt(void)	// Main CPU interrupts

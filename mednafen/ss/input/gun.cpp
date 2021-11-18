@@ -185,11 +185,6 @@ void IODevice_Gun::TransformInput(uint8* const data, float gun_x_scale, float gu
  tmp = std::max<int32>(-32768, std::min<int32>(32767, tmp));
 
  MDFN_en16lsb(&data[0], tmp);
-
-#if 0
- MDFN_en16lsb(&data[0], rand());
- //MDFN_en16lsb(&data[2], rand());
-#endif
 }
 
 void IODevice_Gun::UpdateInput(const uint8* data, const int32 time_elapsed)

@@ -127,18 +127,6 @@ ReedSolomonTables *CreateReedSolomonTables(GaloisTables *gt,
    for(i=0; i<=rt->nroots; i++)
      rt->gpoly[i] = gt->indexOf[rt->gpoly[i]];
 
-#if 0
-   /* for the precalculated unrolled loops only */
-
-   for(i=gt->nroots-1; i>0; i--)
-     PrintCLI(
-	    "                  par_idx[((++spk)&%d)] ^= enc_alpha_to[feedback + %3d];\n",
-	    nroots-1,gt->gpoly[i]);
-
-   PrintCLI("                  par_idx[sp] = enc_alpha_to[feedback + %3d];\n",
-	  gt->gpoly[0]);
-#endif
-
    return rt;
 }
 

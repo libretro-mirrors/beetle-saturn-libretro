@@ -105,27 +105,6 @@ static void gf8_create_log_tables()
  */
 #define gf8_add(a,  b) (a) ^ (b)
 
-
-/* Multiplication in the GF(8) domain: add the logarithms (modulo 255)
- * and return the inverse logarithm. Not used!
- */
-#if 0
-static gf8_t gf8_mult(gf8_t a, gf8_t b)
-{
-  int16_t sum;
-
-  if (a == 0 || b == 0)
-    return 0;
-
-  sum = GF8_LOG[a] + GF8_LOG[b];
-
-  if (sum >= 255)
-    sum -= 255;
-
-  return GF8_ILOG[sum];
-}
-#endif
-
 /* Division in the GF(8) domain: Like multiplication but logarithms a
  * subtracted.
  */

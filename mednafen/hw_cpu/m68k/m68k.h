@@ -339,18 +339,6 @@ class M68K
  template<typename T, M68K::AddressMode TAM>
  void ROXR(HAM<T, TAM> &targ, unsigned count);
 
-#if 0
-static uint8 TAS_Callback(uint8 data)
-{
- CalcZN<uint8>(data);
- SetC(false);
- SetV(false);
-
- data |= 0x80;
- return data;
-}
-#endif
-
  template<typename T, M68K::AddressMode DAM>
  void TAS(HAM<T, DAM> &dst);
 
