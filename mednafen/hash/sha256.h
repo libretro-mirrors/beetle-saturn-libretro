@@ -28,7 +28,6 @@
 
 typedef std::array<uint8, 32> sha256_digest;
 
-void sha256_test(void);
 sha256_digest sha256(const void* data, const uint64 len);
 
 static INLINE constexpr uint8 sha256_cton(char c)

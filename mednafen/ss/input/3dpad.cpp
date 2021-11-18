@@ -68,8 +68,6 @@ void IODevice_3DPad::UpdateInput(const uint8* data, const int32 time_elapsed)
   else if(shoulder[w] >= 0x8E)
    dbuttons |= 0x0800 << (w << 2);
  }
-
- //printf("DButtons: %04x, Mode: %d, Thumb0: %02x, Thumb1: %02x, Shoulder0: %02x, Shoulder1: %02x\n", dbuttons, mode, thumb[0], thumb[1], shoulder[0], shoulder[1]);
 }
 
 void IODevice_3DPad::StateAction(StateMem* sm, const unsigned load, const bool data_only, const char* sname_prefix)

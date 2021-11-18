@@ -111,7 +111,6 @@ static INLINE int32 SpriteBase(const uint16* cmd_data)
    p[i].x = sign_x_to_s32(13, cmd_data[0x6 + (i << 1)]) + LocalX;
    p[i].y = sign_x_to_s32(13, cmd_data[0x7 + (i << 1)]) + LocalY;
   }
-  //printf("Hrm: %d:%d %d:%d %d:%d %d:%d\n", p[0].x, p[0].y, p[1].x, p[1].y, p[2].x, p[2].y, p[3].x, p[3].y);
  }
  else if(format == FORMAT_NORMAL)
  {
@@ -274,10 +273,7 @@ static INLINE int32 SpriteBase(const uint16* cmd_data)
   e[1].GetVertex(&LineSetup.p[1]);
 
   LineSetup.tex_base = tex_base + big_t.PreStep();
-  //
-  //printf("%d:%d -> %d:%d\n", lp[0].x, lp[0].y, lp[1].x, lp[1].y);
   ret += fnptr();
-  //
   e[0].Step();
   e[1].Step();
  }

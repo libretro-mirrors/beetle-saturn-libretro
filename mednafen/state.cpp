@@ -156,7 +156,6 @@ static void SubWrite(StateMem *st, const SFORMAT *sf)
 			for(int32 bool_monster = 0; bool_monster < bytesize; bool_monster++)
 			{
 				uint8 tmp_bool = ((bool *)p)[bool_monster];
-				//printf("Bool write: %.31s\n", sf->name);
 				smem_write(st, &tmp_bool, 1);
 			}
 		}

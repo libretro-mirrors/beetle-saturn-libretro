@@ -234,27 +234,3 @@ void md5_context::finish(uint8 digest[16] )
     PUT_UINT32( state[3], digest, 12 );
 }
 
-
-/* Uses a static buffer, so beware of how it's used. */
-//static 
-std::string md5_context::asciistr(const uint8 digest[16], bool borked_order)
-{
- static char str[33];
- static char trans[16]={'0','1','2','3','4','5','6','7','8','9','a','b','c','d','e','f'};
- int x;
-
- for(x=0;x<16;x++)
- {
-  if(borked_order)
-  {
-   str[x*2]=trans[digest[x]&0x0F];
-   str[x*2+1]=trans[digest[x]>>4];
-  }
-  else
-  {
-   str[x*2+1]=trans[digest[x]&0x0F];
-   str[x*2]=trans[digest[x]>>4];
-  }
- }
- return(std::string(str));
-}

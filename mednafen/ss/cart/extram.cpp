@@ -32,8 +32,6 @@ static MDFN_HOT void ExtRAM_RW_DB(uint32 A, uint16* DB)
  const uint32 mask = (sizeof(T) == 2) ? 0xFFFF : (0xFF << (((A & 1) ^ 1) << 3));
  uint16* const ptr = (uint16*)((uint8*)ExtRAM + (A & ExtRAM_Mask));
 
- //printf("Barf %zu %d: %08x\n", sizeof(T), IsWrite, A);
-
  if(IsWrite)
   *ptr = (*ptr & ~mask) | (*DB & mask);
  else

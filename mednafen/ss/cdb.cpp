@@ -132,203 +132,6 @@ enum
  COMMAND_GET_AUTH	= 0xE1
 };
 
-#ifdef HAVE_DEBUG
-static MDFN_COLD void GetCommandDetails(const uint16* CD, char* s, size_t sl)
-{
- switch(CD[0] >> 8)
- {
-  default:
-	trio_snprintf(s, sl, "UNKNOWN: 0x%04x, 0x%04x, 0x%04x, 0x%04x", CD[0], CD[1], CD[2], CD[3]);
-	break;
-
-  case COMMAND_GET_CDSTATUS:
-	trio_snprintf(s, sl, "Get CD Status");
-	break;
-
-  case COMMAND_GET_HWINFO:
-	trio_snprintf(s, sl, "Get Hardware Info");
-	break;
-
-  case COMMAND_GET_TOC:
-	trio_snprintf(s, sl, "Get TOC");
-	break;
-
-  case COMMAND_GET_SESSINFO:
-	trio_snprintf(s, sl, "Get Session Info; Type=0x%02x", CD[0] & 0xFF);
-	break;
-
-  case COMMAND_INIT:
-	trio_snprintf(s, sl, "Initialize; Flags=0x%02x, StandbyTime=0x%04x, ECC=0x%02x, Retry=0x%02x", CD[0] & 0xFF, CD[1], CD[3] >> 8, CD[3] & 0xFF);
-	break;
-
-  case COMMAND_OPEN:
-	trio_snprintf(s, sl, "Open Tray");
-	break;
-
-  case COMMAND_END_DATAXFER:
-	trio_snprintf(s, sl, "End Data Transfer");
-	break;
-
-  case COMMAND_PLAY:
-	trio_snprintf(s, sl, "Play; Start=0x%06x, End=0x%06x, Mode=0x%02x", ((CD[0] & 0xFF) << 16) | CD[1], ((CD[2] & 0xFF) << 16) | CD[3], CD[2] >> 8);
-	break;
-
-  case COMMAND_SEEK:
-	// 0xFFFFFF=pause, 0=stop
-	trio_snprintf(s, sl, "Seek; Target=0x%06x", ((CD[0] & 0xFF) << 16) | CD[1]);
-	break;
-
-  case COMMAND_SCAN:
-	trio_snprintf(s, sl, "Scan; Direction=0x%02x", CD[0] & 0xFF);
-	break;
-
-  case COMMAND_GET_SUBCODE:
-	trio_snprintf(s, sl, "Get Subcode; Type=0x%02x", CD[0] & 0xFF);
-	break;
-
-  case COMMAND_SET_CDDEVCONN:
-	trio_snprintf(s, sl, "Set CD Device Connection; Filter=0x%02x", CD[2] >> 8);
-	break;
-
-  case COMMAND_GET_CDDEVCONN:
-	trio_snprintf(s, sl, "Get CD Device Connection");
-	break;
-
-  case COMMAND_GET_LASTBUFDST:
-	trio_snprintf(s, sl, "Get Last Buffer Destination");
-	break;
-
-  case COMMAND_SET_FILTRANGE:
-	trio_snprintf(s, sl, "Set Filter Range; Filter=0x%02x, FAD=0x%06x, Count=0x%06x", CD[2] >> 8, ((CD[0] & 0xFF) << 16) | CD[1], ((CD[2] & 0xFF) << 16) | CD[3]);
-	break;
-
-  case COMMAND_GET_FILTRANGE:
-	trio_snprintf(s, sl, "Get Filter Range; Filter=0x%02x", CD[2] >> 8);
-	break;
-
-  case COMMAND_SET_FILTSUBHC:
-	trio_snprintf(s, sl, "Set Filter Subheader Conditions; Filter=0x%02x, Channel=0x%02x, Sub Mode: 0x%02x(Mask=0x%02x), Coding Info: 0x%02x(Mask=0x%02x), File: 0x%02x", (CD[2] >> 8), CD[0] & 0xFF, CD[3] >> 8, CD[1] >> 8, CD[3] & 0xFF, CD[1] & 0xFF, CD[2] & 0xFF);
-	break;
-
-  case COMMAND_GET_FILTSUBHC:
-	trio_snprintf(s, sl, "Get Filter Subheader Conditions; Filter=0x%02x", CD[2] >> 8);
-	break;
-
-  case COMMAND_SET_FILTMODE:
-	trio_snprintf(s, sl, "Set Filter Mode; Filter=0x%02x, Mode=0x%02x", (CD[2] >> 8), CD[0] & 0xFF);
-	break;
-
-  case COMMAND_GET_FILTMODE:
-	trio_snprintf(s, sl, "Get Filter Mode; Filter=0x%02x", CD[2] >> 8);
-	break;
-
-  case COMMAND_SET_FILTCONN:
-	trio_snprintf(s, sl, "Set Filter Connection; Filter=0x%02x, Flags=0x%02x, True=0x%02x, False=0x%02x", (CD[2] >> 8), (CD[0] & 0xFF), (CD[1] >> 8), (CD[1] & 0xFF));
-	break;
-
-  case COMMAND_GET_FILTCONN:
-	trio_snprintf(s, sl, "Get Filter Connection; Filter=0x%02x", CD[2] >> 8);
-	break;
-
-  case COMMAND_RESET_SEL:
-	trio_snprintf(s, sl, "Reset Selector; Flags=0x%02x, pn=0x%02x", CD[0] & 0xFF, CD[2] >> 8);
-	break;
-
-  case COMMAND_GET_BUFSIZE:
-	trio_snprintf(s, sl, "Get Buffer Size");
-	break;
-
-  case COMMAND_GET_SECNUM:
-	trio_snprintf(s, sl, "Get Sector Number; Source=0x%02x", CD[2] >> 8);
-	break;
-
-  case COMMAND_CALC_ACTSIZE:
-	trio_snprintf(s, sl, "Calculate Actual Size; Source=0x%02x[0x%04x], Count=0x%02x", CD[2] >> 8, CD[1], CD[3]);
-	break;
-
-  case COMMAND_GET_ACTSIZE:
-	trio_snprintf(s, sl, "Get Actual Size");
-	break;
-
-  case COMMAND_GET_SECINFO:
-	trio_snprintf(s, sl, "Get Sector Info; Source=0x%02x[0x%04x]", CD[2] >> 8, CD[1]);
-	break;
-
-  case COMMAND_EXEC_FADSRCH:
-	trio_snprintf(s, sl, "Execute FAD Search; Source=0x%02x[0x%04x], FAD=0x%06x", CD[2] >> 8, CD[1], ((CD[2] & 0xFF) << 16) | CD[3]);
-	break;
-
-  case COMMAND_GET_FADSRCH:
-	trio_snprintf(s, sl, "Get FAD Search Results");
-	break;
-
-  case COMMAND_SET_SECLEN:
-	trio_snprintf(s, sl, "Set Sector Length; Get: 0x%02x, Put: 0x%02x", (CD[0] & 0xFF), (CD[1] >> 8));
-	break;
-
-  case COMMAND_GET_SECDATA:
-	trio_snprintf(s, sl, "Get Sector Data; Source=0x%02x[0x%04x], Count=0x%04x", CD[2] >> 8, CD[1], CD[3]);
-	break;
-
-  case COMMAND_DEL_SECDATA:
-	trio_snprintf(s, sl, "Delete Sector Data; Source=0x%02x[0x%04x], Count=0x%04x", CD[2] >> 8, CD[1], CD[3]);
-	break;
-
-  case COMMAND_GETDEL_SECDATA:
-	trio_snprintf(s, sl, "Get and Delete Sector Data; Source=0x%02x[0x%04x], Count=0x%04x", CD[2] >> 8, CD[1], CD[3]);
-	break;
-
-  case COMMAND_PUT_SECDATA:
-	trio_snprintf(s, sl, "Put Sector Data; Filter=0x%02x, Count=0x%04x", CD[2] >> 8, CD[3]);
-	break;
-
-  case COMMAND_COPY_SECDATA:
-	trio_snprintf(s, sl, "Copy Sector Data; Source=0x%02x[0x%04x], Dest=0x%02x, Count=0x%04x", CD[2] >> 8, CD[1], CD[0] & 0xFF, CD[3]);
-	break;
-
-  case COMMAND_MOVE_SECDATA:
-	trio_snprintf(s, sl, "Move Sector Data; Source=0x%02x[0x%04x], Dest=0x%02x, Count=0x%04x", CD[2] >> 8, CD[1], CD[0] & 0xFF, CD[3]);
-	break;
-
-  case COMMAND_GET_COPYERR:
-	trio_snprintf(s, sl, "Get Copy Error");
-	break;
-
-  case COMMAND_CHANGE_DIR:
-	trio_snprintf(s, sl, "Change Directory; ID=0x%06x, Filter: 0x%02x", ((CD[2] & 0xFF) << 16) | CD[3], (CD[2] >> 8));
-	break;
-
-  case COMMAND_READ_DIR:
-	trio_snprintf(s, sl, "Read Directory; ID=0x%06x, Filter=0x%02x", ((CD[2] & 0xFF) << 16) | CD[3], (CD[2] >> 8));
-	break;
-
-  case COMMAND_GET_FSSCOPE:
-	trio_snprintf(s, sl, "Get Filesystem Scope");
-	break;
-
-  case COMMAND_GET_FINFO:
-	trio_snprintf(s, sl, "Get File Info; ID=0x%06x", ((CD[2] & 0xFF) << 16) | CD[3]);
-	break;
-
-  case COMMAND_READ_FILE:
-	trio_snprintf(s, sl, "Read File; Offset=0x%06x, ID=0x%06x, Filter=0x%02x\n", ((CD[0] & 0xFF) << 16) | CD[1], ((CD[2] & 0xFF) << 16) | CD[3], CD[2] >> 8);
-	break;
-
-  case COMMAND_ABORT_FILE:
-	trio_snprintf(s, sl, "Abort File");
-	break;
-
-  case COMMAND_AUTH_DEVICE:
-	trio_snprintf(s, sl, "Authenticate Device; Type=0x%04x, Filter=0x%02x", CD[1], CD[2] >> 8);
-	break;
-
-  case COMMAND_GET_AUTH:
-	trio_snprintf(s, sl, "Get Device Authentication Status");
-	break;
- }
-}
-#endif
-
 enum
 {
  STATUS_BUSY	 = 0x00,
@@ -921,8 +724,6 @@ static void ReadRecord(FileInfoS* fi, const uint8* rr)
  int su_offs = 33 + (fi_len | 1);
  int su_len = (rec_len - su_offs);
 
- //printf("%d %d %d %d\n", rec_len, fi_len, su_offs, su_len);
-
  if(su_len >= 14 && (su_offs + su_len) <= 256)
  {
   if(rr[su_offs + 6] == 'X' && rr[su_offs + 7] == 'A')
@@ -931,8 +732,6 @@ static void ReadRecord(FileInfoS* fi, const uint8* rr)
    fi->fnum = rr[su_offs + 8];
   }
  }
-
- //printf("Meow: fad=%08x size=%08x attr=%02x us=%02x gs=%02x fnum=%02x %s\n", fi->fad(), fi->size(), fi->attr, fi->unit_size, fi->gap_size, fi->fnum, &FLS.record[33]);
 }
 
 static void ClearPendingSec(void);
@@ -940,7 +739,6 @@ static void ClearPendingSec(void);
 static bool FLS_Run(void)
 {
  bool ret = false;
- //printf("%d, %d\n", Partitions[FLS.pnum].Count, FreeBufferCount);
 
  if(FLS.Abort)
  {
@@ -971,11 +769,6 @@ static bool FLS_Run(void)
      break;
     else if(FLS.pbuf[0] == 0x01)	// PVD
     {
-     //printf("MEOW MEOW:");
-     //for(unsigned i = 0; i < 64; i++)
-     // printf("%02x ", FLS.pbuf[156 + i]);
-     //printf("\n");
-
      ReadRecord(&RootDirInfo, &FLS.pbuf[156]);
      RootDirInfoValid = true;
      break;
@@ -994,7 +787,6 @@ static bool FLS_Run(void)
    FLS.record_counter = 0;
    FLS.finfo_offs = 0;
 
-   //printf("Start\n");
    while(FLS.total_counter < FLS.total_max)
    {
     memset(FLS.record, 0, sizeof(FLS.record));
@@ -1132,7 +924,6 @@ static void DT_ReadIntoFIFO(void)
  else
   tmp = MDFN_de16msb(&Buffers[DT.BufList[DT.CurBufIndex]].Data[DT.InBufOffs << 1]);
 
- //printf("%02x %02x\n", DT.BufList[DT.CurBufIndex], DT.CurBufIndex);
  DT.FIFO[DT.FIFO_WP] = tmp;
  DT.FIFO_WP = (DT.FIFO_WP + 1) % (sizeof(DT.FIFO) / sizeof(DT.FIFO[0]));
  DT.FIFO_In++;
@@ -1297,7 +1088,6 @@ enum : int { CommandPhaseBias = __COUNTER__ + 1 };
 			      CommandPhase = __COUNTER__ - CommandPhaseBias - 1;			\
 			      goto CommandGetOut;						\
 			     }									\
-			     /*printf("%f\n", (double)ClockCounter / (1LL << 32));*/		\
 			    }									\
 			   }
 
@@ -1748,14 +1538,7 @@ static void Drive_Run(int64 clocks)
 	  {
 	   DrivePhase = DRIVEPHASE_PLAY;
 	   DriveCounter += (int64)((44100 * 256) / ((SubQBuf_Safe[0] & 0x40) ? 150 : 75)) << 32;
-
-#if 0
-	   if(!Cur_CDIF->NonDeterministic_CheckSectorReady(CurSector - 150))
-	    DrivePhase = DRIVEPHASE_SEEK;
-#endif
 	  }
-	  //else
-	  // printf("%d\n", CurSector);
          }
         }
 	break;
@@ -1820,11 +1603,6 @@ static void Drive_Run(int64 clocks)
 	 {
 	  // TODO: More accurate:
 	  CurPosInfo.status = STATUS_PAUSE;
-
-#ifdef HAVE_DEBUG
-	  if(SecPreBuf_In > 0)
-	   SS_DBG(SS_DBG_CDB, "[CDB] SB Overflow\n");
-#endif
 	 }
 	 else
 	 {
@@ -2025,14 +1803,6 @@ sscpu_timestamp_t CDB_Update(sscpu_timestamp_t timestamp)
      CTR.CD[i] = CData[i];
 
     CTR.Command = CTR.CD[0] >> 8;
-#ifdef HAVE_DEBUG
-    if(MDFN_UNLIKELY(ss_dbg_mask & SS_DBG_CDB))
-    {
-     char cdet[128];
-     GetCommandDetails(CTR.CD, cdet, sizeof(cdet));
-     SS_DBG(SS_DBG_CDB, "[CDB] Command: %s --- HIRQ=0x%04x, HIRQ_Mask=0x%04x\n", cdet, HIRQ, HIRQ_Mask);
-    }
-#endif
     //
     //
     CMD_EAT_CLOCKS(84);
@@ -3414,7 +3184,6 @@ sscpu_timestamp_t CDB_Update(sscpu_timestamp_t timestamp)
 
       Partition_Clear(fnum);
 
-      //printf("DT Meow READ: 0x%08x 0x%08x --- offs=0x%08x\n", FileInfo[fileid].fad(), FileInfo[fileid].size(), offset);
       const uint32 fiaoffs = (fileid < 2) ? fileid : (2 + fileid - FLS.FileInfoOffs);
       uint32 start_fad = (FileInfo[fiaoffs].fad() + offset) & 0xFFFFFF;
       uint32 sec_count = ((FileInfo[fiaoffs].size() + 2047) >> 11) - offset;	// FIXME: Check offset versus ifile size.
@@ -3614,14 +3383,11 @@ uint16 CDB_Read(uint32 offset)
 	ret = HIRQ_Mask;
 	break;
 
-  case 0x6: ret = Results[0]; /*if(!ResultsRead) printf(" [CDB] Result0 Read: 0x%04x\n", ret);*/ break;
-  case 0x7: ret = Results[1]; /*if(!ResultsRead) printf(" [CDB] Result1 Read: 0x%04x\n", ret);*/ break;
-  case 0x8: ret = Results[2]; /*if(!ResultsRead) printf(" [CDB] Result2 Read: 0x%04x\n", ret);*/ break;
-  case 0x9: ret = Results[3]; /*if(!ResultsRead) printf(" [CDB] Result3 Read: 0x%04x\n", ret);*/ ResultsRead = true; break;
+  case 0x6: ret = Results[0];  break;
+  case 0x7: ret = Results[1];  break;
+  case 0x8: ret = Results[2];  break;
+  case 0x9: ret = Results[3]; ResultsRead = true; break;
  }
-
- //if(offset == 0)
- // fprintf(stderr, "Read: %02x %04x\n", offset, ret);
 
  return ret;
 }
@@ -3921,10 +3687,7 @@ void CDB_StateAction(StateMem* sm, const unsigned load, const bool data_only)
   }
 
   if(need_reset_buffers)
-  {
-   printf("need_reset_buffers!\n");
    ResetBuffers();
-  }
   //
   //
   //

@@ -668,7 +668,6 @@ void SMPC_UpdateOutput(void)
 
 void SMPC_UpdateInput(const int32 time_elapsed)
 {
-   //printf("%8d\n", time_elapsed);
    if (MiscInputPtr)
       ResetButtonPhysStatus = (bool)(*MiscInputPtr & 0x1);
 
@@ -685,10 +684,6 @@ void SMPC_Write(const sscpu_timestamp_t timestamp, uint8 A, uint8 V)
  BusBuffer = V;
  A &= 0x3F;
 
-#ifdef HAVE_DEBUG
- SS_DBGTI(SS_DBG_SMPC_REGW, "[SMPC] Write to 0x%02x:0x%02x", A, V);
-#endif
-
  //
  // Call VDP2::Update() to prevent out-of-temporal-order calls to SMPC_Update() from here and the event system.
  //
@@ -703,34 +698,16 @@ void SMPC_Write(const sscpu_timestamp_t timestamp, uint8 A, uint8 V)
   case 0x04:
   case 0x05:
   case 0x06:
-#ifdef HAVE_DEBUG
-	if(MDFN_UNLIKELY(ExecutingCommand >= 0))
-	{
-	 SS_DBGTI(SS_DBG_WARNING | SS_DBG_SMPC, "[SMPC] Input register %u port written with 0x%02x while command 0x%02x is executing.", A, V, ExecutingCommand);
-	}
-#endif
 
 	IREG[A] = V;
 	break;
 
   case 0x0F:
-#ifdef HAVE_DEBUG
-	if(MDFN_UNLIKELY(ExecutingCommand >= 0))
-	{
-	 SS_DBGTI(SS_DBG_WARNING | SS_DBG_SMPC, "[SMPC] Command port written with 0x%02x while command 0x%02x is still executing.", V, ExecutingCommand);
-	}
-#endif
 
 	PendingCommand = V;
 	break;
 
   case 0x31:
-#ifdef HAVE_DEBUG
-	if(MDFN_UNLIKELY(SF))
-	{
-	 SS_DBGTI(SS_DBG_WARNING | SS_DBG_SMPC, "[SMPC] SF port written while SF is 1.");
-	}
-#endif
 
 	SF = true;
 	break;
@@ -775,9 +752,6 @@ void SMPC_Write(const sscpu_timestamp_t timestamp, uint8 A, uint8 V)
 	break;
 
   default:
-#ifdef HAVE_DEBUG
-	SS_DBG(SS_DBG_WARNING | SS_DBG_SMPC, "[SMPC] Unknown write of 0x%02x to 0x%02x\n", V, A);
-#endif
 	break;
 
  }
@@ -799,32 +773,17 @@ uint8 SMPC_Read(const sscpu_timestamp_t timestamp, uint8 A)
  switch(A)
  {
   default:
-#ifdef HAVE_DEBUG
-	SS_DBG(SS_DBG_WARNING | SS_DBG_SMPC, "[SMPC] Unknown read from 0x%02x\n", A);
-#endif
 	break;
 
     case 0x10: case 0x11: case 0x12: case 0x13: case 0x14: case 0x15: case 0x16: case 0x17:
   case 0x18: case 0x19: case 0x1A: case 0x1B: case 0x1C: case 0x1D: case 0x1E: case 0x1F:
   case 0x20: case 0x21: case 0x22: case 0x23: case 0x24: case 0x25: case 0x26: case 0x27:
   case 0x28: case 0x29: case 0x2A: case 0x2B: case 0x2C: case 0x2D: case 0x2E: case 0x2F:
-#ifdef HAVE_DEBUG
-	if(MDFN_UNLIKELY(ExecutingCommand >= 0))
- 	{
-	 //SS_DBG(SS_DBG_WARNING | SS_DBG_SMPC, "[SMPC] Output register %u port read while command 0x%02x is executing.\n", A - 0x10, ExecutingCommand);
- 	}
-#endif
 
 	ret = (OREG - 0x10)[A];
 	break;
 
   case 0x30:
-#ifdef HAVE_DEBUG
-   if(MDFN_UNLIKELY(ExecutingCommand >= 0))
- 	{
-	 //SS_DBG(SS_DBG_WARNING | SS_DBG_SMPC, "[SMPC] SR port read while command 0x%02x is executing.\n", ExecutingCommand);
- 	}
-#endif
 
 	ret = SR;
 	break;
@@ -889,7 +848,6 @@ void SMPC_ResetTS(void)
 		  next_event_ts = timestamp + (-ClockCounter + SMPC_ClockRatio - 1) / SMPC_ClockRatio;		\
 		  goto Breakout;								\
 		 }										\
-		 /*printf("%f\n", (double)ClockCounter / (1LL << 32));*/			\
 		}										\
 
 
@@ -1064,10 +1022,6 @@ sscpu_timestamp_t SMPC_Update(sscpu_timestamp_t timestamp)
    {
     OREG[0x1F] = ExecutingCommand;
 
-#ifdef HAVE_DEBUG
-    SS_DBGTI(SS_DBG_SMPC, "[SMPC] Command 0x%02x --- 0x%02x 0x%02x 0x%02x 0x%02x 0x%02x 0x%02x 0x%02x", ExecutingCommand, IREG[0], IREG[1], IREG[2], IREG[3], IREG[4], IREG[5], IREG[6]);
-#endif
-
     if(ExecutingCommand == CMD_MSHON)
     {
 
@@ -1226,12 +1180,7 @@ sscpu_timestamp_t SMPC_Update(sscpu_timestamp_t timestamp)
       {
        JR_WAIT((bool)(IREG[0] & 0x80) == JRS.NextContBit || (IREG[0] & 0x40));
        if(IREG[0] & 0x40)
-       {
-#ifdef HAVE_DEBUG
-        SS_DBGTI(SS_DBG_SMPC, "[SMPC] Break");
-#endif
         goto AbortJR;
-       }
        JRS.NextContBit = !JRS.NextContBit;
       }
 
@@ -1248,12 +1197,7 @@ sscpu_timestamp_t SMPC_Update(sscpu_timestamp_t timestamp)
       {
        SMPC_WAIT_UNTIL_COND_TIMEOUT(PendingVB, JRS.OptEatTime);
        if(PendingVB)
-       {
-#ifdef HAVE_DEBUG
-	SS_DBGTI(SS_DBG_SMPC, "[SMPC] abortjr timeopt");
-#endif
 	goto AbortJR;
-       }
        SS_SetEventNT(&events[SS_EVENT_MIDSYNC], timestamp + 1);
       }
 
@@ -1279,8 +1223,6 @@ sscpu_timestamp_t SMPC_Update(sscpu_timestamp_t timestamp)
        JR_EAT(50);
        JRS.work[1] = JR_BS;
        JRS.ID1 |= ((((JRS.work[1] >> 3) | (JRS.work[1] >> 2)) & 1) << 1) | ((((JRS.work[1] >> 1) | (JRS.work[1] >> 0)) & 1) << 0);
-
-       //printf("%d ID1: %02x (%02x, %02x)\n", JRS.CurPort, JRS.ID1, JRS.work[0], JRS.work[1]);
 
        if(JRS.ID1 == 0xB)
        {
@@ -1336,8 +1278,6 @@ sscpu_timestamp_t SMPC_Update(sscpu_timestamp_t timestamp)
 	JR_EAT(50);
 	JR_WAIT(JR_BS & 0x10);
 	JRS.ID2 |= ((JR_BS & 0xF) << 0);
-
-	//printf("%d, %02x %02x\n", JRS.CurPort, JRS.ID1, JRS.ID2);
 
 	if(JRS.ID1 == 0x3)
 	 JRS.ID2 = 0xE3;
@@ -1396,8 +1336,6 @@ sscpu_timestamp_t SMPC_Update(sscpu_timestamp_t timestamp)
 	  JR_WRNYB(JRS.IDTap >> 0);
 	  JR_EAT(21);
          }
-
-         //printf("What: %d, %02x\n", JRS.TapCounter, JRS.ID2);
 
 	 JR_WRNYB(JRS.ID2 >> 4);
 	 JR_EAT(21);

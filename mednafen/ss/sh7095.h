@@ -541,7 +541,7 @@ class SH7095 final
   GSREG_RWT,
  };
 
- uint32 GetRegister(const unsigned id, char* const special, const uint32 special_len);
+ uint32 GetRegister(const unsigned id);
  void SetRegister(const unsigned id, const uint32 value) MDFN_COLD;
 
  void CheckRWBreakpoints(void (*MRead)(unsigned len, uint32 addr), void (*MWrite)(unsigned len, uint32 addr)) const;

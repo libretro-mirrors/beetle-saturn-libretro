@@ -53,8 +53,6 @@ void Deinterlacer::InternalProcess(MDFN_Surface *surface, MDFN_Rect &DisplayRect
  //
  const int32 XReposition = ((WeaveGood && DisplayRect.x > PrevDRect.x) ? DisplayRect.x : 0);
 
- //printf("%2d %2d, %d\n", DisplayRect.x, PrevDRect.x, XReposition);
-
  if(XReposition)
   DisplayRect.x = 0;
 

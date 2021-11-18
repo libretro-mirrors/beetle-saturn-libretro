@@ -58,33 +58,6 @@ IDIISG::IDIISG(std::initializer_list<InputDeviceInputInfoStruct> l) : std::vecto
    case IDIT_BUTTON:
    case IDIT_BUTTON_CAN_RAPID:
 	bit_size = 1;
-
-#if 0
-	if(idii.Button.ExcludeName)
-	{
-	 bool found = false;
-
-	 //printf("%s\n", idii.Button.ExcludeName);
-
-	 for(auto& idii_sub : *this)
-	 {
-	  if(&idii == &idii_sub || !idii_sub.SettingName)
-	   continue;
-
-	  if(!strcmp(idii.Button.ExcludeName, idii_sub.SettingName))
-	  {
-	   found = true;
-	   break;
-	  }
- 	 }
-	 if(!found)
-	  abort();
-	}
-	else if(strstr(idii.SettingName, "up") || strstr(idii.SettingName, "down") || strstr(idii.SettingName, "left") || strstr(idii.SettingName, "right"))
-	{
-	 printf("Suspicious: %s, %s\n", idii.SettingName, idii.Name);
-	}
-#endif
 	break;
 
    case IDIT_RESET_BUTTON:
@@ -129,8 +102,6 @@ IDIISG::IDIISG(std::initializer_list<InputDeviceInputInfoStruct> l) : std::vecto
   }
 
   bit_offset = (bit_offset + (bit_align - 1)) &~ (bit_align - 1);
-
- // printf("%s, %zu(%zu)\n", idii.SettingName, bit_offset, bit_offset / 8);
 
   idii.BitSize = bit_size;
   idii.BitOffset = bit_offset;

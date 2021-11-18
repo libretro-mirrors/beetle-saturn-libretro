@@ -1183,11 +1183,7 @@ INLINE void M68K::Divide(uint16 divisor, const unsigned dr)
   tmp = (tmp << 1) | lb;
 
   if(ob)
-  {
    oflow = true;
-   //puts("OVERFLOW");
-   //break;
-  }
  }
 
  if(sdiv)
@@ -2115,8 +2111,6 @@ INLINE void M68K::TRAPV(void)
 //
 INLINE void M68K::ILLEGAL(const uint16 instr)
 {
- //printf("ILLEGAL: %04x\n", instr);
-
  PC -= 2;
  Exception(EXCEPTION_ILLEGAL, VECNUM_ILLEGAL);
 }
@@ -2226,17 +2220,6 @@ INLINE void M68K::InternalStep(void)
  const unsigned instr_b11_b9 = (instr >> 9) & 0x7;
  const unsigned instr_b2_b0 = instr & 0x7;
 
-#if 0
-  printf("PC=%08x: %04x ---", PC - 2, instr);
-
-  for(unsigned i = 0; i < 8; i++)
-   printf(" A%u=0x%08x", i, A[i]);
- 
-  for(unsigned i = 0; i < 8; i++)
-   printf(" D%u=0x%08x", i, D[i]);
-
-  printf("\n");
-#endif
  switch(instr)
  {
   default: ILLEGAL(instr); break;
@@ -2253,7 +2236,6 @@ void NO_INLINE M68K::Run(int32 run_until_time)
 
 void NO_INLINE M68K::Step(void)
 {
- //printf("%08x\n", PC);
  InternalStep();
 }
 

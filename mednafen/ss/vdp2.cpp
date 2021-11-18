@@ -281,7 +281,6 @@ static INLINE void RecalcVRAMPenalty(void)
 
    static const uint8 tab[9] = { 0, 0, 0, 0, 1, 1, 2, 3, 4 };
    VRAMPenalty[bank] = tab[tmp];
-   //printf("%d, %d\n", bank, tmp);
   }
  }
 }
@@ -348,7 +347,6 @@ void GetGunXTranslation(const bool clock28m, float* scale, float* offs)
 void StartFrame(EmulateSpecStruct* espec, const bool clock28m)
 {
  Clock28M = clock28m;
- //printf("StartFrame: %d\n", SurfInterlaceField);
  VDP2REND_StartFrame(espec, clock28m, SurfInterlaceField);
  CRTLineCounter = 0;
 }
@@ -371,19 +369,9 @@ static INLINE void IncVCounter(const sscpu_timestamp_t event_timestamp)
  // (exit granularity could be large if program is executing from SCSP RAM space, for example).
  if(VCounter == (VTimings[PAL][VRes][VPHASE_TOP_BLANKING] - 1))
  {
-#if 0
-  for(unsigned bank = 0; bank < 4; bank++)
-  {
-   printf("Bank %d: ", bank);
-   for(unsigned vc = 0; vc < 8; vc++)
-    printf("%01x ", VCPRegs[bank][vc]);
-   printf("\n");
-  }
-#endif
 
   SS_RequestMLExit();
   VDP2REND_EndFrame();
-  //printf("Meow: %d\n", VCounter);
  }
 
  while(VCounter >= VTimings[PAL][VRes][VPhase] - ((VPhase == VPHASE_VSYNC - 1) && InterlaceMode))
@@ -433,16 +421,10 @@ static INLINE void IncVCounter(const sscpu_timestamp_t event_timestamp)
   for(unsigned d = 0; d < 2; d++)
   {
    if((nlvc & mask) == (Window[d].YStart & mask))
-   {
-    //printf("Window%d YStartMet at VC=0x%03x ---- %03x %03x\n", d, nlvc, Window[d].YStart, Window[d].YEnd);
     Window[d].YIn = true;
-   }
 
    if((prev_nlvc & mask) == (Window[d].YEnd & mask))
-   {
-    //printf("Window%d YEndMet at VC=0x%03x ---- %03x %03x\n", d, nlvc, Window[d].YStart, Window[d].YEnd);
     Window[d].YEndMet = true;
-   }
 
    Window[d].YIn &= !Window[d].YEndMet;
   }
@@ -458,9 +440,6 @@ static INLINE void IncVCounter(const sscpu_timestamp_t event_timestamp)
 static INLINE int32 AddHCounter(const sscpu_timestamp_t event_timestamp, int32 count)
 {
  HCounter += count;
-
- //if(HCounter > HTimings[HRes & 1][HPhase])
- // printf("VDP2 oops: %d %d\n", HCounter, HTimings[HRes & 1][HPhase]);
 
  while(HCounter >= HTimings[HRes & 1][HPhase])
  {
@@ -532,8 +511,6 @@ static INLINE int32 AddHCounter(const sscpu_timestamp_t event_timestamp, int32 c
       r.DKAx = rp.DKAx;
      }
     }
-    //printf("%d, 0x%08x(%f) 0x%08x(%f)\n", VCounter, RotParams[0].KAstAccum >> 10, (int32)RotParams[0].DKAst / 1024.0, RotParams[1].KAstAccum >> 10, (int32)RotParams[1].DKAst / 1024.0);
-    //printf("DL: %d\n", VCounter);
     lib->vdp1_hires8 = VDP1::GetLine(VCounter, lib->vdp1_line, (HRes & 1) ? 352 : 320, (int32)RotParams[0].XstAccum >> 1, (int32)RotParams[0].YstAccum >> 1, (int32)RotParams[0].DX >> 1, (int32)RotParams[0].DY >> 1); // Always call, has side effects.
     VDP2REND_DrawLine(InternalVB ? -1 : VCounter, CRTLineCounter, !Odd);
     CRTLineCounter++;
@@ -583,7 +560,6 @@ sscpu_timestamp_t Update(sscpu_timestamp_t timestamp)
   LatchHV();
   HVIsExLatched = true;
   ExLatchPending = false;
-  //printf("ExLatch: %04x %04x\n", Latched_VCNT, Latched_HCNT);
  }
 
  return lastts + (ne << 2);
@@ -597,10 +573,6 @@ static INLINE void RegsWrite(uint32 A, uint16 V)
  A &= 0x1FE;
 
  RawRegs[A >> 1] = V;
-
-#ifdef HAVE_DEBUG
- SS_DBGTI(SS_DBG_VDP2_REGW, "[VDP2] Register write 0x%03x: 0x%04x", A, V);
-#endif
 
  switch(A)
  {
@@ -632,11 +604,6 @@ static INLINE void RegsWrite(uint32 A, uint16 V)
 
   case 0x06:
 	VRAMSize = (V >> 15) & 0x1;
-
-#ifdef HAVE_DEBUG
-	if(VRAMSize)
-	 SS_DBGTI(SS_DBG_WARNING | SS_DBG_VDP2, "[VDP2] VRAMSize=%d (unemulated)", VRAMSize);
-#endif
 	break;
 
   case 0x0E:
@@ -814,14 +781,7 @@ static INLINE uint32 RW(uint32 A, uint16* DB)
  if(A < 0x1C0000)
  {
   if(IsWrite)
-  {
-#ifdef HAVE_DEBUG
-   if(sizeof(T) == 1)
-    SS_DBGTI(SS_DBG_WARNING | SS_DBG_VDP2, "[VDP2] Byte-write to register at 0x%08x(DB=0x%04x)", A, *DB);
-#endif
-
    RegsWrite(A, *DB);
-  }
   else
    *DB = RegsRead(A);
 
@@ -980,7 +940,7 @@ void Reset(bool powering_up)
 //
 //
 //
-uint32 GetRegister(const unsigned id, char* const special, const uint32 special_len)
+uint32 GetRegister(const unsigned id)
 {
  uint32 ret = 0xDEADBEEF;
 
@@ -1019,20 +979,8 @@ uint32 GetRegister(const unsigned id, char* const special, const uint32 special_
   case GSREG_CYCB0:
   case GSREG_CYCB1:
 	{
-	 static const char* tab[0x10] =
-	 {
-	  "NBG0 PN", "NBG1 PN", "NBG2 PN", "NBG3 PN",
-	  "NBG0 CG", "NBG1 CG", "NBG2 CG", "NBG3 CG",
-	  "ILLEGAL", "ILLEGAL", "ILLEGAL", "ILLEGAL",
-	  "NBG0 VCS", "NBG1 VCS", "CPU", "NOP"
-	 };
 	 const size_t idx = (id - GSREG_CYCA0);
 	 ret = (RawRegs[(0x10 >> 1) + (idx << 1)] << 16) | RawRegs[(0x12 >> 1) + (idx << 1)];
-
-	 if(special)
-	  snprintf(special, special_len, "0: %s, 1: %s, 2: %s, 3: %s, 4: %s, 5: %s, 6: %s, 7: %s",
-		tab[(ret >> 28) & 0xF], tab[(ret >> 24) & 0xF], tab[(ret >> 20) & 0xF], tab[(ret >> 16) & 0xF],
-		tab[(ret >> 12) & 0xF], tab[(ret >>  8) & 0xF], tab[(ret >>  4) & 0xF], tab[(ret >>  0) & 0xF]);
 	}
 	break;
 
@@ -1399,8 +1347,6 @@ void StateAction(StateMem* sm, const unsigned load, const bool data_only)
    Window[1].YStart = RawRegs[0xCA >> 1] & 0x1FF;
    Window[1].YEnd = RawRegs[0xCE >> 1] & 0x1FF;
 
-   //printf("%08x %03x:%03x, %03x:%03x\n", load, Window[0].YStart, Window[0].YEnd, Window[1].YStart, Window[1].YEnd);
-
    for(unsigned d = 0; d < 2; d++)
    {
     Window[d].YEndMet = false;
@@ -1411,29 +1357,5 @@ void StateAction(StateMem* sm, const unsigned load, const bool data_only)
 
  VDP2REND_StateAction(sm, load, data_only, RawRegs, CRAM, VRAM);
 }
-
-#ifdef HAVE_DEBUG
-void MakeDump(const std::string& path)
-{
- FileStream fp(path, FileStream::MODE_WRITE);
-
- fp.print_format(" { ");
- for(unsigned i = 0; i < 0x100; i++)
-  fp.print_format("0x%04x, ", RawRegs[i]);
- fp.print_format(" }, \n");
-
- fp.print_format(" { ");
- for(unsigned i = 0; i < 2048; i++)
-  fp.print_format("0x%04x, ", CRAM[i]);
- fp.print_format(" }, \n");
-
- fp.print_format(" { ");
- for(unsigned i = 0; i < 0x40000; i++)
-  fp.print_format("0x%04x, ", VRAM[i]);
- fp.print_format(" }, \n");
-
- fp.close();
-}
-#endif
 
 }

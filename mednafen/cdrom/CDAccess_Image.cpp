@@ -177,8 +177,6 @@ uint32_t CDAccess_Image::GetSectorCount(CDRFILE_TRACK_INFO *track)
       else
       {
          const int64_t size = track->fp->size();
-
-         //printf("%d %d %d\n", (int)stat_buf.st_size, (int)track->FileOffset, (int)stat_buf.st_size - (int)track->FileOffset);
          if(track->SubchannelMode)
             return((size - track->FileOffset) / (2352 + 96));
          return((size - track->FileOffset) / 2352);
@@ -253,7 +251,6 @@ bool CDAccess_Image::ParseTOCFileLineInfo(CDRFILE_TRACK_INFO *track, const int t
 
    track->FileOffset = offset; // Make sure this is set before calling GetSectorCount()!
    sectors = GetSectorCount(track);
-   //printf("Track: %d, offset: %ld, %ld\n", tracknum, offset, sectors);
 
    if(length)
    {
@@ -351,12 +348,6 @@ bool CDAccess_Image::LoadSBI(const std::string& sbi_path)
       subq_generate_checksum(tmpq);
       tmpq[10] ^= 0xFF;
       tmpq[11] ^= 0xFF;
-      //
-
-      //printf("%02x:%02x:%02x --- ", ed[0], ed[1], ed[2]);
-      //for(unsigned i = 0; i < 12; i++)
-      // printf("%02x ", tmpq[i]);
-      //printf("\n");
 
       uint32_t aba = AMSF_to_ABA(BCD_to_U8(ed[0]), BCD_to_U8(ed[1]), BCD_to_U8(ed[2]));
 
@@ -469,8 +460,6 @@ bool CDAccess_Image::ImageOpen(const std::string& path, bool image_memcache)
          MDFN_strtoupper(cmdbuf);
       }
 
-      //printf("%s\n", cmdbuf.c_str()); //: %s %s %s %s\n", cmdbuf.c_str(), args[0].c_str(), args[1].c_str(), args[2].c_str(), args[3].c_str());
-
       if(IsTOC)
       {
          if(cmdbuf == "TRACK")
@@ -561,7 +550,6 @@ bool CDAccess_Image::ImageOpen(const std::string& path, bool image_memcache)
                msfoffset = args[1].c_str();
                length = args[2].c_str();
             }
-            //printf("%s, %s, %s, %s\n", args[0].c_str(), binoffset, msfoffset, length);
             if (!ParseTOCFileLineInfo(&TmpTrack, active_track, args[0], binoffset, msfoffset, length, image_memcache, toc_streamcache))
                return false;
          }
@@ -956,11 +944,8 @@ bool CDAccess_Image::ImageOpen(const std::string& path, bool image_memcache)
                Tracks[x].sectors = Tracks[x + 1].index[0] - Tracks[x].index[1];	//Tracks[x + 1].index - Tracks[x].index;
          }
 
-         //printf("Poo: %d %d\n", x, Tracks[x].sectors);
          RunningLBA += Tracks[x].sectors;
          RunningLBA += Tracks[x].postgap;
-
-         //printf("%d, %ld %d %d %d %d\n", x, FileOffset, Tracks[x].index, Tracks[x].pregap, Tracks[x].sectors, Tracks[x].LBA);
 
          FileOffset += Tracks[x].sectors * DI_Size_Table[Tracks[x].DIFormat];
       } // end to cue sheet handling
@@ -1127,7 +1112,6 @@ bool CDAccess_Image::Read_Raw_Sector(uint8_t *buf, int32_t lba)
             // TODO: Zero out optional(?) checksum bytes?
             break;
       }
-      //printf("Pre/post-gap read, LBA=%d(LBA-track_start_LBA=%d)\n", lba, lba - ct->LBA);
    }
    else
    {
@@ -1139,10 +1123,7 @@ bool CDAccess_Image::Read_Raw_Sector(uint8_t *buf, int32_t lba)
          ct->LastSamplePos += frames_read;
 
          if(frames_read > 588)	// This shouldn't happen.
-         {
-            printf("Error: frames_read out of range: %llu\n", (unsigned long long)frames_read);
             frames_read = 0;
-         }
 
          if(frames_read < 588)
             memset((uint8_t *)AudioBuf + frames_read * 2 * sizeof(int16_t), 0, (588 - frames_read) * 2 * sizeof(int16_t));
@@ -1275,10 +1256,7 @@ int32_t CDAccess_Image::MakeSubPQ(int32_t lba, uint8_t *SubPWBuf) const
 
    // Handle pause(D7 of interleaved subchannel byte) bit, should be set to 1 when in pregap or postgap.
    if((lba < Tracks[track].LBA) || (lba >= Tracks[track].LBA + Tracks[track].sectors))
-   {
-      //printf("pause_or = 0x80 --- %d\n", lba);
       pause_or = 0x80;
-   }
 
    // Handle pregap between audio->data track
    {
@@ -1292,10 +1270,7 @@ int32_t CDAccess_Image::MakeSubPQ(int32_t lba, uint8_t *SubPWBuf) const
       if(pg_offset < -150)
       {
          if((Tracks[track].subq_control & SUBQ_CTRLF_DATA) && (FirstTrack < track) && !(Tracks[track - 1].subq_control & SUBQ_CTRLF_DATA))
-         {
-            //printf("Pregap part 1 audio->data: lba=%d track_lba=%d\n", lba, Tracks[track].LBA);
             control = Tracks[track - 1].subq_control;
-         }
       }
    }
 
@@ -1336,15 +1311,10 @@ int32_t CDAccess_Image::MakeSubPQ(int32_t lba, uint8_t *SubPWBuf) const
 
    if(!SubQReplaceMap.empty())
    {
-      //printf("%d\n", lba);
-
       std::map<uint32_t, stl_array<uint8_t, 12> >::const_iterator it = SubQReplaceMap.find(LBA_to_ABA(lba));
 
       if(it != SubQReplaceMap.end())
-      {
-         //printf("Replace: %d\n", lba);
          memcpy(buf, (void*)it->second.data(), 12);
-      }
    }
 
    for(int i = 0; i < 96; i++)

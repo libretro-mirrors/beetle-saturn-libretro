@@ -69,14 +69,6 @@ INLINE void SetExtLatch(sscpu_timestamp_t event_timestamp, bool status)
    //
    ExLatchPending = true;
    SS_SetEventNT(&events[SS_EVENT_VDP2], event_timestamp);
-#if 0
-   SS_SetEventNT(&events[SS_EVENT_VDP2], Update(event_timestamp));
-   //
-   LatchHV();
-   //
-   HVIsExLatched = true;
-   printf("ExLatch: %04x %04x\n", Latched_VCNT, Latched_HCNT);
-#endif
   }
  }
 }
@@ -134,13 +126,10 @@ enum
 
 };
 
-uint32 GetRegister(const unsigned id, char* const special, const uint32 special_len);
+uint32 GetRegister(const unsigned id);
 void SetRegister(const unsigned id, const uint32 value);
 uint8 PeekVRAM(uint32 addr);
 void PokeVRAM(uint32 addr, const uint8 val);
-#ifdef HAVE_DEBUG
-void MakeDump(const std::string& path) MDFN_COLD;
-#endif
 
 INLINE uint32 PeekLine(void) { extern int32 VCounter; return VCounter; }
 INLINE uint32 PeekHPos(void) { extern int32 HCounter; return HCounter; }

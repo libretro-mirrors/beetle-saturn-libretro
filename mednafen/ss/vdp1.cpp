@@ -389,10 +389,7 @@ sscpu_timestamp_t Update(sscpu_timestamp_t timestamp)
   CycleCounter = VDP1_UpdateTimingGran;
 
  if(CycleCounter > 0 && SCU_CheckVDP1HaltKludge())
- {
-  //puts("Kludge");
   CycleCounter = 0;
- }
  else if(DrawingActive)
  {
   while(CycleCounter > 0)
@@ -479,15 +476,6 @@ sscpu_timestamp_t Update(sscpu_timestamp_t timestamp)
 
 static void StartDrawing(void)
 {
-#ifdef HAVE_DEBUG
- if(DrawingActive)
- {
-  SS_DBGTI(SS_DBG_WARNING | SS_DBG_VDP1, "[VDP1] Drawing interrupted by new drawing start request.");
- }
-
- SS_DBGTI(SS_DBG_VDP1, "[VDP1] Started drawing to framebuffer %d.", FBDrawWhich);
-#endif
-
  // On draw start, clear CEF.
  EDSR &= ~0x2;
 
@@ -516,10 +504,6 @@ void SetHBVB(const sscpu_timestamp_t event_timestamp, const bool new_hb_status, 
    //
    if((TVMR & TVMR_VBE) || FBVBErasePending)
    {
-#ifdef HAVE_DEBUG
-      SS_DBGTI(SS_DBG_VDP1, "[VDP1] VB erase start of framebuffer %d.", !FBDrawWhich);
-#endif
-
     FBVBErasePending = false;
     FBVBEraseActive = true;
     FBVBEraseLastTS = event_timestamp;
@@ -531,10 +515,6 @@ void SetHBVB(const sscpu_timestamp_t event_timestamp, const bool new_hb_status, 
    if(FBVBEraseActive)
    {
     int32 count = event_timestamp - FBVBEraseLastTS;
-    //printf("%d %d, %d\n", event_timestamp, FBVBEraseLastTS, count);
-    //
-    //
-    //
     uint32 y = EraseParams.y_start;
 
     do
@@ -551,8 +531,6 @@ void SetHBVB(const sscpu_timestamp_t event_timestamp, const bool new_hb_status, 
      {
       for(unsigned sub = 0; sub < 8; sub++)
       {
-       //printf("%d %d:%d %04x\n", FBDrawWhich, x, y, fill_data);
-       //printf("%lld\n", &fbyptr[x & fb_x_mask] - FB[!FBDrawWhich]);
        fbyptr[x & EraseParams.fb_x_mask] = EraseParams.fill_data;
        x++;
       }
@@ -582,17 +560,10 @@ void SetHBVB(const sscpu_timestamp_t event_timestamp, const bool new_hb_status, 
 
     if(DrawingActive)
     {
-#ifdef HAVE_DEBUG
-     SS_DBGTI(SS_DBG_WARNING | SS_DBG_VDP1, "[VDP1] Drawing aborted by framebuffer swap.");
-#endif
      DrawingActive = false;
     }
 
     FBDrawWhich = !FBDrawWhich;
-
-#ifdef HAVE_DEBUG
-    SS_DBGTI(SS_DBG_VDP1, "[VDP1] Displayed framebuffer changed to %d.", !FBDrawWhich);
-#endif
 
     // On fb swap, copy CEF to BEF, clear CEF, and copy COPR to LOPR.
     EDSR = EDSR >> 1;
@@ -712,8 +683,6 @@ bool GetLine(const int line, uint16* buf, unsigned w, uint32 rot_x, uint32 rot_y
   {
    for(unsigned sub = 0; sub < 2; sub++)
    {
-    //printf("%d %d:%d %04x\n", FBDrawWhich, x, y, fill_data);
-    //printf("%lld\n", &fbyptr[x & fb_x_mask] - FB[!FBDrawWhich]);
     fbyptr[x & EraseParams.fb_x_mask] = EraseParams.fill_data;
     x++;
    }
@@ -736,10 +705,6 @@ static INLINE void WriteReg(const unsigned which, const uint16 value)
 {
  SS_SetEventNT(&events[SS_EVENT_VDP2], VDP2::Update(SH7095_mem_timestamp));
  sscpu_timestamp_t nt = Update(SH7095_mem_timestamp);
-
-#ifdef HAVE_DEBUG
- SS_DBGTI(SS_DBG_VDP1_REGW, "[VDP1] Register write: 0x%02x: 0x%04x", which << 1, value);
-#endif
 
  switch(which)
  {
@@ -836,9 +801,6 @@ void Write8_DB(uint32 A, uint16 DB)
   return;
  }
 
-#ifdef HAVE_DEBUG
- SS_DBGTI(SS_DBG_WARNING | SS_DBG_VDP1, "[VDP1] 8-bit write to 0x%08x(DB=0x%04x)", A, DB);
-#endif
  WriteReg((A - 0x100000) >> 1, DB);
 }
 
@@ -965,19 +927,7 @@ void StateAction(StateMem* sm, const unsigned load, const bool data_only)
  }
 }
 
-void MakeDump(const std::string& path)
-{
-#ifdef HAVE_DEBUG
- FileStream fp(path, MODE_WRITE);
-
- for(unsigned i = 0; i < 0x40000; i++)
-  fp.print_format("0x%04x, ", VRAM[i]);
-
- fp.close();
-#endif
-}
-
-uint32 GetRegister(const unsigned id, char* const special, const uint32 special_len)
+uint32 GetRegister(const unsigned id)
 {
  uint32 ret = 0xDEADBEEF;
 

@@ -77,10 +77,6 @@ INLINE void PokeFB(const bool which, const uint32 addr, const uint8 val)
  ne16_wbo_be<uint8>(FB[which], addr & 0x3FFFF, val);
 }
 
-#ifdef HAVE_DEBUG
-void MakeDump(const std::string& path) MDFN_COLD;
-#endif
-
 enum
 {
  GSREG_SYSCLIPX = 0,
@@ -92,7 +88,7 @@ enum
  GSREG_LOCALX,
  GSREG_LOCALY
 };
-uint32 GetRegister(const unsigned id, char* const special, const uint32 special_len) MDFN_COLD;
+uint32 GetRegister(const unsigned id) MDFN_COLD;
 void SetRegister(const unsigned id, const uint32 value) MDFN_COLD;
 
 }

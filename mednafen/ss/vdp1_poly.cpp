@@ -118,8 +118,6 @@ static INLINE int32 CMD_PolygonG_gouraud_true(const uint16* cmd_data)
  {
   e[0].GetVertex(&LineSetup.p[0]);
   e[1].GetVertex(&LineSetup.p[1]);
-  //
-  //printf("%d:%d -> %d:%d\n", lp[0].x, lp[0].y, lp[1].x, lp[1].y);
   ret += fnptr();
   //
   e[0].Step();
@@ -171,8 +169,6 @@ static INLINE int32 CMD_PolygonG_gouraud_false(const uint16* cmd_data)
  {
   e[0].GetVertex(&LineSetup.p[0]);
   e[1].GetVertex(&LineSetup.p[1]);
-  //
-  //printf("%d:%d -> %d:%d\n", lp[0].x, lp[0].y, lp[1].x, lp[1].y);
   ret += fnptr();
   //
   e[0].Step();

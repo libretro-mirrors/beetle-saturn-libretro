@@ -363,7 +363,6 @@ bool CDAccess_CHD::Read_Raw_Sector(uint8_t *buf, int32_t lba)
       // TODO: Zero out optional(?) checksum bytes?
       break;
     }
-    printf("Pre/post-gap read, LBA=%d(LBA-track_start_LBA=%d)\n", lba, lba - ct->LBA);
   }
   else
   {
@@ -456,10 +455,7 @@ int32_t CDAccess_CHD::MakeSubPQ(int32_t lba, uint8_t *SubPWBuf) const
 
   // Handle pause(D7 of interleaved subchannel byte) bit, should be set to 1 when in pregap or postgap.
   if ((lba < Tracks[track].LBA) || (lba >= Tracks[track].LBA + Tracks[track].sectors))
-  {
-    //printf("pause_or = 0x80 --- %d\n", lba);
     pause_or = 0x80;
-  }
 
   // Handle pregap between audio->data track
   {
@@ -473,10 +469,7 @@ int32_t CDAccess_CHD::MakeSubPQ(int32_t lba, uint8_t *SubPWBuf) const
     if (pg_offset < -150)
     {
       if ((Tracks[track].subq_control & SUBQ_CTRLF_DATA) && (FirstTrack < track) && !(Tracks[track - 1].subq_control & SUBQ_CTRLF_DATA))
-      {
-        //printf("Pregap part 1 audio->data: lba=%d track_lba=%d\n", lba, Tracks[track].LBA);
         control = Tracks[track - 1].subq_control;
-      }
     }
   }
 

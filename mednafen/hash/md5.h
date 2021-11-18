@@ -11,8 +11,6 @@ class md5_context
  md5_context(void);
  ~md5_context(void);
 
- static std::string asciistr(const uint8 digest[16], bool borked_order);
- std::string asciistr(void);
  void starts(void);
  void update(const uint8 *input, uint32 length);
  inline void update_u32_as_lsb(const uint32 input)

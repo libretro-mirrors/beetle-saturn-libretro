@@ -28,7 +28,6 @@
 #include "cart.h"
 #include "cart/backup.h"
 #include "cart/cs1ram.h"
-#include "cart/debug.h"
 #include "cart/extram.h"
 //#include "cart/nlmodem.h"
 #include "cart/rom.h"
@@ -198,7 +197,6 @@ void CART_Init(const int cart_type)
 	break;
 
   case CART_MDFN_DEBUG:
-	CART_Debug_Init(&Cart);
 	break;
 
 //  case CART_NLMODEM:

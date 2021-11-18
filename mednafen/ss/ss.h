@@ -74,11 +74,7 @@
   SS_DBG_SCSP 	   = (1U << 28),
   SS_DBG_SCSP_REGW = (1U << 29),
  };
-#ifdef MDFN_SS_DEV_BUILD
- extern uint32 ss_dbg_mask;
-#else
  enum { ss_dbg_mask = 0 };
-#endif
 
 #define SS_DBG(which, format, ...)
 #define SS_DBGTI SS_DBG
@@ -86,18 +82,6 @@
  template<unsigned which>
  static void SS_DBG_Wrap(const char* format, ...) noexcept
  {
-#ifdef HAVE_DEBUG
-  if(ss_dbg_mask & which)
-  {
-   va_list ap;
-
-   va_start(ap, format);
-
-   trio_vprintf(format, ap);
-
-   va_end(ap);
-  }
-#endif
  }
 
  typedef int32 sscpu_timestamp_t;
