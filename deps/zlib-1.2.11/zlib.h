@@ -908,41 +908,6 @@ ZEXTERN int ZEXPORT inflateGetDictionary OF((z_streamp strm,
    stream state is inconsistent.
 */
 
-ZEXTERN int ZEXPORT inflateSync OF((z_streamp strm));
-/*
-     Skips invalid compressed data until a possible full flush point (see above
-   for the description of deflate with Z_FULL_FLUSH) can be found, or until all
-   available input is skipped.  No output is provided.
-
-     inflateSync searches for a 00 00 FF FF pattern in the compressed data.
-   All full flush points have this pattern, but not all occurrences of this
-   pattern are full flush points.
-
-     inflateSync returns Z_OK if a possible full flush point has been found,
-   Z_BUF_ERROR if no more input was provided, Z_DATA_ERROR if no flush point
-   has been found, or Z_STREAM_ERROR if the stream structure was inconsistent.
-   In the success case, the application may save the current current value of
-   total_in which indicates where valid compressed data was found.  In the
-   error case, the application may repeatedly call inflateSync, providing more
-   input each time, until success or end of the input data.
-*/
-
-ZEXTERN int ZEXPORT inflateCopy OF((z_streamp dest,
-                                    z_streamp source));
-/*
-     Sets the destination stream as a complete copy of the source stream.
-
-     This function can be useful when randomly accessing a large stream.  The
-   first pass through the stream can periodically record the inflate state,
-   allowing restarting inflate at those points when randomly accessing the
-   stream.
-
-     inflateCopy returns Z_OK if success, Z_MEM_ERROR if there was not
-   enough memory, Z_STREAM_ERROR if the source stream state was inconsistent
-   (such as zalloc being Z_NULL).  msg is left unchanged in both source and
-   destination.
-*/
-
 ZEXTERN int ZEXPORT inflateReset OF((z_streamp strm));
 /*
      This function is equivalent to inflateEnd followed by inflateInit,
@@ -965,95 +930,6 @@ ZEXTERN int ZEXPORT inflateReset2 OF((z_streamp strm,
      inflateReset2 returns Z_OK if success, or Z_STREAM_ERROR if the source
    stream state was inconsistent (such as zalloc or state being Z_NULL), or if
    the windowBits parameter is invalid.
-*/
-
-ZEXTERN int ZEXPORT inflatePrime OF((z_streamp strm,
-                                     int bits,
-                                     int value));
-/*
-     This function inserts bits in the inflate input stream.  The intent is
-   that this function is used to start inflating at a bit position in the
-   middle of a byte.  The provided bits will be used before any bytes are used
-   from next_in.  This function should only be used with raw inflate, and
-   should be used before the first inflate() call after inflateInit2() or
-   inflateReset().  bits must be less than or equal to 16, and that many of the
-   least significant bits of value will be inserted in the input.
-
-     If bits is negative, then the input stream bit buffer is emptied.  Then
-   inflatePrime() can be called again to put bits in the buffer.  This is used
-   to clear out bits leftover after feeding inflate a block description prior
-   to feeding inflate codes.
-
-     inflatePrime returns Z_OK if success, or Z_STREAM_ERROR if the source
-   stream state was inconsistent.
-*/
-
-ZEXTERN long ZEXPORT inflateMark OF((z_streamp strm));
-/*
-     This function returns two values, one in the lower 16 bits of the return
-   value, and the other in the remaining upper bits, obtained by shifting the
-   return value down 16 bits.  If the upper value is -1 and the lower value is
-   zero, then inflate() is currently decoding information outside of a block.
-   If the upper value is -1 and the lower value is non-zero, then inflate is in
-   the middle of a stored block, with the lower value equaling the number of
-   bytes from the input remaining to copy.  If the upper value is not -1, then
-   it is the number of bits back from the current bit position in the input of
-   the code (literal or length/distance pair) currently being processed.  In
-   that case the lower value is the number of bytes already emitted for that
-   code.
-
-     A code is being processed if inflate is waiting for more input to complete
-   decoding of the code, or if it has completed decoding but is waiting for
-   more output space to write the literal or match data.
-
-     inflateMark() is used to mark locations in the input data for random
-   access, which may be at bit positions, and to note those cases where the
-   output of a code may span boundaries of random access blocks.  The current
-   location in the input stream can be determined from avail_in and data_type
-   as noted in the description for the Z_BLOCK flush parameter for inflate.
-
-     inflateMark returns the value noted above, or -65536 if the provided
-   source stream state was inconsistent.
-*/
-
-ZEXTERN int ZEXPORT inflateGetHeader OF((z_streamp strm,
-                                         gz_headerp head));
-/*
-     inflateGetHeader() requests that gzip header information be stored in the
-   provided gz_header structure.  inflateGetHeader() may be called after
-   inflateInit2() or inflateReset(), and before the first call of inflate().
-   As inflate() processes the gzip stream, head->done is zero until the header
-   is completed, at which time head->done is set to one.  If a zlib stream is
-   being decoded, then head->done is set to -1 to indicate that there will be
-   no gzip header information forthcoming.  Note that Z_BLOCK or Z_TREES can be
-   used to force inflate() to return immediately after header processing is
-   complete and before any actual data is decompressed.
-
-     The text, time, xflags, and os fields are filled in with the gzip header
-   contents.  hcrc is set to true if there is a header CRC.  (The header CRC
-   was valid if done is set to one.) If extra is not Z_NULL, then extra_max
-   contains the maximum number of bytes to write to extra.  Once done is true,
-   extra_len contains the actual extra field length, and extra contains the
-   extra field, or that field truncated if extra_max is less than extra_len.
-   If name is not Z_NULL, then up to name_max characters are written there,
-   terminated with a zero unless the length is greater than name_max.  If
-   comment is not Z_NULL, then up to comm_max characters are written there,
-   terminated with a zero unless the length is greater than comm_max.  When any
-   of extra, name, or comment are not Z_NULL and the respective field is not
-   present in the header, then that field is set to Z_NULL to signal its
-   absence.  This allows the use of deflateSetHeader() with the returned
-   structure to duplicate the header.  However if those fields are set to
-   allocated memory, then the application will need to save those pointers
-   elsewhere so that they can be eventually freed.
-
-     If inflateGetHeader is not used, then the header information is simply
-   discarded.  The header is always checked for validity, including the header
-   CRC if present.  inflateReset() will reset the process to discard the header
-   information.  The application would need to call inflateGetHeader() again to
-   retrieve the header from the next gzip stream.
-
-     inflateGetHeader returns Z_OK if success, or Z_STREAM_ERROR if the source
-   stream state was inconsistent.
 */
 
 /*
@@ -1081,76 +957,6 @@ ZEXTERN int ZEXPORT inflateBackInit OF((z_streamp strm, int windowBits,
 typedef unsigned (*in_func) OF((void FAR *,
                                 z_const unsigned char FAR * FAR *));
 typedef int (*out_func) OF((void FAR *, unsigned char FAR *, unsigned));
-
-ZEXTERN int ZEXPORT inflateBack OF((z_streamp strm,
-                                    in_func in, void FAR *in_desc,
-                                    out_func out, void FAR *out_desc));
-/*
-     inflateBack() does a raw inflate with a single call using a call-back
-   interface for input and output.  This is potentially more efficient than
-   inflate() for file i/o applications, in that it avoids copying between the
-   output and the sliding window by simply making the window itself the output
-   buffer.  inflate() can be faster on modern CPUs when used with large
-   buffers.  inflateBack() trusts the application to not change the output
-   buffer passed by the output function, at least until inflateBack() returns.
-
-     inflateBackInit() must be called first to allocate the internal state
-   and to initialize the state with the user-provided window buffer.
-   inflateBack() may then be used multiple times to inflate a complete, raw
-   deflate stream with each call.  inflateBackEnd() is then called to free the
-   allocated state.
-
-     A raw deflate stream is one with no zlib or gzip header or trailer.
-   This routine would normally be used in a utility that reads zip or gzip
-   files and writes out uncompressed files.  The utility would decode the
-   header and process the trailer on its own, hence this routine expects only
-   the raw deflate stream to decompress.  This is different from the default
-   behavior of inflate(), which expects a zlib header and trailer around the
-   deflate stream.
-
-     inflateBack() uses two subroutines supplied by the caller that are then
-   called by inflateBack() for input and output.  inflateBack() calls those
-   routines until it reads a complete deflate stream and writes out all of the
-   uncompressed data, or until it encounters an error.  The function's
-   parameters and return types are defined above in the in_func and out_func
-   typedefs.  inflateBack() will call in(in_desc, &buf) which should return the
-   number of bytes of provided input, and a pointer to that input in buf.  If
-   there is no input available, in() must return zero -- buf is ignored in that
-   case -- and inflateBack() will return a buffer error.  inflateBack() will
-   call out(out_desc, buf, len) to write the uncompressed data buf[0..len-1].
-   out() should return zero on success, or non-zero on failure.  If out()
-   returns non-zero, inflateBack() will return with an error.  Neither in() nor
-   out() are permitted to change the contents of the window provided to
-   inflateBackInit(), which is also the buffer that out() uses to write from.
-   The length written by out() will be at most the window size.  Any non-zero
-   amount of input may be provided by in().
-
-     For convenience, inflateBack() can be provided input on the first call by
-   setting strm->next_in and strm->avail_in.  If that input is exhausted, then
-   in() will be called.  Therefore strm->next_in must be initialized before
-   calling inflateBack().  If strm->next_in is Z_NULL, then in() will be called
-   immediately for input.  If strm->next_in is not Z_NULL, then strm->avail_in
-   must also be initialized, and then if strm->avail_in is not zero, input will
-   initially be taken from strm->next_in[0 ..  strm->avail_in - 1].
-
-     The in_desc and out_desc parameters of inflateBack() is passed as the
-   first parameter of in() and out() respectively when they are called.  These
-   descriptors can be optionally used to pass any information that the caller-
-   supplied in() and out() functions need to do their job.
-
-     On return, inflateBack() will set strm->next_in and strm->avail_in to
-   pass back any unused input that was provided by the last in() call.  The
-   return values of inflateBack() can be Z_STREAM_END on success, Z_BUF_ERROR
-   if in() or out() returned an error, Z_DATA_ERROR if there was a format error
-   in the deflate stream (in which case strm->msg is set to indicate the nature
-   of the error), or Z_STREAM_ERROR if the stream was not properly initialized.
-   In the case of Z_BUF_ERROR, an input or output error can be distinguished
-   using strm->next_in which will be Z_NULL only if in() returned an error.  If
-   strm->next_in is not Z_NULL, then the Z_BUF_ERROR was due to out() returning
-   non-zero.  (in() will always be called before out(), so strm->next_in is
-   assured to be defined if out() returns non-zero.)  Note that inflateBack()
-   cannot return Z_OK.
-*/
 
 ZEXTERN int ZEXPORT inflateBackEnd OF((z_streamp strm));
 /*
@@ -1218,17 +1024,11 @@ ZEXTERN uLong ZEXPORT crc32_z OF((uLong adler, const Bytef *buf,
 
 /* various hacks, don't look :) */
 
-/* deflateInit and inflateInit are macros to allow checking the zlib version
+/* inflateInit is a macro to allow checking the zlib version
  * and the compiler's view of z_stream:
  */
-ZEXTERN int ZEXPORT deflateInit_ OF((z_streamp strm, int level,
-                                     const char *version, int stream_size));
 ZEXTERN int ZEXPORT inflateInit_ OF((z_streamp strm,
                                      const char *version, int stream_size));
-ZEXTERN int ZEXPORT deflateInit2_ OF((z_streamp strm, int  level, int  method,
-                                      int windowBits, int memLevel,
-                                      int strategy, const char *version,
-                                      int stream_size));
 ZEXTERN int ZEXPORT inflateInit2_ OF((z_streamp strm, int  windowBits,
                                       const char *version, int stream_size));
 ZEXTERN int ZEXPORT inflateBackInit_ OF((z_streamp strm, int windowBits,
@@ -1236,13 +1036,8 @@ ZEXTERN int ZEXPORT inflateBackInit_ OF((z_streamp strm, int windowBits,
                                          const char *version,
                                          int stream_size));
 #ifdef Z_PREFIX_SET
-#  define z_deflateInit(strm, level) \
-          deflateInit_((strm), (level), ZLIB_VERSION, (int)sizeof(z_stream))
 #  define z_inflateInit(strm) \
           inflateInit_((strm), ZLIB_VERSION, (int)sizeof(z_stream))
-#  define z_deflateInit2(strm, level, method, windowBits, memLevel, strategy) \
-          deflateInit2_((strm),(level),(method),(windowBits),(memLevel),\
-                        (strategy), ZLIB_VERSION, (int)sizeof(z_stream))
 #  define z_inflateInit2(strm, windowBits) \
           inflateInit2_((strm), (windowBits), ZLIB_VERSION, \
                         (int)sizeof(z_stream))
@@ -1250,13 +1045,8 @@ ZEXTERN int ZEXPORT inflateBackInit_ OF((z_streamp strm, int windowBits,
           inflateBackInit_((strm), (windowBits), (window), \
                            ZLIB_VERSION, (int)sizeof(z_stream))
 #else
-#  define deflateInit(strm, level) \
-          deflateInit_((strm), (level), ZLIB_VERSION, (int)sizeof(z_stream))
 #  define inflateInit(strm) \
           inflateInit_((strm), ZLIB_VERSION, (int)sizeof(z_stream))
-#  define deflateInit2(strm, level, method, windowBits, memLevel, strategy) \
-          deflateInit2_((strm),(level),(method),(windowBits),(memLevel),\
-                        (strategy), ZLIB_VERSION, (int)sizeof(z_stream))
 #  define inflateInit2(strm, windowBits) \
           inflateInit2_((strm), (windowBits), ZLIB_VERSION, \
                         (int)sizeof(z_stream))
@@ -1266,13 +1056,7 @@ ZEXTERN int ZEXPORT inflateBackInit_ OF((z_streamp strm, int windowBits,
 #endif
 
 /* undocumented functions */
-ZEXTERN int            ZEXPORT inflateSyncPoint OF((z_streamp));
-ZEXTERN const z_crc_t FAR * ZEXPORT get_crc_table    OF((void));
-ZEXTERN int            ZEXPORT inflateUndermine OF((z_streamp, int));
-ZEXTERN int            ZEXPORT inflateValidate OF((z_streamp, int));
-ZEXTERN unsigned long  ZEXPORT inflateCodesUsed OF ((z_streamp));
 ZEXTERN int            ZEXPORT inflateResetKeep OF((z_streamp));
-ZEXTERN int            ZEXPORT deflateResetKeep OF((z_streamp));
 
 #ifdef __cplusplus
 }

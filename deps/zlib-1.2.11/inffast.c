@@ -53,9 +53,6 @@ unsigned start;         /* inflate()'s starting value for strm->avail_out */
     unsigned char FAR *out;     /* local strm->next_out */
     unsigned char FAR *beg;     /* inflate()'s initial strm->next_out */
     unsigned char FAR *end;     /* while out < end, enough space available */
-#ifdef INFLATE_STRICT
-    unsigned dmax;              /* maximum distance from zlib header */
-#endif
     unsigned wsize;             /* window size or zero if not using window */
     unsigned whave;             /* valid bytes in the window */
     unsigned wnext;             /* window write index */
@@ -80,9 +77,6 @@ unsigned start;         /* inflate()'s starting value for strm->avail_out */
     out = strm->next_out;
     beg = out - (start - strm->avail_out);
     end = out + (strm->avail_out - 257);
-#ifdef INFLATE_STRICT
-    dmax = state->dmax;
-#endif
     wsize = state->wsize;
     whave = state->whave;
     wnext = state->wnext;
@@ -148,13 +142,6 @@ unsigned start;         /* inflate()'s starting value for strm->avail_out */
                     }
                 }
                 dist += (unsigned)hold & ((1U << op) - 1);
-#ifdef INFLATE_STRICT
-                if (dist > dmax) {
-                    strm->msg = (char *)"invalid distance too far back";
-                    state->mode = BAD;
-                    break;
-                }
-#endif
                 hold >>= op;
                 bits -= op;
                 op = (unsigned)(out - beg);     /* max distance in output */
@@ -167,25 +154,6 @@ unsigned start;         /* inflate()'s starting value for strm->avail_out */
                             state->mode = BAD;
                             break;
                         }
-#ifdef INFLATE_ALLOW_INVALID_DISTANCE_TOOFAR_ARRR
-                        if (len <= op - whave) {
-                            do {
-                                *out++ = 0;
-                            } while (--len);
-                            continue;
-                        }
-                        len -= op - whave;
-                        do {
-                            *out++ = 0;
-                        } while (--op > whave);
-                        if (op == 0) {
-                            from = out - dist;
-                            do {
-                                *out++ = *from++;
-                            } while (--len);
-                            continue;
-                        }
-#endif
                     }
                     from = window;
                     if (wnext == 0) {           /* very common case */
